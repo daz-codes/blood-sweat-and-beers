@@ -1,0 +1,7 @@
+<%# Remove the request row from the inbox %>
+<%= turbo_stream.remove "follow_request_#{@follow.id}" %>
+
+<%# Update the nav badge %>
+<%= turbo_stream.replace "follow_requests_badge" do %>
+  <%= render "follows/pending_badge", count: Current.user.pending_follow_request_count %>
+<% end %>

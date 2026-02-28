@@ -1,0 +1,3 @@
+<%= turbo_stream.replace "like_workout_#{@workout.id}" do %>
+  <%= render "workouts/like_button", workout: @workout, liked: @liked, like_count: @like_count %>
+<% end %>

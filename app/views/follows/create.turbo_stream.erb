@@ -1,0 +1,6 @@
+<%= turbo_stream.replace "follow_button_#{@target_user.id}" do %>
+  <%= render "shared/follow_button",
+        user: @target_user,
+        follow_state: @follow_state,
+        follow: Current.user.follows_as_follower.find_by(following: @target_user) %>
+<% end %>

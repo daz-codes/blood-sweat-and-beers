@@ -1,0 +1,52 @@
+<% if @page == 1 %>
+  <% content_for :title, "Workout Log" %>
+
+  <div class="max-w-2xl mx-auto">
+
+    <%# Header %>
+    <div class="flex items-center gap-3 mb-6">
+      <%= render "shared/avatar", user: Current.user, classes: "w-10 h-10 text-sm" %>
+      <div>
+        <p class="text-white font-black text-lg leading-tight tracking-tight" style="font-family: 'Jost', sans-serif"><%= Current.user.display %></p>
+        <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest">Workout Log</p>
+      </div>
+    </div>
+
+    <% if @workout_logs.empty? %>
+      <div class="text-center py-20">
+        <p class="text-5xl mb-4">📋</p>
+        <h2 class="text-xl font-bold mb-2">No workouts logged yet</h2>
+        <p class="text-gray-500 text-sm mb-6">Complete a workout to see it here.</p>
+        <%= link_to "Go to Feed", root_path, class: "bg-orange-500 hover:bg-orange-400 text-white font-bold px-6 py-3 rounded-xl transition-colors" %>
+      </div>
+    <% else %>
+      <div class="space-y-4">
+        <% @workout_logs.each do |wl| %>
+          <%= render "feed/workout_log_card", workout_log: wl, liked_workout_ids: @liked_workout_ids %>
+        <% end %>
+      </div>
+
+      <% if @has_more %>
+        <%= turbo_frame_tag "workout_log_page_#{@next_page}", src: workout_log_index_path(page: @next_page), loading: "lazy" do %>
+          <div class="py-8 text-center text-gray-700 text-sm">Loading more…</div>
+        <% end %>
+      <% end %>
+    <% end %>
+
+  </div>
+
+<% else %>
+  <%= turbo_frame_tag "workout_log_page_#{@page}" do %>
+    <div class="space-y-4 mt-4">
+      <% @workout_logs.each do |wl| %>
+        <%= render "feed/workout_log_card", workout_log: wl, liked_workout_ids: @liked_workout_ids %>
+      <% end %>
+    </div>
+
+    <% if @has_more %>
+      <%= turbo_frame_tag "workout_log_page_#{@next_page}", src: workout_log_index_path(page: @next_page), loading: "lazy" do %>
+        <div class="py-8 text-center text-gray-700 text-sm">Loading more…</div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

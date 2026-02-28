@@ -1,0 +1,68 @@
+<%# Locals: section (Hash) %>
+<% sec_mins = section["duration_mins"].to_i > 0 ? section["duration_mins"].to_i : (section["format"] == "tabata" ? 7 : nil) %>
+<% format_desc = case section["format"]
+   when "rounds"
+     parts = []
+     parts << "#{section["rounds"]} rounds" if section["rounds"].to_i > 0
+     parts << "#{section["rest_secs"]}s rest after each round" if section["rest_secs"].to_i > 0
+     parts.join(" · ").presence
+   when "amrap"
+     section["duration_mins"] ? "AMRAP · #{section["duration_mins"]} min" : "AMRAP"
+   when "emom"
+     section["duration_mins"] ? "Every Minute On the Minute · #{section["duration_mins"]} min" : "Every Minute On the Minute"
+   when "tabata"
+     "8 rounds · 20s work · 30s rest"
+   end %>
+
+<div class="bg-gray-950/60 rounded-xl overflow-hidden border border-gray-700/50">
+
+  <%# Header: section name + time circle; format description below name %>
+  <div class="px-3 py-2.5 bg-gray-800/40">
+    <div class="flex items-center justify-between gap-2">
+      <span class="font-black text-white text-xs uppercase tracking-widest" style="font-family: 'Jost', sans-serif"><%= section["name"] %></span>
+      <% if sec_mins %>
+        <div class="flex flex-col items-center justify-center w-8 h-8 rounded-full bg-gray-700/80 flex-shrink-0">
+          <span class="text-white font-black text-xs leading-none"><%= sec_mins %></span>
+          <span class="text-gray-400 text-[7px] leading-none mt-0.5">min</span>
+        </div>
+      <% end %>
+    </div>
+    <% if format_desc.present? %>
+      <p class="text-gray-400 text-xs mt-1 leading-relaxed"><%= format_desc %></p>
+    <% end %>
+  </div>
+
+  <%# Exercises — name on top, metrics + notes inline below %>
+  <% Array(section["exercises"]).each do |exercise| %>
+    <div class="px-3 py-2.5 border-t border-gray-800/50">
+      <p class="text-white text-sm font-semibold"><%= exercise["name"] %></p>
+      <% has_metric = exercise["distance_m"] || exercise["reps"] || exercise["duration_s"] || exercise["weight_kg"] %>
+      <% if has_metric || exercise["notes"].present? %>
+        <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+          <% if exercise["distance_m"] %>
+            <span class="text-xs font-bold text-orange-400"><%= exercise["distance_m"] %>m</span>
+          <% elsif exercise["reps"] %>
+            <span class="text-xs font-bold text-orange-400"><%= exercise["reps"] %> reps</span>
+          <% elsif exercise["duration_s"] %>
+            <% ds = exercise["duration_s"].to_i; dm = ds / 60; dr = ds % 60 %>
+            <span class="text-xs font-bold text-orange-400"><%= dm > 0 ? "#{dm}m #{dr > 0 ? "#{dr}s" : ""}".strip : "#{ds}s" %></span>
+          <% end %>
+          <% if exercise["weight_kg"] %>
+            <span class="text-xs font-bold text-orange-400"><%= exercise["weight_kg"] %>kg</span>
+          <% end %>
+          <% if exercise["notes"].present? %>
+            <span class="text-gray-400 text-xs italic"><%= exercise["notes"] %></span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# Footer: section notes only %>
+  <% if section["notes"].present? %>
+    <div class="px-3 py-2 border-t border-gray-700/40 bg-gray-800/20">
+      <p class="text-gray-400 text-xs leading-relaxed"><%= section["notes"] %></p>
+    </div>
+  <% end %>
+
+</div>

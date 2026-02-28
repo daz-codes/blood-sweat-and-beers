@@ -1,0 +1,62 @@
+<div class="mt-6 bg-gray-900 border border-gray-700/80 rounded-2xl overflow-hidden shadow-sm">
+
+  <%# Header: name + meta %>
+  <div class="px-5 pt-5 pb-4 border-b border-gray-800">
+    <% if workout.name.present? %>
+      <h2 class="text-2xl text-gray-300 tracking-tight leading-tight mb-3 font-jost uppercase"><%= workout.name %></h2>
+    <% end %>
+
+    <div class="flex items-center gap-3 flex-wrap">
+      <%# Duration circle %>
+      <div class="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-orange-500 shadow-md shadow-orange-500/30 flex-shrink-0">
+        <span class="text-white font-black text-lg leading-none"><%= workout.duration_mins %></span>
+        <span class="text-orange-100 text-[9px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
+      </div>
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-gray-800/60 text-gray-300">
+          <%= workout.difficulty.capitalize %>
+        </span>
+        <% if workout.tags.any? %>
+          <div class="flex flex-wrap gap-1.5 mt-2">
+            <% workout.tags.each do |tag| %>
+              <span class="text-xs bg-orange-500/10 border border-orange-500/20 text-orange-400 px-2.5 py-0.5 rounded-full font-semibold"><%= tag.name %></span>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <% if workout.structure.is_a?(Hash) && workout.structure["goal"].present? %>
+      <p class="text-gray-400 text-sm italic mt-3 leading-relaxed"><%= workout.structure["goal"] %></p>
+    <% end %>
+  </div>
+
+  <%# Sections %>
+  <% sections = workout.structure.is_a?(Hash) ? Array(workout.structure["sections"]) : [] %>
+  <div class="px-4 py-3 space-y-2">
+    <% sections.each do |section| %>
+      <%= render "shared/workout_section", section: section %>
+    <% end %>
+  </div>
+
+  <%# Actions %>
+  <div class="bg-gray-950 border-t border-gray-800 px-5 py-4 flex gap-3 flex-wrap">
+    <button type="button"
+            onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
+            class="flex-1 text-center bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-black py-3 rounded-xl text-sm transition-colors uppercase tracking-wide shadow-sm shadow-orange-500/30 cursor-pointer">
+      Do this
+    </button>
+    <% if Current.user == workout.user %>
+      <%= link_to "Edit", edit_workout_path(workout),
+          data: { turbo_frame: "workout_preview" },
+          class: "px-4 py-3 border border-gray-700 hover:border-orange-500 hover:text-orange-400 text-gray-300 font-bold rounded-xl text-sm transition-colors" %>
+    <% end %>
+    <%= button_to "Save to Library", save_workout_path(workout), method: :post,
+        class: "px-4 py-3 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white font-bold rounded-xl text-sm transition-colors cursor-pointer" %>
+    <%= link_to "Regenerate", new_workout_path,
+        class: "px-4 py-3 text-gray-500 hover:text-gray-300 font-semibold text-sm transition-colors" %>
+  </div>
+
+</div>
+
+<%= render "shared/complete_workout_dialog", workout: workout %>

@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --font-jost: 'Jost', sans-serif;
+  --font-slab: 'Alfa Slab One', serif;
+}
+
+/* Native dialog/modal */
+dialog {
+  overflow-y: auto;
+  max-height: min(90dvh, 90vh);
+  /* Tailwind resets margin:0 on *, which breaks browser's UA centering for showModal() */
+  margin: auto;
+}
+
+dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(2px);
+}

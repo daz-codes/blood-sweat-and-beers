@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(psql:*)",
+      "Bash(brew:*)",
+      "Bash(brew services:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:$PATH\" bundle install:*)",
+      "Bash(ruby:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle install:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle install:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails db:create:*)",
+      "Bash(LC_ALL=\"en_US.UTF-8\" /opt/homebrew/opt/postgresql@17/bin/pg_ctl:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails db:migrate:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails generate:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails db:seed:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails runner:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails routes:*)",
+      "Bash(bin/rails generate:*)",
+      "Bash(bin/rails db:migrate:*)",
+      "Bash(bin/rails db:seed:*)",
+      "Bash(bin/rails runner:*)",
+      "Bash(ls:*)",
+      "Bash(source .env:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails tailwindcss:build:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails db:reset:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails active_storage:install:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" ruby:*)"
+    ]
+  }
+}

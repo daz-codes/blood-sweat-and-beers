@@ -1,0 +1,130 @@
+<% content_for :title, "Complete Workout" %>
+
+<div class="max-w-2xl mx-auto">
+
+  <%# Page header %>
+  <div class="mb-5">
+    <%= link_to "&larr; Back".html_safe, root_path, class: "text-gray-500 hover:text-gray-300 text-sm" %>
+    <div class="mt-4 flex items-start gap-4">
+      <div class="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-orange-500 shadow-md shadow-orange-500/30 flex-shrink-0">
+        <span class="text-white font-black text-lg leading-none"><%= @workout.duration_mins %></span>
+        <span class="text-orange-100 text-[9px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
+      </div>
+      <div>
+        <h1 class="text-2xl text-gray-300 tracking-tight leading-tight font-jost uppercase"><%= @workout.name.presence || "Log Your Session" %></h1>
+        <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+          <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-gray-800/60 text-gray-300"><%= @workout.difficulty.capitalize %></span>
+          <% @workout.tags.first(3).each do |tag| %>
+            <span class="text-xs bg-orange-500/10 border border-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-semibold"><%= tag.name %></span>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%# Workout summary — sections-based (new) or flat steps (legacy) %>
+  <div class="bg-gray-900 border border-gray-700/80 rounded-2xl overflow-hidden mb-6">
+    <% if @workout.structure.is_a?(Hash) %>
+      <%# New sections-based structure %>
+      <div class="px-3 py-3 space-y-2">
+        <% Array(@workout.structure["sections"]).each do |section| %>
+          <%= render "shared/workout_section", section: section %>
+        <% end %>
+      </div>
+    <% else %>
+      <%# Legacy flat structure — per-step time inputs %>
+      <p class="text-gray-500 text-xs px-4 py-2 bg-gray-900/50">Enter your time for each step (mm:ss). Skip any you didn't complete.</p>
+      <% @workout.structure.each do |step| %>
+        <% is_run = step["type"] == "run" %>
+        <div class="flex items-center gap-4 px-4 py-3 border-b border-gray-800 last:border-0 <%= is_run ? 'bg-gray-950/60' : '' %>">
+          <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center <%= is_run ? 'bg-blue-500/15 text-blue-400' : 'bg-orange-500/15 text-orange-400' %> text-xs font-bold">
+            <%= is_run ? "▶" : (step["order"].to_i / 2).to_s %>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-sm text-white truncate"><%= step["name"] %></p>
+            <p class="text-gray-500 text-xs mt-0.5">
+              <% if step["distance_m"] %>Target: <%= step["distance_m"] %>m<% if step["weight_kg"] %> @ <%= step["weight_kg"] %>kg<% end %>
+              <% elsif step["reps"] %>Target: <%= step["reps"] %> reps<% if step["weight_kg"] %> @ <%= step["weight_kg"] %>kg<% end %>
+              <% end %>
+            </p>
+          </div>
+          <div class="flex-shrink-0">
+            <input type="text" name="step_times[<%= step["order"] %>]" placeholder="mm:ss"
+                   class="w-20 bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white text-sm text-center font-mono focus:outline-none focus:border-orange-500 placeholder-gray-700">
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <%= form_with url: workout_logs_path, method: :post, multipart: true do |f| %>
+    <%= f.hidden_field :workout_id, value: @workout.id %>
+
+    <div class="bg-gray-900 border border-gray-700/80 rounded-2xl p-5 space-y-5 shadow-sm">
+      <h2 class="font-black text-xl tracking-tight">How did it go?</h2>
+
+      <%# Sweat rating %>
+      <div data-controller="sweat-rating">
+        <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Sweat Rating</p>
+        <div class="flex gap-2">
+          <% (1..5).each do |n| %>
+            <label class="cursor-pointer" data-value="<%= n %>"
+                   data-action="mouseenter->sweat-rating#highlight mouseleave->sweat-rating#reset">
+              <%= f.radio_button "workout_log[sweat_rating]", n, class: "sr-only", required: true,
+                  data: { action: "change->sweat-rating#reset" } %>
+              <span class="text-3xl select-none opacity-25 transition-opacity" data-sweat-rating-target="drop">💧</span>
+            </label>
+          <% end %>
+        </div>
+        <p class="text-gray-600 text-xs mt-2">1 = light sweat &nbsp;·&nbsp; 5 = absolutely drenched</p>
+      </div>
+
+      <%# Notes %>
+      <div>
+        <label class="block text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2">Notes</label>
+        <%= f.text_area "workout_log[notes]", rows: 3, placeholder: "How did it feel? Any modifications?",
+            class: "w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-orange-500 resize-none" %>
+      </div>
+
+      <%# Location %>
+      <div>
+        <label class="block text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2">
+          Location <span class="text-gray-600 normal-case font-normal">(optional)</span>
+        </label>
+        <%= f.text_field "workout_log[location]", placeholder: "e.g. CrossFit HQ, Gym name, City",
+            class: "w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-orange-500" %>
+      </div>
+
+      <%# Session Tags %>
+      <div>
+        <label class="block text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2">
+          Tags <span class="text-gray-600 normal-case font-normal">(optional)</span>
+        </label>
+        <input type="text" name="tag_names"
+               value="<%= @workout.tags.map(&:name).join(", ") %>"
+               placeholder="e.g. legs, strength, heavy (comma separated)"
+               class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-700 focus:outline-none focus:border-orange-500">
+        <p class="text-gray-600 text-xs mt-1">Pre-filled from workout. Add, remove or change as needed.</p>
+      </div>
+
+      <%# Photo %>
+      <div>
+        <label class="block text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2">
+          Photo <span class="text-gray-600 normal-case font-normal">(optional)</span>
+        </label>
+        <input type="file" name="workout_log[photo]" accept="image/*"
+               class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-400 file:cursor-pointer cursor-pointer">
+      </div>
+
+      <%# Visibility %>
+      <div class="flex items-center gap-3">
+        <%= f.check_box "workout_log[private]", { class: "w-4 h-4 accent-orange-500 cursor-pointer" }, "1", "0" %>
+        <label class="text-sm text-gray-300 cursor-pointer">Keep this workout private</label>
+      </div>
+
+      <%= f.submit "Post to Feed",
+          class: "w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-4 rounded-xl text-base transition-colors cursor-pointer mt-2 uppercase tracking-wide shadow-sm shadow-orange-500/30" %>
+    </div>
+
+  <% end %>
+</div>

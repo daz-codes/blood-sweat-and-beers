@@ -1,0 +1,247 @@
+<% structure  = workout_log.workout.structure %>
+<% workout    = workout_log.workout %>
+<% liked      = liked_workout_ids.include?(workout.id) %>
+<% like_count = workout.workout_likes.size %>
+<% is_own     = workout_log.user == Current.user %>
+
+<% all_exercises = if structure.is_a?(Hash)
+     structure["sections"].to_a.flat_map { |s| Array(s["exercises"]).map { |e| e["name"] } }.uniq
+   else
+     []
+   end %>
+<% summary_text = all_exercises.first(6).join(" · ") %>
+<% summary_text += " +#{all_exercises.size - 6} more" if all_exercises.size > 6 %>
+<% sections = structure.is_a?(Hash) ? Array(structure["sections"]) : [] %>
+<% session_tags = workout_log.tags %>
+<% workout_tags = workout.tags %>
+<% display_tags = session_tags.any? ? session_tags : workout_tags %>
+<% goal = structure.is_a?(Hash) ? structure["goal"] : nil %>
+
+<div class="bg-gray-900 border border-gray-700/80 rounded-2xl overflow-hidden shadow-sm hover:border-gray-600 hover:shadow-md transition-all duration-200">
+
+  <%# ── Card body ── %>
+  <div class="px-4 pt-4 pb-3">
+
+    <%# Header: title + difficulty badge + duration circle %>
+    <div class="flex items-start justify-between gap-3">
+      <p class="text-gray-300 text-2xl leading-tight tracking-tight font-jost uppercase">
+        <%= workout.name.presence || "Untitled Workout" %>
+      </p>
+      <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+        <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-gray-600 bg-gray-800/60 text-gray-300"><%= workout.difficulty.capitalize %></span>
+        <div class="flex flex-col items-center justify-center w-10 h-10 rounded-full bg-orange-500 shadow-sm shadow-orange-500/40 flex-shrink-0">
+          <span class="text-white font-black text-sm leading-none"><%= workout.duration_mins %></span>
+          <span class="text-orange-100 text-[7px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
+        </div>
+      </div>
+    </div>
+
+    <%# Attribution: avatar · username · sweat · date · location %>
+    <div class="flex items-center justify-between mt-2">
+      <div class="flex items-center gap-2 min-w-0 flex-wrap">
+        <%= render "shared/avatar", user: workout_log.user %>
+        <%= link_to workout_log.user.display, user_path(workout_log.user),
+              class: "text-xs font-bold text-gray-300 hover:text-blue-400 transition-colors" %>
+        <span class="text-gray-700 text-xs">·</span>
+        <div class="flex gap-px flex-shrink-0">
+          <% 5.times do |i| %>
+            <span class="text-xs <%= i < workout_log.sweat_rating ? 'opacity-90' : 'opacity-15' %>">💧</span>
+          <% end %>
+        </div>
+        <span class="text-gray-700 text-xs">·</span>
+        <span class="text-xs text-gray-600 flex-shrink-0"><%= workout_log.completed_at.strftime("%-d %b %Y") %></span>
+        <% if workout_log.location.present? %>
+          <span class="text-gray-700 text-xs">·</span>
+          <span class="text-xs text-gray-600 truncate"><%= workout_log.location %></span>
+        <% end %>
+      </div>
+      <% unless is_own %>
+        <% follow_state = Current.user.follow_state_for(workout_log.user) %>
+        <% follow = Current.user.follows_as_follower.find_by(following: workout_log.user) %>
+        <%= render "shared/follow_button", user: workout_log.user, follow_state: follow_state, follow: follow %>
+      <% end %>
+    </div>
+
+    <%# Exercise summary %>
+    <% if summary_text.present? %>
+      <p class="text-gray-500 text-xs mt-2.5 leading-relaxed"><%= summary_text %></p>
+    <% end %>
+
+    <%# Goal / coaching cue %>
+    <% if goal.present? %>
+      <p class="text-orange-400/80 text-xs italic mt-1 leading-snug font-medium"><%= goal %></p>
+    <% end %>
+
+    <%# Tags %>
+    <% if display_tags.any? %>
+      <div class="flex items-center gap-1.5 mt-3 flex-wrap">
+        <% display_tags.first(3).each do |tag| %>
+          <span class="text-xs bg-orange-500/10 border border-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-semibold flex-shrink-0"><%= tag.name %></span>
+        <% end %>
+      </div>
+    <% end %>
+
+
+  </div>
+
+  <%# Photo %>
+  <% if workout_log.photo.attached? %>
+    <%= image_tag workout_log.photo, class: "w-full max-h-96 object-cover" %>
+  <% end %>
+
+  <%# ── Footer ── %>
+  <% if sections.any? %>
+    <details class="group">
+      <summary class="bg-gray-950 border-t border-gray-800 px-4 py-3 list-none cursor-pointer select-none">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-3">
+            <%= render "workouts/like_button", workout: workout, liked: liked, like_count: like_count %>
+            <%= link_to workout_log_comments_path(workout_log),
+                  data: { turbo_frame: dom_id(workout_log, :comments) },
+                  class: "flex items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              <span id="comment_count_<%= workout_log.id %>" class="text-xs font-semibold"><%= workout_log.comments_count %></span>
+            <% end %>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button type="button"
+                    onclick="document.getElementById('remix_<%= workout.id %>').showModal()"
+                    class="flex items-center gap-1.5 text-xs font-black border border-gray-600 hover:border-orange-500 hover:text-orange-400 text-gray-400 px-3 py-1.5 rounded-xl transition-colors cursor-pointer uppercase tracking-wide">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+              </svg>
+              Remix
+            </button>
+            <button type="button"
+                    onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
+                    class="text-xs font-black bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white px-3 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm shadow-orange-500/40 uppercase tracking-wide">
+              Do this
+            </button>
+            <% unless is_own %>
+              <%= button_to save_workout_path(workout), method: :post,
+                    class: "text-xs font-bold border border-gray-600 hover:border-orange-500 hover:text-orange-400 text-gray-400 px-3 py-1.5 rounded-lg transition-colors cursor-pointer" do %>
+                + Save
+              <% end %>
+            <% end %>
+            <span class="text-gray-500 hover:text-gray-300 text-xs font-bold flex items-center gap-1 transition-colors uppercase tracking-wide">
+              <span class="group-open:hidden">▾ Workout</span>
+              <span class="hidden group-open:inline">▴ Hide</span>
+            </span>
+          </div>
+        </div>
+      </summary>
+
+      <%# Expanded sections %>
+      <div class="bg-gray-950 border-t border-gray-800/60 px-3 py-3 space-y-2">
+        <% sections.each do |section| %>
+          <%= render "shared/workout_section", section: section %>
+        <% end %>
+      </div>
+    </details>
+
+  <% else %>
+    <div class="bg-gray-950 border-t border-gray-800 px-4 py-3">
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <%= render "workouts/like_button", workout: workout, liked: liked, like_count: like_count %>
+          <%= link_to workout_log_comments_path(workout_log),
+                data: { turbo_frame: dom_id(workout_log, :comments) },
+                class: "flex items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span id="comment_count_<%= workout_log.id %>" class="text-xs font-semibold"><%= workout_log.comments_count %></span>
+          <% end %>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button"
+                  onclick="document.getElementById('remix_<%= workout.id %>').showModal()"
+                  class="flex items-center gap-1.5 text-xs font-black border border-gray-600 hover:border-orange-500 hover:text-orange-400 text-gray-400 px-3 py-1.5 rounded-xl transition-colors cursor-pointer uppercase tracking-wide">
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+            Remix
+          </button>
+          <button type="button"
+                  onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
+                  class="text-xs font-black bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white px-3 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm shadow-orange-500/40 uppercase tracking-wide">
+            Do this
+          </button>
+          <% unless is_own %>
+            <%= button_to save_workout_path(workout), method: :post,
+                  class: "text-xs font-bold border border-gray-600 hover:border-orange-500 hover:text-orange-400 text-gray-400 px-3 py-1.5 rounded-lg transition-colors cursor-pointer" do %>
+              + Save
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <%= turbo_frame_tag dom_id(workout_log, :comments) %>
+
+</div>
+
+<%= render "shared/complete_workout_dialog", workout: workout %>
+
+<%# Remix dialog %>
+<dialog id="remix_<%= workout.id %>"
+        class="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 text-white p-0 shadow-2xl backdrop:bg-black/70"
+        onclick="if(event.target===this) this.close()">
+  <div class="px-6 py-6">
+    <div class="flex items-start justify-between mb-6">
+      <div>
+        <h2 class="text-xl font-black tracking-tight" style="font-family: 'Jost', sans-serif">Remix</h2>
+        <p class="text-gray-400 mt-0.5 text-sm font-medium truncate max-w-xs"><%= workout.name %></p>
+      </div>
+      <button type="button" onclick="this.closest('dialog').close()"
+              class="flex-shrink-0 ml-2 flex items-center justify-center w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-gray-800 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <%= form_with url: remix_workout_path(workout), method: :post do |f| %>
+      <div class="mb-6" data-controller="duration-slider">
+        <div class="flex items-baseline justify-between mb-3">
+          <p class="text-sm font-bold text-gray-300 uppercase tracking-wide">Duration</p>
+          <p class="text-3xl font-black text-white">
+            <span data-duration-slider-target="display"><%= workout.duration_mins %></span>
+            <span class="text-base font-normal text-gray-400">min</span>
+          </p>
+        </div>
+        <%= f.range_field :duration_mins, value: workout.duration_mins, min: 5, max: 180, step: 5,
+            class: "w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500",
+            data: { duration_slider_target: "input", action: "input->duration-slider#update" },
+            required: true %>
+        <div class="flex justify-between text-xs text-gray-600 mt-1.5">
+          <span>5 min</span><span>3 hrs</span>
+        </div>
+      </div>
+
+      <div class="mb-8">
+        <p class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-3">Difficulty</p>
+        <div class="grid grid-cols-3 gap-2">
+          <% [["beginner", "Beginner", "Building base"], ["intermediate", "Intermediate", "Regular training"], ["advanced", "Advanced", "Competition prep"]].each do |value, label, desc| %>
+            <label class="cursor-pointer">
+              <%= f.radio_button :difficulty, value, class: "peer sr-only", checked: workout.difficulty == value %>
+              <div class="border-2 border-gray-700 rounded-xl p-3 peer-checked:border-orange-500 peer-checked:bg-orange-500/10 transition-all text-center">
+                <p class="font-black text-sm"><%= label %></p>
+                <p class="text-gray-500 text-xs mt-0.5"><%= desc %></p>
+              </div>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <%= f.submit "Generate Remix",
+          class: "w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-black py-4 rounded-xl text-base transition-colors cursor-pointer tracking-wide uppercase",
+          data: { turbo_submits_with: "Generating…" } %>
+    <% end %>
+  </div>
+</dialog>

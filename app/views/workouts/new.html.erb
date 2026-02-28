@@ -1,0 +1,15 @@
+<% content_for :title, "Create Workout" %>
+
+<div class="max-w-2xl mx-auto">
+  <div class="mb-6">
+    <%= link_to "← Feed", root_path, class: "text-gray-500 hover:text-gray-300 text-sm" %>
+  </div>
+
+  <h1 class="text-2xl font-bold tracking-tight mb-1">Create a Workout</h1>
+  <p class="text-gray-400 text-sm mb-6">Add sections, then exercises within each section.</p>
+
+  <%= render "workouts/builder_form",
+        workout: @workout,
+        action_url: workouts_path,
+        submit_label: "Save & Log Workout" %>
+</div>

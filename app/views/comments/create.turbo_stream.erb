@@ -1,0 +1,14 @@
+<%# Append the new comment to the list %>
+<%= turbo_stream.append dom_id(@workout_log, :comment_list) do %>
+  <%= render @comment %>
+<% end %>
+
+<%# Reset the form %>
+<%= turbo_stream.replace "comment_form_#{@workout_log.id}" do %>
+  <%= render "comments/form", workout_log: @workout_log, comment: Comment.new %>
+<% end %>
+
+<%# Update the comment count in the footer badge %>
+<%= turbo_stream.replace "comment_count_#{@workout_log.id}" do %>
+  <%= @workout_log.reload.comments_count %>
+<% end %>

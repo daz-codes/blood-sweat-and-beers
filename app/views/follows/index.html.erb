@@ -1,0 +1,35 @@
+<% content_for :title, "Follow Requests" %>
+
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-2xl font-bold mb-6">Follow Requests</h1>
+
+  <% if @pending_follows.empty? %>
+    <div class="text-center py-16">
+      <p class="text-gray-500 text-sm">No pending follow requests.</p>
+    </div>
+  <% else %>
+    <div class="space-y-2">
+      <% @pending_follows.each do |follow| %>
+        <div id="follow_request_<%= follow.id %>"
+             class="flex items-center justify-between border border-gray-700 rounded-xl px-4 py-3">
+          <div>
+            <%= link_to user_path(follow.follower), class: "font-semibold text-white hover:text-orange-400 transition-colors" do %>
+              <%= follow.follower.display %>
+            <% end %>
+            <p class="text-gray-500 text-xs mt-0.5">Requested <%= time_ago_in_words(follow.requested_at) %> ago</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <%= button_to "Accept",
+                  accept_follow_path(follow),
+                  method: :patch,
+                  class: "text-sm font-semibold bg-orange-500 hover:bg-orange-400 text-white px-4 py-1.5 rounded-full transition-colors cursor-pointer" %>
+            <%= button_to "Decline",
+                  follow_path(follow),
+                  method: :delete,
+                  class: "text-sm text-gray-500 hover:text-gray-300 px-3 py-1.5 transition-colors cursor-pointer" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

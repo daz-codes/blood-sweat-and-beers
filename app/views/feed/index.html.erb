@@ -1,0 +1,48 @@
+<% if @page == 1 %>
+  <% content_for :title, "Feed" %>
+
+  <div class="max-w-2xl mx-auto">
+
+    <% if @workout_logs.empty? %>
+      <div class="text-center py-20">
+        <p class="text-5xl mb-4">🏋️</p>
+        <h2 class="text-xl font-bold mb-2">Nothing here yet</h2>
+        <p class="text-gray-500 text-sm mb-6">Generate your first workout or find people to follow.</p>
+        <div class="flex items-center justify-center gap-3 flex-wrap">
+          <button type="button" data-action="click->dialog#open"
+                  class="bg-orange-500 hover:bg-orange-400 text-white font-bold px-6 py-3 rounded-xl transition-colors cursor-pointer">Generate Workout</button>
+          <%= link_to "Find People", users_path, class: "border border-gray-600 hover:border-gray-400 text-gray-300 font-bold px-6 py-3 rounded-xl transition-colors" %>
+        </div>
+      </div>
+    <% else %>
+      <div class="space-y-4">
+        <% @workout_logs.each do |wl| %>
+          <%= render "feed/workout_log_card", workout_log: wl, liked_workout_ids: @liked_workout_ids %>
+        <% end %>
+      </div>
+
+      <% if @has_more %>
+        <%= turbo_frame_tag "feed_page_#{@next_page}", src: feed_path(page: @next_page), loading: "lazy" do %>
+          <div class="py-8 text-center text-gray-700 text-sm">Loading more workouts…</div>
+        <% end %>
+      <% end %>
+    <% end %>
+
+  </div>
+
+<% else %>
+  <%# Subsequent pages are fetched lazily into a named Turbo Frame %>
+  <%= turbo_frame_tag "feed_page_#{@page}" do %>
+    <div class="space-y-4 mt-4">
+      <% @workout_logs.each do |wl| %>
+        <%= render "feed/workout_log_card", workout_log: wl, liked_workout_ids: @liked_workout_ids %>
+      <% end %>
+    </div>
+
+    <% if @has_more %>
+      <%= turbo_frame_tag "feed_page_#{@next_page}", src: feed_path(page: @next_page), loading: "lazy" do %>
+        <div class="py-8 text-center text-gray-700 text-sm">Loading more workouts…</div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

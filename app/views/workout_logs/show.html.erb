@@ -1,0 +1,130 @@
+<% content_for :title, "Session — #{@workout.name}" %>
+
+<div class="max-w-2xl mx-auto">
+
+  <%# Back nav %>
+  <div class="mb-5">
+    <a href="<%= root_path %>" class="text-gray-500 hover:text-gray-300 text-sm">&larr; Feed</a>
+  </div>
+
+  <%# Session card header %>
+  <div class="bg-gray-900 border border-gray-700/80 rounded-2xl overflow-hidden shadow-sm mb-4">
+
+    <div class="px-5 pt-5 pb-4">
+      <%# Workout name + meta %>
+      <div class="flex items-start gap-4 mb-4">
+        <%# Duration circle %>
+        <div class="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-orange-500 shadow-md shadow-orange-500/30 flex-shrink-0 mt-0.5">
+          <span class="text-white font-black text-lg leading-none"><%= @workout.duration_mins %></span>
+          <span class="text-orange-100 text-[9px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          <h1 class="text-2xl font-bold text-white tracking-tight leading-tight" style="font-family: 'Jost', sans-serif"><%= @workout.name.presence || "Workout" %></h1>
+          <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-gray-800/60 text-gray-300">
+              <%= @workout.difficulty.capitalize %>
+            </span>
+            <% @workout_log.tags.first(4).each do |tag| %>
+              <span class="text-xs bg-orange-500/10 border border-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-semibold"><%= tag.name %></span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <%# Date, location, visibility %>
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <p class="text-gray-400 text-sm">
+            <%= @workout_log.completed_at.strftime("%-d %B %Y, %H:%M") %>
+            <% if @workout_log.location.present? %>
+              <span class="text-gray-600">&nbsp;·&nbsp;</span><%= @workout_log.location %>
+            <% end %>
+          </p>
+          <% if @workout_log.visibility == "private" %>
+            <span class="text-xs text-gray-600 border border-gray-700 px-2 py-0.5 rounded-full mt-1 inline-block">Private</span>
+          <% end %>
+        </div>
+
+        <%# Sweat rating %>
+        <div class="text-right flex-shrink-0">
+          <p class="text-xs text-gray-600 uppercase tracking-wider mb-1">Effort</p>
+          <div class="flex gap-0.5">
+            <% 5.times do |i| %>
+              <span class="text-lg <%= i < @workout_log.sweat_rating ? 'opacity-100' : 'opacity-15' %>">💧</span>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <%# Photo %>
+    <% if @workout_log.photo.attached? %>
+      <%= image_tag @workout_log.photo, class: "w-full max-h-72 object-cover border-t border-gray-800" %>
+    <% end %>
+
+    <%# Notes %>
+    <% if @workout_log.notes.present? %>
+      <div class="px-5 py-4 border-t border-gray-800">
+        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1.5">Notes</p>
+        <p class="text-gray-200 text-sm whitespace-pre-wrap leading-relaxed"><%= @workout_log.notes %></p>
+      </div>
+    <% end %>
+
+  </div>
+
+  <%# Workout structure %>
+  <div class="bg-gray-900 border border-gray-700/80 rounded-2xl overflow-hidden shadow-sm mb-4">
+    <div class="px-5 py-3 border-b border-gray-800">
+      <p class="text-xs font-black text-gray-500 uppercase tracking-widest">Workout</p>
+    </div>
+    <% if @workout.structure.is_a?(Hash) %>
+      <div class="px-3 py-3 space-y-2">
+        <% Array(@workout.structure["sections"]).each do |section| %>
+          <%= render "shared/workout_section", section: section %>
+        <% end %>
+        <% if @workout.structure["goal"].present? %>
+          <p class="text-gray-500 text-xs italic px-1 pt-1"><%= @workout.structure["goal"] %></p>
+        <% end %>
+      </div>
+    <% else %>
+      <%# Legacy flat structure — with per-step logged times %>
+      <% @workout.structure.each do |step| %>
+        <% is_run = step["type"] == "run" %>
+        <% log_entry = @exercise_logs[step["order"].to_i] %>
+        <div class="flex items-center gap-4 px-5 py-3 border-b border-gray-800 last:border-0 <%= is_run ? 'bg-gray-950/40' : '' %>">
+          <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center <%= is_run ? 'bg-blue-500/15 text-blue-400' : 'bg-orange-500/15 text-orange-400' %> text-xs font-black">
+            <%= is_run ? "▶" : (step["order"].to_i / 2).to_s %>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-sm text-white truncate"><%= step["name"] %></p>
+            <p class="text-gray-500 text-xs mt-0.5">
+              <% if step["distance_m"] %><%= step["distance_m"] %>m<% if step["weight_kg"] %> @ <%= step["weight_kg"] %>kg<% end %>
+              <% elsif step["reps"] %><%= step["reps"] %> reps<% if step["weight_kg"] %> @ <%= step["weight_kg"] %>kg<% end %>
+              <% end %>
+            </p>
+          </div>
+          <div class="flex-shrink-0 text-right">
+            <% if log_entry && log_entry.sets_data.first&.dig("time_s") %>
+              <% time_s = log_entry.sets_data.first["time_s"].to_i %>
+              <span class="font-mono font-black text-white text-sm"><%= format("%d:%02d", time_s / 60, time_s % 60) %></span>
+            <% else %>
+              <span class="text-gray-700 text-xs">—</span>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <%# Comments %>
+  <%= turbo_frame_tag "comments_#{@workout_log.id}", src: workout_log_comments_path(@workout_log) do %>
+    <p class="text-gray-700 text-sm text-center py-4">Loading comments…</p>
+  <% end %>
+
+  <%# Actions %>
+  <div class="flex gap-3 mt-4">
+    <%= link_to "Back to Feed", root_path,
+        class: "flex-1 text-center border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white font-bold py-3 rounded-xl text-sm transition-colors" %>
+  </div>
+
+</div>

@@ -1,0 +1,70 @@
+<% content_for :title, @profile_user.display %>
+
+<div class="max-w-2xl mx-auto">
+
+  <%# Profile header %>
+  <div class="border border-gray-700 rounded-2xl p-6 mb-6">
+    <div class="flex items-start justify-between">
+      <div>
+        <h1 class="text-2xl font-bold"><%= @profile_user.display %></h1>
+        <% if @profile_user.username.present? %>
+          <p class="text-gray-500 text-sm mt-0.5">@<%= @profile_user.username %></p>
+        <% end %>
+      </div>
+      <%= render "shared/follow_button", user: @profile_user, follow_state: @follow_state, follow: @follow %>
+    </div>
+
+    <div class="flex items-center gap-6 mt-4 text-center">
+      <div>
+        <p class="text-2xl font-bold"><%= @workout_count %></p>
+        <p class="text-gray-500 text-xs">Workouts</p>
+      </div>
+      <div>
+        <p class="text-2xl font-bold"><%= @follower_count %></p>
+        <p class="text-gray-500 text-xs">Followers</p>
+      </div>
+      <div>
+        <p class="text-2xl font-bold"><%= @following_count %></p>
+        <p class="text-gray-500 text-xs">Following</p>
+      </div>
+    </div>
+  </div>
+
+  <%# Workout list %>
+  <% if @follow_state == :accepted %>
+    <% if @recent_logs.any? %>
+      <div class="space-y-4">
+        <% @recent_logs.each do |wl| %>
+          <div class="border border-gray-700 rounded-2xl px-4 py-3 hover:border-gray-600 transition-colors">
+            <% workout = wl.workout %>
+            <p class="text-white text-base font-bold leading-snug"><%= workout.name.presence || "Workout" %></p>
+            <p class="text-gray-500 text-xs mt-1"><%= workout.duration_mins %> min &middot; <%= workout.difficulty.capitalize %></p>
+            <p class="text-gray-600 text-xs mt-1"><%= wl.completed_at.strftime("%-d %b %Y") %></p>
+            <% if workout.tags.any? %>
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                <% workout.tags.each do |tag| %>
+                  <span class="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full"><%= tag.name %></span>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-gray-500 text-sm text-center py-12">No workouts logged yet.</p>
+    <% end %>
+  <% elsif @follow_state == :pending %>
+    <div class="text-center py-12 border border-gray-800 rounded-2xl">
+      <p class="text-2xl mb-3">🔒</p>
+      <p class="text-gray-400 font-semibold">Follow request pending</p>
+      <p class="text-gray-600 text-sm mt-1">Workouts will be visible once your request is accepted.</p>
+    </div>
+  <% else %>
+    <div class="text-center py-12 border border-gray-800 rounded-2xl">
+      <p class="text-2xl mb-3">🔒</p>
+      <p class="text-gray-400 font-semibold">Follow to see workouts</p>
+      <p class="text-gray-600 text-sm mt-1">Send a follow request to view their training.</p>
+    </div>
+  <% end %>
+
+</div>

@@ -1,0 +1,23 @@
+<%# Locals: user (User), follow_state (:none | :pending | :accepted | :self), follow (Follow | nil) %>
+<%= turbo_frame_tag "follow_button_#{user.id}" do %>
+  <% case follow_state %>
+  <% when :none %>
+    <%= button_to "Follow",
+          follows_path(following_id: user.id),
+          method: :post,
+          class: "text-xs font-semibold bg-orange-500 hover:bg-orange-400 text-white px-3 py-1 rounded-full transition-colors cursor-pointer" %>
+  <% when :pending %>
+    <div class="flex items-center gap-1">
+      <span class="text-xs text-gray-500">Requested</span>
+      <%= button_to "Cancel",
+            follow_path(follow),
+            method: :delete,
+            class: "text-xs text-gray-600 hover:text-gray-400 transition-colors cursor-pointer" %>
+    </div>
+  <% when :accepted %>
+    <%= button_to "Following",
+          follow_path(follow),
+          method: :delete,
+          class: "text-xs font-semibold border border-gray-600 hover:border-red-500 hover:text-red-400 text-gray-400 px-3 py-1 rounded-full transition-colors cursor-pointer" %>
+  <% end %>
+<% end %>

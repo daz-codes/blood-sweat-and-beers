@@ -1,0 +1,173 @@
+<% content_for :title, "Workout Library" %>
+
+<div class="max-w-2xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3 min-w-0">
+      <%= render "shared/avatar", user: Current.user, classes: "w-10 h-10 text-sm" %>
+      <div class="min-w-0">
+        <p class="text-white font-black text-lg leading-tight tracking-tight truncate" style="font-family: 'Jost', sans-serif"><%= Current.user.display %></p>
+        <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest">Workout Library</p>
+      </div>
+    </div>
+    <%= link_to new_workout_path, class: "flex items-center gap-1.5 bg-orange-500 hover:bg-orange-400 text-white text-sm font-black px-4 py-2.5 rounded-xl transition-colors uppercase tracking-wide shadow-sm shadow-orange-500/30" do %>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Build
+    <% end %>
+  </div>
+
+  <% if @workouts.empty? %>
+    <div class="text-center py-20">
+      <p class="text-5xl mb-4">📋</p>
+      <h2 class="text-xl font-black mb-2">No workouts yet</h2>
+      <p class="text-gray-500 text-sm mb-6">Build your own or generate one with AI.</p>
+      <div class="flex items-center justify-center gap-3 flex-wrap">
+        <%= link_to "Create Workout", new_workout_path, class: "bg-orange-500 hover:bg-orange-400 text-white font-black px-6 py-3 rounded-xl transition-colors" %>
+        <button type="button" data-action="click->dialog#open"
+                class="border border-gray-600 hover:border-gray-400 text-gray-300 font-bold px-6 py-3 rounded-xl transition-colors cursor-pointer">
+          Generate with AI
+        </button>
+      </div>
+    </div>
+  <% else %>
+    <div class="space-y-3">
+      <% @workouts.each do |workout| %>
+        <div class="bg-gray-900 border border-gray-700/80 rounded-2xl overflow-hidden shadow-sm hover:border-gray-500 hover:shadow-md transition-all duration-200">
+
+          <%# Card body %>
+          <div class="px-4 py-4">
+            <div class="flex items-start gap-4">
+
+              <%# Duration circle %>
+              <div class="flex flex-col items-center justify-center w-12 h-12 rounded-full bg-orange-500 shadow-md shadow-orange-500/30 flex-shrink-0 mt-0.5">
+                <span class="text-white font-black text-sm leading-none"><%= workout.duration_mins %></span>
+                <span class="text-orange-100 text-[8px] font-bold leading-none mt-0.5 uppercase">min</span>
+              </div>
+
+              <%# Name + meta %>
+              <div class="flex-1 min-w-0">
+                <p class="text-gray-300 text-lg leading-tight tracking-tight truncate font-jost uppercase">
+                  <%= workout.name.presence || "Untitled Workout" %>
+                </p>
+                <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                  <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-gray-800/60 text-gray-300">
+                    <%= workout.difficulty.capitalize %>
+                  </span>
+                  <% sections_count = workout.structure.is_a?(Hash) ? Array(workout.structure["sections"]).size : 0 %>
+                  <% if sections_count > 0 %>
+                    <span class="text-xs text-gray-500"><%= pluralize(sections_count, "section") %></span>
+                  <% end %>
+                  <% workout.tags.first(3).each do |tag| %>
+                    <span class="text-xs bg-orange-500/10 border border-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-semibold"><%= tag.name %></span>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <%# Action strip + accordion %>
+          <% lib_sections = workout.structure.is_a?(Hash) ? Array(workout.structure["sections"]) : [] %>
+          <details class="group">
+            <summary class="bg-gray-950 border-t border-gray-800 px-4 py-2.5 list-none cursor-pointer select-none">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <%= link_to "Edit", edit_workout_path(workout),
+                        class: "text-xs font-bold border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-lg transition-colors" %>
+                  <%= button_to "Clone", clone_workout_path(workout), method: :post,
+                        class: "text-xs font-bold border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer" %>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button type="button"
+                          onclick="event.stopPropagation(); document.getElementById('remix_lib_<%= workout.id %>').showModal()"
+                          class="flex items-center gap-1.5 text-xs font-black border border-gray-600 hover:border-orange-500 hover:text-orange-400 text-gray-400 px-3 py-1.5 rounded-xl transition-colors cursor-pointer uppercase tracking-wide">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                      <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                    </svg>
+                    Remix
+                  </button>
+                  <button type="button"
+                          onclick="event.stopPropagation(); document.getElementById('complete_workout_<%= workout.id %>').showModal()"
+                          class="text-xs font-black bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white px-3 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm shadow-orange-500/40 uppercase tracking-wide">
+                    Do this
+                  </button>
+                  <% if lib_sections.any? %>
+                    <span class="text-gray-500 hover:text-gray-300 text-xs font-bold flex items-center gap-1 transition-colors uppercase tracking-wide">
+                      <span class="group-open:hidden">▾ Workout</span>
+                      <span class="hidden group-open:inline">▴ Hide</span>
+                    </span>
+                  <% end %>
+                </div>
+              </div>
+            </summary>
+            <% if lib_sections.any? %>
+              <div class="bg-gray-950 border-t border-gray-800/60 px-3 py-3 space-y-2">
+                <% lib_sections.each do |section| %>
+                  <%= render "shared/workout_section", section: section %>
+                <% end %>
+              </div>
+            <% end %>
+          </details>
+        </div>
+
+        <%= render "shared/complete_workout_dialog", workout: workout %>
+
+        <%# Remix dialog %>
+        <dialog id="remix_lib_<%= workout.id %>"
+                class="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 text-white p-0 shadow-2xl backdrop:bg-black/70"
+                onclick="if(event.target===this) this.close()">
+          <div class="px-6 py-6">
+            <div class="flex items-start justify-between mb-6">
+              <div>
+                <h2 class="text-xl font-black tracking-tight">Remix</h2>
+                <p class="text-gray-400 mt-0.5 text-sm font-medium truncate max-w-xs"><%= workout.name %></p>
+              </div>
+              <button type="button" onclick="this.closest('dialog').close()"
+                      class="flex-shrink-0 ml-2 flex items-center justify-center w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-gray-800 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <%= form_with url: remix_workout_path(workout), method: :post do |f| %>
+              <div class="mb-6" data-controller="duration-slider">
+                <div class="flex items-baseline justify-between mb-3">
+                  <p class="text-sm font-bold text-gray-300 uppercase tracking-wide">Duration</p>
+                  <p class="text-3xl font-black text-white">
+                    <span data-duration-slider-target="display"><%= workout.duration_mins %></span>
+                    <span class="text-base font-normal text-gray-400">min</span>
+                  </p>
+                </div>
+                <%= f.range_field :duration_mins, value: workout.duration_mins, min: 5, max: 180, step: 5,
+                    class: "w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500",
+                    data: { duration_slider_target: "input", action: "input->duration-slider#update" },
+                    required: true %>
+                <div class="flex justify-between text-xs text-gray-600 mt-1.5">
+                  <span>5 min</span><span>3 hrs</span>
+                </div>
+              </div>
+              <div class="mb-8">
+                <p class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-3">Difficulty</p>
+                <div class="grid grid-cols-3 gap-2">
+                  <% [["beginner", "Beginner", "Building base"], ["intermediate", "Intermediate", "Regular training"], ["advanced", "Advanced", "Competition prep"]].each do |value, label, desc| %>
+                    <label class="cursor-pointer">
+                      <%= f.radio_button :difficulty, value, class: "peer sr-only", checked: workout.difficulty == value %>
+                      <div class="border-2 border-gray-700 rounded-xl p-3 peer-checked:border-orange-500 peer-checked:bg-orange-500/10 transition-all text-center">
+                        <p class="font-black text-sm"><%= label %></p>
+                        <p class="text-gray-500 text-xs mt-0.5"><%= desc %></p>
+                      </div>
+                    </label>
+                  <% end %>
+                </div>
+              </div>
+              <%= f.submit "Generate Remix",
+                  class: "w-full bg-orange-500 hover:bg-orange-400 text-white font-black py-4 rounded-xl text-base transition-colors cursor-pointer tracking-wide uppercase",
+                  data: { turbo_submits_with: "Generating…" } %>
+            <% end %>
+          </div>
+        </dialog>
+      <% end %>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,7 @@
+<%# Remove the comment row %>
+<%= turbo_stream.remove dom_id(@comment) %>
+
+<%# Update the comment count in the footer badge %>
+<%= turbo_stream.replace "comment_count_#{@workout_log.id}" do %>
+  <%= @workout_log.reload.comments_count %>
+<% end %>

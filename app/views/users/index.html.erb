@@ -1,0 +1,44 @@
+<% content_for :title, "Find People" %>
+
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-2xl font-bold mb-6">Find People</h1>
+
+  <%= form_with url: users_path, method: :get, data: { turbo_frame: "search_results" } do |f| %>
+    <div class="relative mb-6">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <%= f.text_field :q, value: params[:q],
+            placeholder: "Search by name or username…",
+            autofocus: true,
+            class: "w-full bg-gray-900 border border-gray-700 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors" %>
+    </div>
+  <% end %>
+
+  <%= turbo_frame_tag "search_results" do %>
+    <% if params[:q].present? && @users.empty? %>
+      <p class="text-gray-500 text-sm text-center py-8">No users found for "<%= params[:q] %>".</p>
+    <% elsif @users.any? %>
+      <div class="space-y-2">
+        <% @users.each do |user| %>
+          <div class="flex items-center justify-between border border-gray-700 rounded-xl px-4 py-3 hover:border-gray-600 transition-colors">
+            <div>
+              <%= link_to user_path(user), class: "font-semibold text-white hover:text-orange-400 transition-colors" do %>
+                <%= user.display %>
+              <% end %>
+              <% if user.username.present? %>
+                <p class="text-gray-600 text-xs">@<%= user.username %></p>
+              <% end %>
+            </div>
+            <% follow_state = Current.user.follow_state_for(user) %>
+            <% follow = Current.user.follows_as_follower.find_by(following: user) %>
+            <%= render "shared/follow_button", user: user, follow_state: follow_state, follow: follow %>
+          </div>
+        <% end %>
+      </div>
+    <% elsif params[:q].blank? %>
+      <p class="text-gray-600 text-sm text-center py-8">Type a name or username to search.</p>
+    <% end %>
+  <% end %>
+</div>

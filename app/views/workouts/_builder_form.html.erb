@@ -1,0 +1,207 @@
+<%# Locals: workout (Workout), action_url, submit_label, form_method (optional, default :post) %>
+
+<%= form_with url: action_url, method: local_assigns.fetch(:form_method, :post), data: { controller: "builder" } do |f| %>
+  <input type="hidden" name="source" value="manual">
+
+  <%# Name %>
+  <div class="mb-6">
+    <label class="text-sm font-semibold text-gray-300 uppercase tracking-wide block mb-2">Workout Name</label>
+    <%= f.text_field :name, value: workout.name,
+          placeholder: "e.g. Morning Grind, Death by Burpees…",
+          required: true,
+          class: "w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors" %>
+  </div>
+
+  <%# Tags %>
+  <div class="mb-6">
+    <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Focus</p>
+    <% existing_tags = Tag.top_used_on_workouts(10) %>
+    <% workout_tag_ids = workout.tags.map(&:id) %>
+    <% if existing_tags.any? %>
+      <div class="flex flex-wrap gap-2 mb-3">
+        <% existing_tags.each do |tag| %>
+          <label class="cursor-pointer">
+            <%= check_box_tag "tag_ids[]", tag.id, workout_tag_ids.include?(tag.id),
+                  id: "builder_tag_#{tag.id}", class: "peer sr-only" %>
+            <span class="inline-block border-2 border-gray-700 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-orange-500 peer-checked:bg-orange-500/20 peer-checked:text-orange-400 transition-all select-none">
+              <%= tag.name %>
+            </span>
+          </label>
+        <% end %>
+      </div>
+    <% end %>
+    <%= text_field_tag :new_tag_name, nil,
+        placeholder: "Enter areas to focus on, comma separated…",
+        class: "w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors" %>
+  </div>
+
+  <%# Duration slider %>
+  <div class="mb-6" data-controller="duration-slider">
+    <div class="flex items-baseline justify-between mb-3">
+      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Duration</p>
+      <p class="text-2xl font-bold text-white">
+        <span data-duration-slider-target="display"><%= workout.duration_mins || 60 %></span>
+        <span class="text-base font-normal text-gray-400">min</span>
+      </p>
+    </div>
+    <%= f.range_field :duration_mins, value: workout.duration_mins || 60, min: 5, max: 180, step: 5,
+        class: "w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500",
+        data: { duration_slider_target: "input", action: "input->duration-slider#update" },
+        required: true %>
+    <div class="flex justify-between text-xs text-gray-600 mt-1.5">
+      <span>5 min</span>
+      <span>3 hrs</span>
+    </div>
+  </div>
+
+  <%# Difficulty tiles %>
+  <div class="mb-8">
+    <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Difficulty</p>
+    <div class="grid grid-cols-3 gap-3">
+      <% [["beginner", "Beginner", "Building base fitness"], ["intermediate", "Intermediate", "Regular training"], ["advanced", "Advanced", "Competition prep"]].each do |value, label, desc| %>
+        <label class="relative cursor-pointer">
+          <%= f.radio_button :difficulty, value, class: "peer sr-only", checked: (workout.difficulty || "intermediate") == value %>
+          <div class="border-2 border-gray-700 rounded-xl p-3 peer-checked:border-orange-500 peer-checked:bg-orange-500/10 transition-all text-center">
+            <p class="font-semibold text-sm"><%= label %></p>
+            <p class="text-gray-500 text-xs mt-0.5"><%= desc %></p>
+          </div>
+        </label>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Sections %>
+  <div class="mb-4">
+    <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Sections</p>
+
+    <div data-builder-target="sectionsList" class="space-y-4 mb-4">
+      <%# Pre-render existing sections when editing %>
+      <% existing_sections = workout.structure.is_a?(Hash) ? Array(workout.structure["sections"]) : [] %>
+      <% existing_sections.each_with_index do |section, si| %>
+        <div data-section-id="<%= si %>" class="border border-gray-700 rounded-2xl p-4">
+          <div class="flex items-center gap-2 mb-3">
+            <input name="sections[<%= si %>][name]" type="text"
+              value="<%= section["name"] %>" placeholder="Section name" required
+              class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            <select name="sections[<%= si %>][format]" data-action="change->builder#toggleFormat"
+              class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors">
+              <% [["straight", "Straight"], ["rounds", "Rounds"], ["amrap", "AMRAP"], ["emom", "EMOM"], ["tabata", "Tabata"]].each do |val, label| %>
+                <option value="<%= val %>" <%= "selected" if section["format"] == val %>><%= label %></option>
+              <% end %>
+            </select>
+            <button type="button" data-action="builder#removeSection"
+              class="text-gray-600 hover:text-red-500 transition-colors flex-shrink-0 p-1" aria-label="Remove section">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+              </svg>
+            </button>
+          </div>
+          <% fmt = section["format"] %>
+          <div data-format-field="rounds" class="flex items-center gap-2 mb-3" <%= "style=display:none" unless fmt == "rounds" %>>
+            <input name="sections[<%= si %>][rounds]" type="number" min="1" placeholder="Number of rounds"
+              value="<%= section["rounds"] %>"
+              class="w-40 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            <input name="sections[<%= si %>][rest_secs]" type="number" min="0" placeholder="Rest between rounds (secs)"
+              value="<%= section["rest_secs"] %>"
+              class="w-48 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+          </div>
+          <div data-format-field="amrap" class="mb-3" <%= "style=display:none" unless fmt == "amrap" %>>
+            <input name="sections[<%= si %>][duration_mins]" type="number" min="1" placeholder="Duration (minutes)"
+              value="<%= section["duration_mins"] %>"
+              class="w-44 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+          </div>
+          <div data-format-field="emom" class="mb-3" <%= "style=display:none" unless fmt == "emom" %>>
+            <div class="flex items-center gap-3">
+              <input name="sections[<%= si %>][duration_mins]" type="number" min="1" placeholder="Duration (minutes)"
+                value="<%= section["duration_mins"] %>"
+                class="w-44 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              <p class="text-xs text-gray-500">Every Minute On the Minute — list the exercises done each minute.</p>
+            </div>
+          </div>
+          <div data-format-field="tabata" class="mb-3" <%= "style=display:none" unless fmt == "tabata" %>>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-purple-400 bg-purple-500/10 border border-purple-500/25 px-3 py-1.5 rounded-full">8 rounds · 20s on · 30s rest</span>
+              <p class="text-xs text-gray-500">Add the exercises performed during each work interval.</p>
+            </div>
+          </div>
+          <div data-exercises-list class="space-y-2 mb-3">
+            <% Array(section["exercises"]).each_with_index do |exercise, ei| %>
+              <% ex_id = "#{si}_#{ei}" %>
+              <div data-exercise-id="<%= ex_id %>" class="bg-gray-900/60 border border-gray-800 rounded-xl p-3 space-y-2">
+                <div class="flex items-start gap-2">
+                  <div class="flex-1 space-y-2">
+                    <input name="sections[<%= si %>][exercises][<%= ex_id %>][name]" type="text"
+                      value="<%= exercise["name"] %>" placeholder="Exercise name" required
+                      class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                    <input name="sections[<%= si %>][exercises][<%= ex_id %>][notes]" type="text"
+                      value="<%= exercise["notes"] %>" placeholder="Description or cue (optional)"
+                      class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                    <% metric = exercise["reps"] ? "reps" : exercise["distance_m"] ? "distance" : exercise["duration_s"] ? "duration" : "reps" %>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <select data-action="change->builder#toggleMetric"
+                        class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-orange-500 transition-colors">
+                        <option value="reps"     <%= "selected" if metric == "reps" %>>Reps</option>
+                        <option value="distance" <%= "selected" if metric == "distance" %>>Distance</option>
+                        <option value="duration" <%= "selected" if metric == "duration" %>>Time</option>
+                      </select>
+                      <div data-metric="reps" <%= "style=display:none" if metric != "reps" %>>
+                        <input name="sections[<%= si %>][exercises][<%= ex_id %>][reps]" type="number" min="1"
+                          value="<%= exercise["reps"] %>" placeholder="Reps"
+                          class="w-20 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                      </div>
+                      <div data-metric="distance" <%= "style=display:none" if metric != "distance" %>>
+                        <input name="sections[<%= si %>][exercises][<%= ex_id %>][distance_m]" type="number" min="1"
+                          value="<%= exercise["distance_m"] %>" placeholder="Metres"
+                          class="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                      </div>
+                      <div data-metric="duration" <%= "style=display:none" if metric != "duration" %> class="flex items-center gap-1">
+                        <% ds = exercise["duration_s"].to_i; dm = ds / 60; dr = ds % 60 %>
+                        <input name="sections[<%= si %>][exercises][<%= ex_id %>][duration_m]" type="number" min="0"
+                          value="<%= dm > 0 ? dm : nil %>" placeholder="Mins"
+                          class="w-16 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                        <span class="text-xs text-gray-600">m</span>
+                        <input name="sections[<%= si %>][exercises][<%= ex_id %>][duration_s_part]" type="number" min="0" max="59"
+                          value="<%= dr > 0 ? dr : nil %>" placeholder="Secs"
+                          class="w-16 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                        <span class="text-xs text-gray-600">s</span>
+                      </div>
+                      <input name="sections[<%= si %>][exercises][<%= ex_id %>][weight_kg]" type="number" min="0" step="0.5"
+                        value="<%= exercise["weight_kg"] %>" placeholder="kg (opt.)"
+                        class="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                    </div>
+                  </div>
+                  <button type="button" data-action="builder#removeExercise"
+                    class="text-gray-600 hover:text-red-500 transition-colors flex-shrink-0 mt-1 p-0.5" aria-label="Remove exercise">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            <% end %>
+          </div>
+          <button type="button" data-action="builder#addExercise"
+            class="text-sm text-orange-500 hover:text-orange-400 transition-colors font-medium">
+            + Add Exercise
+          </button>
+        </div>
+      <% end %>
+    </div>
+
+    <button type="button" data-action="builder#addSection"
+      class="w-full border-2 border-dashed border-gray-700 hover:border-orange-500 text-gray-500 hover:text-orange-500 rounded-2xl py-3 text-sm font-medium transition-colors">
+      + Add Section
+    </button>
+  </div>
+
+  <div class="flex gap-3 mt-6">
+    <%= f.submit submit_label,
+          class: "flex-1 bg-orange-500 hover:bg-orange-400 text-white font-bold py-3.5 rounded-xl text-base transition-colors cursor-pointer" %>
+    <% if local_assigns[:cancel_url] %>
+      <%= link_to "Cancel", cancel_url,
+            data: { turbo_frame: "workout_preview" },
+            class: "px-6 py-3.5 border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white font-bold rounded-xl text-base transition-colors text-center" %>
+    <% end %>
+  </div>
+<% end %>

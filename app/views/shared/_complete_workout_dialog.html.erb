@@ -1,0 +1,91 @@
+<%# Locals: workout %>
+<dialog id="complete_workout_<%= workout.id %>"
+        class="w-full max-w-md rounded-2xl border border-gray-700 bg-gray-900 text-white p-0 shadow-2xl backdrop:bg-black/70"
+        onclick="if(event.target===this) this.close()">
+  <div class="px-6 py-6">
+
+    <div class="flex items-start justify-between mb-6">
+      <div class="min-w-0 pr-3">
+        <p class="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">How did it go?</p>
+        <h2 class="text-3xl tracking-tight leading-tight text-gray-300 font-jost uppercase"><%= workout.name %></h2>
+      </div>
+      <button type="button" onclick="this.closest('dialog').close()"
+              class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-gray-800 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <%= form_with url: workout_logs_path, method: :post, multipart: true, data: { turbo_frame: "_top" } do |f| %>
+      <%= f.hidden_field :workout_id, value: workout.id %>
+
+      <%# Sweat rating %>
+      <div class="mb-6" data-controller="sweat-rating">
+        <p class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-3">Sweat Rating</p>
+        <div class="flex gap-3">
+          <% (1..5).each do |n| %>
+            <label class="cursor-pointer" data-value="<%= n %>"
+                   data-action="mouseenter->sweat-rating#highlight mouseleave->sweat-rating#reset">
+              <%= f.radio_button "workout_log[sweat_rating]", n, class: "sr-only", required: true,
+                  data: { action: "change->sweat-rating#reset" } %>
+              <span class="text-3xl select-none opacity-25 transition-opacity" data-sweat-rating-target="drop">💧</span>
+            </label>
+          <% end %>
+        </div>
+        <p class="text-gray-600 text-xs mt-2">1 = light sweat &nbsp;·&nbsp; 5 = absolutely drenched</p>
+      </div>
+
+      <%# Notes %>
+      <div class="mb-4">
+        <label class="block text-sm font-bold text-gray-300 uppercase tracking-wide mb-2">Notes</label>
+        <%= f.text_area "workout_log[notes]", rows: 3,
+            placeholder: "How did it feel? Any modifications?",
+            class: "w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-orange-500 resize-none" %>
+      </div>
+
+      <%# Location %>
+      <div class="mb-4" data-controller="geolocation">
+        <label class="block text-sm font-bold text-gray-300 uppercase tracking-wide mb-2">
+          Location <span class="text-gray-600 normal-case font-normal">(optional)</span>
+        </label>
+        <div class="flex gap-2">
+          <%= f.text_field "workout_log[location]",
+              placeholder: "e.g. CrossFit HQ, Gym name, City",
+              data: { geolocation_target: "input" },
+              class: "flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-orange-500" %>
+          <button type="button"
+                  data-geolocation-target="button"
+                  data-action="click->geolocation#detect"
+                  title="Use my location"
+                  class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-xl border border-gray-700 hover:border-orange-500 text-gray-400 hover:text-orange-400 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <p data-geolocation-target="status" class="text-gray-600 text-xs mt-1.5 min-h-[1rem]"></p>
+      </div>
+
+      <%# Photo %>
+      <div class="mb-5">
+        <label class="block text-sm font-bold text-gray-300 uppercase tracking-wide mb-2">
+          Photo <span class="text-gray-600 normal-case font-normal">(optional)</span>
+        </label>
+        <input type="file" name="workout_log[photo]" accept="image/*"
+               class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-orange-500 file:text-white hover:file:bg-orange-400 file:cursor-pointer cursor-pointer">
+      </div>
+
+      <%# Visibility %>
+      <div class="flex items-center gap-3 mb-6">
+        <%= f.check_box "workout_log[private]", { class: "w-4 h-4 accent-orange-500 cursor-pointer" }, "1", "0" %>
+        <label class="text-sm text-gray-300 cursor-pointer">Keep this workout private</label>
+      </div>
+
+      <%= f.submit "Post to Feed",
+          class: "w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-black py-4 rounded-xl text-base transition-colors cursor-pointer uppercase tracking-wide shadow-sm shadow-orange-500/30",
+          data: { turbo_submits_with: "Posting…" } %>
+    <% end %>
+
+  </div>
+</dialog>
