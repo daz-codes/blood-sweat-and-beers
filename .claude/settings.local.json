@@ -25,7 +25,8 @@
       "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails db:reset:*)",
       "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails:*)",
       "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails active_storage:install:*)",
-      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" ruby:*)"
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" ruby:*)",
+      "Bash(chmod +x:*)"
     ]
   }
 }
