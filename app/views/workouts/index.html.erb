@@ -61,10 +61,6 @@
                   <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300">
                     <%= workout.difficulty.capitalize %>
                   </span>
-                  <% sections_count = workout.structure.is_a?(Hash) ? Array(workout.structure["sections"]).size : 0 %>
-                  <% if sections_count > 0 %>
-                    <span class="text-xs text-gray-500"><%= pluralize(sections_count, "section") %></span>
-                  <% end %>
                   <% workout.tags.first(3).each do |tag| %>
                     <%= link_to tag.name, library_path(tag_id: tag.id), class: "text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 hover:text-white hover:border-lime-400 px-2 py-0.5 rounded-full font-semibold transition-colors" %>
                   <% end %>
