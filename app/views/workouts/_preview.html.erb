@@ -55,6 +55,7 @@
     <% end %>
     <% unless own_active %>
       <%= button_to "Save to Library", save_workout_path(workout), method: :post,
+          data: { turbo_frame: "_top" },
           class: "px-4 py-3 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white font-bold rounded-xl text-sm transition-colors cursor-pointer" %>
     <% end %>
     <% if own_preview %>

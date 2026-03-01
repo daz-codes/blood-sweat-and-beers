@@ -122,6 +122,13 @@ class WorkoutsController < ApplicationController
     redirect_to workout_path(@workout), notice: "Saved as template"
   end
 
+  # DELETE /workouts/:id
+  def destroy
+    @workout = Current.user.workouts.find(params[:id])
+    @workout.destroy!
+    redirect_to library_path, notice: "\"#{@workout.name}\" deleted."
+  end
+
   private
 
   def set_owned_workout
@@ -227,6 +234,7 @@ class WorkoutsController < ApplicationController
     ex = { "name" => e[:name].to_s.strip }
     ex["notes"]      = e[:notes].to_s.strip if e[:notes].present?
     ex["reps"]       = e[:reps].to_i        if e[:reps].present?
+    ex["calories"]   = e[:calories].to_i    if e[:calories].present?
     ex["distance_m"] = e[:distance_m].to_i  if e[:distance_m].present?
     if e[:duration_m].present? || e[:duration_s_part].present?
       total_s = e[:duration_m].to_i * 60 + e[:duration_s_part].to_i

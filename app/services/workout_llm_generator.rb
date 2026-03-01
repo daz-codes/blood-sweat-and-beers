@@ -61,6 +61,7 @@ class WorkoutLLMGenerator
                       properties: {
                         name:        { type: "string" },
                         reps:        { type: "integer" },
+                        calories:    { type: "integer", description: "Calories target (e.g. assault bike, rower, ski erg)" },
                         distance_m:  { type: "integer" },
                         duration_s:  { type: "integer" },
                         weight_kg:   { type: "number" },

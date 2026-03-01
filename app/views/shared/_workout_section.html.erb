@@ -66,11 +66,13 @@
   <% Array(section["exercises"]).each do |exercise| %>
     <div class="px-3 py-2.5 border-t border-gray-800/50">
       <p class="text-white text-sm font-semibold"><%= exercise["name"] %></p>
-      <% has_metric = exercise["distance_m"] || exercise["reps"] || exercise["duration_s"] || exercise["weight_kg"] %>
+      <% has_metric = exercise["distance_m"] || exercise["calories"] || exercise["reps"] || exercise["duration_s"] || exercise["weight_kg"] %>
       <% if has_metric || exercise["notes"].present? %>
         <div class="flex items-center gap-1.5 mt-1 flex-wrap">
           <% if exercise["distance_m"] %>
             <span class="text-xs font-bold text-orange-400"><%= exercise["distance_m"] %>m</span>
+          <% elsif exercise["calories"] %>
+            <span class="text-xs font-bold text-orange-400"><%= exercise["calories"] %> cal</span>
           <% elsif exercise["reps"] %>
             <span class="text-xs font-bold text-orange-400"><%= exercise["reps"] %> reps</span>
           <% elsif exercise["duration_s"] %>

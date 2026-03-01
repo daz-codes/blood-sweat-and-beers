@@ -19,7 +19,8 @@ export default class extends Controller {
     const section   = event.currentTarget.closest("[data-section-id]")
     const sectionId = section.dataset.sectionId
     const exId      = Date.now() + Math.floor(Math.random() * 1000)
-    section.querySelector("[data-exercises-list]").insertAdjacentHTML("beforeend", this.exerciseTemplate(sectionId, exId))
+    const format    = section.querySelector("select[name$='[format]']").value
+    section.querySelector("[data-exercises-list]").insertAdjacentHTML("beforeend", this.exerciseTemplate(sectionId, exId, format))
   }
 
   removeExercise(event) {
@@ -139,7 +140,17 @@ export default class extends Controller {
       </div>`
   }
 
-  exerciseTemplate(sectionId, exId) {
+  exerciseTemplate(sectionId, exId, format = "straight") {
+    const isLadderMtn   = ["ladder", "mountain"].includes(format)
+    const isTimedFormat = ["tabata", "emom"].includes(format)
+
+    const repsOption = isLadderMtn   ? "" : `<option value="reps">Reps</option>`
+    const timeOption = isTimedFormat ? "" : `<option value="duration">Time</option>`
+
+    // First option drives which metric div is visible by default
+    const repsVisible = !isLadderMtn
+    const calVisible  = isLadderMtn
+
     return `
       <div data-exercise-id="${exId}" class="bg-gray-900/60 border border-gray-800 rounded-xl p-3 space-y-2">
         <div class="flex items-start gap-2">
@@ -151,13 +162,18 @@ export default class extends Controller {
             <div class="flex items-center gap-2 flex-wrap">
               <select data-action="change->builder#toggleMetric"
                 class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-orange-500 transition-colors">
-                <option value="reps">Reps</option>
+                ${repsOption}
+                <option value="calories">Calories</option>
                 <option value="distance">Distance</option>
-                <option value="duration">Time</option>
+                ${timeOption}
               </select>
-              <div data-metric="reps">
+              <div data-metric="reps" ${repsVisible ? "" : 'style="display:none"'}>
                 <input name="sections[${sectionId}][exercises][${exId}][reps]" type="number" min="1" placeholder="Reps"
                   class="w-20 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              </div>
+              <div data-metric="calories" ${calVisible ? "" : 'style="display:none"'}>
+                <input name="sections[${sectionId}][exercises][${exId}][calories]" type="number" min="1" placeholder="Calories"
+                  class="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
               </div>
               <div data-metric="distance" style="display:none">
                 <input name="sections[${sectionId}][exercises][${exId}][distance_m]" type="number" min="1" placeholder="Metres"

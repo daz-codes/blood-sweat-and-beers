@@ -76,6 +76,14 @@
                         class: "text-xs font-bold border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-lg transition-colors" %>
                   <%= button_to "Clone", clone_workout_path(workout), method: :post,
                         class: "text-xs font-bold border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer" %>
+                  <%= button_to workout_path(workout), method: :delete,
+                        data: { turbo_confirm: "Delete \"#{workout.name}\"? This can't be undone." },
+                        class: "text-xs font-bold border border-gray-700 hover:border-red-500/60 text-gray-600 hover:text-red-400 px-3 py-1.5 rounded-lg transition-colors cursor-pointer" do %>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                      <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                    </svg>
+                  <% end %>
                 </div>
                 <div class="flex items-center gap-2">
                   <button type="button"
