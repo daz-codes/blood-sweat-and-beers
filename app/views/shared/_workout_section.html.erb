@@ -1,6 +1,32 @@
 <%# Locals: section (Hash) %>
-<% sec_mins = section["duration_mins"].to_i > 0 ? section["duration_mins"].to_i : (section["format"] == "tabata" ? 7 : nil) %>
-<% format_desc = case section["format"]
+<% sec_format = section["format"].to_s %>
+<% sec_mins = section["duration_mins"].to_i > 0 ? section["duration_mins"].to_i : (sec_format == "tabata" ? 7 : nil) %>
+
+<%# Build sequence string for ladder/mountain sections %>
+<% ladder_seq_str = nil
+   if %w[ladder mountain].include?(sec_format)
+     step = [section["step"].to_f, 1.0].max
+     varies_lbl = { "reps" => "reps", "calories" => "cal", "kg" => "kg", "distance_m" => "m" }.fetch(section["varies"].to_s, section["varies"].to_s)
+     if sec_format == "ladder"
+       sv = section["start"].to_f; ev = section["end"].to_f
+       vals = []
+       if sv <= ev
+         v = sv; while v <= ev + 0.001; vals << v; v += step; end
+       else
+         v = sv; while v >= ev - 0.001; vals << v; v -= step; end
+       end
+     else
+       sv = section["start"].to_f; pk = section["peak"].to_f; ev = section["end"].to_f
+       up = []; v = sv; while v <= pk + 0.001; up << v; v += step; end
+       dn = []; v = pk - step; while v >= ev - 0.001; dn << v; v -= step; end
+       vals = up + dn
+     end
+     vals = vals.map { |v| v == v.to_i ? v.to_i : v }
+     seq = vals.size <= 10 ? vals.join(" · ") : "#{vals.first(3).join(" · ")} · … · #{vals.last}"
+     ladder_seq_str = "#{seq} #{varies_lbl}".strip
+   end %>
+
+<% format_desc = case sec_format
    when "rounds"
      parts = []
      parts << "#{section["rounds"]} rounds" if section["rounds"].to_i > 0
@@ -12,6 +38,10 @@
      section["duration_mins"] ? "Every Minute On the Minute · #{section["duration_mins"]} min" : "Every Minute On the Minute"
    when "tabata"
      "8 rounds · 20s work · 30s rest"
+   when "ladder", "mountain"
+     parts = [ ladder_seq_str ]
+     parts << "#{section["rest_between_rungs"]}s rest between rungs" if section["rest_between_rungs"].to_i > 0
+     parts.compact.join(" · ").presence
    end %>
 
 <div class="bg-gray-950/60 rounded-xl overflow-hidden border border-gray-700/50">

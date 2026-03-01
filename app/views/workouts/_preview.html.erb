@@ -40,21 +40,27 @@
   </div>
 
   <%# Actions %>
+  <% own_preview = Current.user == workout.user && workout.status == "preview" %>
+  <% own_active  = Current.user == workout.user && workout.status != "preview" %>
   <div class="bg-gray-950 border-t border-gray-800 px-5 py-4 flex gap-3 flex-wrap">
     <button type="button"
             onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
             class="flex-1 text-center bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-black py-3 rounded-xl text-sm transition-colors uppercase tracking-wide shadow-sm shadow-orange-500/30 cursor-pointer">
       Do this
     </button>
-    <% if Current.user == workout.user %>
+    <% if own_active %>
       <%= link_to "Edit", edit_workout_path(workout),
           data: { turbo_frame: "workout_preview" },
           class: "px-4 py-3 border border-gray-700 hover:border-orange-500 hover:text-orange-400 text-gray-300 font-bold rounded-xl text-sm transition-colors" %>
     <% end %>
-    <%= button_to "Save to Library", save_workout_path(workout), method: :post,
-        class: "px-4 py-3 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white font-bold rounded-xl text-sm transition-colors cursor-pointer" %>
-    <%= link_to "Regenerate", new_workout_path,
-        class: "px-4 py-3 text-gray-500 hover:text-gray-300 font-semibold text-sm transition-colors" %>
+    <% unless own_active %>
+      <%= button_to "Save to Library", save_workout_path(workout), method: :post,
+          class: "px-4 py-3 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white font-bold rounded-xl text-sm transition-colors cursor-pointer" %>
+    <% end %>
+    <% if own_preview %>
+      <%= link_to "Regenerate", new_workout_path,
+          class: "px-4 py-3 text-gray-500 hover:text-gray-300 font-semibold text-sm transition-colors" %>
+    <% end %>
   </div>
 
 </div>

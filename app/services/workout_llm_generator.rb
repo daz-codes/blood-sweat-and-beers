@@ -41,12 +41,18 @@ class WorkoutLLMGenerator
                 type: "object",
                 required: %w[name format],
                 properties: {
-                  name:          { type: "string" },
-                  format:        { type: "string", enum: %w[straight amrap rounds emom tabata] },
-                  duration_mins: { type: "integer" },
-                  rounds:        { type: "integer" },
-                  rest_secs:     { type: "integer" },
-                  notes:         { type: "string" },
+                  name:               { type: "string" },
+                  format:             { type: "string", enum: %w[straight amrap rounds emom tabata ladder mountain] },
+                  duration_mins:      { type: "integer" },
+                  rounds:             { type: "integer" },
+                  rest_secs:          { type: "integer" },
+                  notes:              { type: "string" },
+                  varies:             { type: "string", enum: %w[reps calories kg distance_m], description: "What changes each rung (ladder/mountain sections only)" },
+                  start:              { type: "number", description: "Starting value for ladder/mountain" },
+                  end:                { type: "number", description: "Ending value for ladder/mountain" },
+                  peak:               { type: "number", description: "Peak value for mountain sections" },
+                  step:               { type: "number", description: "Increment between rungs, defaults to 1" },
+                  rest_between_rungs: { type: "integer", description: "Rest in seconds between each rung (optional)" },
                   exercises: {
                     type: "array",
                     items: {
@@ -134,6 +140,9 @@ class WorkoutLLMGenerator
       - Be specific with reps, distances, and weights
       - workout_type should always be "custom"
       - Give it a punchy, memorable name — something a gym community would actually call it, not a generic description
+      - You may use ladder or mountain sections for variety:
+        * ladder: a sequence of values (reps, calories, kg) ascending or descending. E.g. start:10 end:1 step:1 varies:"reps" = 10,9,8...1 reps each rung. Or start:50 end:10 step:10 varies:"calories" = 50,40,30,20,10 cal.
+        * mountain: ascend to a peak then descend. E.g. start:1 peak:5 end:1 step:1 varies:"reps" = 1,2,3,4,5,4,3,2,1 reps. Exercises listed are performed every rung.
     PROMPT
   end
 
@@ -160,6 +169,9 @@ class WorkoutLLMGenerator
       - Be specific with reps, distances, and weights
       - workout_type should always be "custom"
       - Give it a punchy, memorable name — something a gym community would actually call it
+      - You may use ladder or mountain sections for variety:
+        * ladder: ascending or descending sequence. E.g. start:10 end:1 step:1 varies:"reps" = 10,9,8...1 reps each rung.
+        * mountain: ascend to peak then descend. E.g. start:1 peak:5 end:1 step:1 varies:"reps" = 1,2,3,4,5,4,3,2,1.
     PROMPT
   end
 
@@ -204,7 +216,7 @@ class WorkoutLLMGenerator
       workout_type:  Workout::TYPES.include?(data["workout_type"]) ? data["workout_type"] : "custom",
       duration_mins: data["duration_mins"].to_i.positive? ? data["duration_mins"] : @duration_mins,
       difficulty:    Workout::DIFFICULTIES.include?(data["difficulty"]) ? data["difficulty"] : @difficulty,
-      status:        "active",
+      status:        "preview",
       structure:     data["structure"]
     )
 

@@ -3,7 +3,9 @@
 <div class="max-w-2xl mx-auto">
 
   <div class="mb-6 flex items-center justify-between">
-    <%= link_to "&larr; Feed".html_safe, root_path, class: "text-gray-500 hover:text-gray-300 text-sm" %>
+    <% back_path = (@workout.status == "preview" && @workout.user == Current.user) ? new_workout_path : root_path %>
+    <% back_label = (@workout.status == "preview" && @workout.user == Current.user) ? "&larr; Generate".html_safe : "&larr; Feed".html_safe %>
+    <%= link_to back_label, back_path, class: "text-gray-500 hover:text-gray-300 text-sm" %>
     <%= render "workouts/like_button",
                workout: @workout,
                liked: @liked,

@@ -5,6 +5,7 @@ class WorkoutsController < ApplicationController
   # GET /library
   def index
     @workouts = Current.user.workouts
+                       .where.not(status: "preview")
                        .includes(:tags)
                        .order(created_at: :desc)
   end
@@ -76,6 +77,14 @@ class WorkoutsController < ApplicationController
   def save
     source = Workout.find(params[:id])
 
+    if source.user == Current.user
+      # User's own generated preview — activate it in place
+      source.update!(status: "active") if source.status == "preview"
+      redirect_to library_path, notice: "\"#{source.name}\" saved to your library."
+      return
+    end
+
+    # Another user's workout — copy it if not already saved
     if Current.user.workouts.exists?(source_workout: source)
       redirect_to library_path, notice: "\"#{source.name}\" is already in your library."
       return
@@ -190,6 +199,20 @@ class WorkoutsController < ApplicationController
     section["duration_mins"] = s[:duration_mins].to_i if s[:duration_mins].present?
     section["rest_secs"]     = s[:rest_secs].to_i     if s[:rest_secs].present?
     section["notes"]         = s[:notes].to_s.strip   if s[:notes].present?
+
+    if %w[ladder mountain].include?(section["format"])
+      section["varies"] = s[:varies].to_s if s[:varies].present?
+      %w[start end step].each do |key|
+        next unless s[key.to_sym].present?
+        val = s[key.to_sym].to_f
+        section[key] = val == val.to_i ? val.to_i : val
+      end
+      if section["format"] == "mountain" && s[:peak].present?
+        val = s[:peak].to_f
+        section["peak"] = val == val.to_i ? val.to_i : val
+      end
+      section["rest_between_rungs"] = s[:rest_between_rungs].to_i if s[:rest_between_rungs].present?
+    end
 
     if s[:exercises].present?
       section["exercises"] = s[:exercises].sort_by { |k, _| k.to_i }

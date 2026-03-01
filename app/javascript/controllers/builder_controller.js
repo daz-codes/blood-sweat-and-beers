@@ -55,6 +55,8 @@ export default class extends Controller {
             <option value="amrap">AMRAP</option>
             <option value="emom">EMOM</option>
             <option value="tabata">Tabata</option>
+            <option value="ladder">Ladder</option>
+            <option value="mountain">Mountain</option>
           </select>
           <button type="button" data-action="builder#removeSection"
             class="text-gray-600 hover:text-red-500 transition-colors flex-shrink-0 p-1" aria-label="Remove section">
@@ -86,6 +88,48 @@ export default class extends Controller {
             <span class="text-xs font-bold text-purple-400 bg-purple-500/10 border border-purple-500/25 px-3 py-1.5 rounded-full">8 rounds · 20s on · 30s rest</span>
             <p class="text-xs text-gray-500">Add the exercises performed during each work interval.</p>
           </div>
+        </div>
+        <div data-format-field="ladder" style="display:none" class="mb-3 space-y-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <select name="sections[${id}][varies]"
+              class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-orange-500 transition-colors">
+              <option value="reps">Reps</option>
+              <option value="calories">Calories</option>
+              <option value="kg">Weight (kg)</option>
+              <option value="distance_m">Distance (m)</option>
+            </select>
+            <input name="sections[${id}][start]" type="number" min="1" placeholder="Start (e.g. 10)"
+              class="w-32 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            <input name="sections[${id}][end]" type="number" min="1" placeholder="End (e.g. 1)"
+              class="w-32 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            <input name="sections[${id}][step]" type="number" min="1" placeholder="Step" value="1"
+              class="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            <input name="sections[${id}][rest_between_rungs]" type="number" min="0" placeholder="Rest (secs, opt.)"
+              class="w-36 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+          </div>
+          <p class="text-xs text-gray-600">Add the exercises done each rung — reps/load are set by the sequence above.</p>
+        </div>
+        <div data-format-field="mountain" style="display:none" class="mb-3 space-y-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <select name="sections[${id}][varies]"
+              class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-orange-500 transition-colors">
+              <option value="reps">Reps</option>
+              <option value="calories">Calories</option>
+              <option value="kg">Weight (kg)</option>
+              <option value="distance_m">Distance (m)</option>
+            </select>
+            <input name="sections[${id}][start]" type="number" min="1" placeholder="Start (e.g. 1)"
+              class="w-32 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            <input name="sections[${id}][peak]" type="number" min="1" placeholder="Peak (e.g. 5)"
+              class="w-32 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            <input name="sections[${id}][end]" type="number" min="1" placeholder="End (e.g. 1)"
+              class="w-32 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            <input name="sections[${id}][step]" type="number" min="1" placeholder="Step" value="1"
+              class="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            <input name="sections[${id}][rest_between_rungs]" type="number" min="0" placeholder="Rest (secs, opt.)"
+              class="w-36 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+          </div>
+          <p class="text-xs text-gray-600">Add the exercises done each rung — reps/load are set by the sequence above.</p>
         </div>
         <div data-exercises-list class="space-y-2 mb-3"></div>
         <button type="button" data-action="builder#addExercise"

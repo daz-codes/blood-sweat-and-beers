@@ -1,0 +1,14 @@
+default: &default
+  connects_to:
+    database:
+      writing: primary
+      reading: primary
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default
