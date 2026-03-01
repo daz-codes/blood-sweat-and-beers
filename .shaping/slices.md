@@ -24,6 +24,9 @@ Vertical implementation slices derived from the breadboard. Each slice ends in d
 | V7 | PR Detection + Progress Charts | A5.3, A5.4, A6.4 | "Log heavier lift → PR badge fires; view exercise chart" | ⬜ |
 | V8 | Daily WOD | A9.1–A9.5 | "WOD on home screen; log result; leaderboard updates live" | ⬜ — N100 must use WorkoutLLMGenerator after GR3 |
 | V9 | Calendar History | A6.2 | "Heatmap of all workouts; tap day → see what you did" | ⬜ |
+| V10 | Exercise Guides | — | "Tap an exercise name → modal shows cues + video link; generated once, cached forever" | ⬜ |
+| V11 | Premium Tier | — | "Upgrade to premium → AI uses Sonnet + more context; unlimited generations" | ⬜ |
+| V12 | Training Plans | — | "Request a 2-month Hyrox plan → get a week-by-week schedule of workouts" | ⬜ |
 
 > GR1–GR3 detail: see `generation-slices.md`
 

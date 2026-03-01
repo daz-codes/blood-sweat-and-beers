@@ -22,6 +22,7 @@ Rails.application.routes.draw do
       post  :clone
       post  :remix
       post  :save
+      post  :regenerate
     end
   end
   get "library", to: "workouts#index", as: :library

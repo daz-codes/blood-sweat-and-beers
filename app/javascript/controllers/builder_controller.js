@@ -45,12 +45,12 @@ export default class extends Controller {
 
   sectionTemplate(id) {
     return `
-      <div data-section-id="${id}" class="border border-gray-700 rounded-2xl p-4">
+      <div data-section-id="${id}" class="border border-zinc-600 rounded-2xl p-4">
         <div class="flex items-center gap-2 mb-3">
           <input name="sections[${id}][name]" type="text" placeholder="Section name (e.g. Warm Up, Main Set)" required
-            class="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            class="flex-1 bg-zinc-800 border border-zinc-600 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
           <select name="sections[${id}][format]" data-action="change->builder#toggleFormat"
-            class="bg-gray-900 border border-gray-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500 transition-colors">
+            class="bg-zinc-800 border border-zinc-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-lime-400 transition-colors">
             <option value="straight">Straight</option>
             <option value="rounds">Rounds</option>
             <option value="amrap">AMRAP</option>
@@ -69,18 +69,18 @@ export default class extends Controller {
         </div>
         <div data-format-field="rounds" style="display:none" class="flex items-center gap-2 mb-3">
           <input name="sections[${id}][rounds]" type="number" min="1" placeholder="Number of rounds"
-            class="w-40 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            class="w-40 bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
           <input name="sections[${id}][rest_secs]" type="number" min="0" placeholder="Rest between rounds (secs)"
-            class="w-48 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            class="w-48 bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
         </div>
         <div data-format-field="amrap" style="display:none" class="mb-3">
           <input name="sections[${id}][duration_mins]" type="number" min="1" placeholder="Duration (minutes)"
-            class="w-44 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+            class="w-44 bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
         </div>
         <div data-format-field="emom" style="display:none" class="mb-3">
           <div class="flex items-center gap-3">
             <input name="sections[${id}][duration_mins]" type="number" min="1" placeholder="Duration (minutes)"
-              class="w-44 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-44 bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
             <p class="text-xs text-gray-500">Every Minute On the Minute — list the exercises done each minute.</p>
           </div>
         </div>
@@ -93,48 +93,48 @@ export default class extends Controller {
         <div data-format-field="ladder" style="display:none" class="mb-3 space-y-2">
           <div class="flex items-center gap-2 flex-wrap">
             <select name="sections[${id}][varies]"
-              class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-orange-500 transition-colors">
+              class="bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-lime-400 transition-colors">
               <option value="reps">Reps</option>
               <option value="calories">Calories</option>
               <option value="kg">Weight (kg)</option>
               <option value="distance_m">Distance (m)</option>
             </select>
             <input name="sections[${id}][start]" type="number" min="1" placeholder="Start (e.g. 10)"
-              class="w-32 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-32 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
             <input name="sections[${id}][end]" type="number" min="1" placeholder="End (e.g. 1)"
-              class="w-32 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-32 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
             <input name="sections[${id}][step]" type="number" min="1" placeholder="Step" value="1"
-              class="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-24 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
             <input name="sections[${id}][rest_between_rungs]" type="number" min="0" placeholder="Rest (secs, opt.)"
-              class="w-36 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-36 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
           </div>
           <p class="text-xs text-gray-600">Add the exercises done each rung — reps/load are set by the sequence above.</p>
         </div>
         <div data-format-field="mountain" style="display:none" class="mb-3 space-y-2">
           <div class="flex items-center gap-2 flex-wrap">
             <select name="sections[${id}][varies]"
-              class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-orange-500 transition-colors">
+              class="bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-lime-400 transition-colors">
               <option value="reps">Reps</option>
               <option value="calories">Calories</option>
               <option value="kg">Weight (kg)</option>
               <option value="distance_m">Distance (m)</option>
             </select>
             <input name="sections[${id}][start]" type="number" min="1" placeholder="Start (e.g. 1)"
-              class="w-32 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-32 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
             <input name="sections[${id}][peak]" type="number" min="1" placeholder="Peak (e.g. 5)"
-              class="w-32 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-32 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
             <input name="sections[${id}][end]" type="number" min="1" placeholder="End (e.g. 1)"
-              class="w-32 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-32 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
             <input name="sections[${id}][step]" type="number" min="1" placeholder="Step" value="1"
-              class="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-24 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
             <input name="sections[${id}][rest_between_rungs]" type="number" min="0" placeholder="Rest (secs, opt.)"
-              class="w-36 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-36 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
           </div>
           <p class="text-xs text-gray-600">Add the exercises done each rung — reps/load are set by the sequence above.</p>
         </div>
         <div data-exercises-list class="space-y-2 mb-3"></div>
         <button type="button" data-action="builder#addExercise"
-          class="text-sm text-orange-500 hover:text-orange-400 transition-colors font-medium">
+          class="text-sm text-lime-400 hover:text-lime-400 transition-colors font-medium">
           + Add Exercise
         </button>
       </div>`
@@ -152,16 +152,16 @@ export default class extends Controller {
     const calVisible  = isLadderMtn
 
     return `
-      <div data-exercise-id="${exId}" class="bg-gray-900/60 border border-gray-800 rounded-xl p-3 space-y-2">
+      <div data-exercise-id="${exId}" class="bg-zinc-900/60 border border-zinc-700 rounded-xl p-3 space-y-2">
         <div class="flex items-start gap-2">
           <div class="flex-1 space-y-2">
             <input name="sections[${sectionId}][exercises][${exId}][name]" type="text" placeholder="Exercise name" required
-              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
             <input name="sections[${sectionId}][exercises][${exId}][notes]" type="text" placeholder="Description or cue (optional)"
-              class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+              class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
             <div class="flex items-center gap-2 flex-wrap">
               <select data-action="change->builder#toggleMetric"
-                class="bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-orange-500 transition-colors">
+                class="bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-lime-400 transition-colors">
                 ${repsOption}
                 <option value="calories">Calories</option>
                 <option value="distance">Distance</option>
@@ -169,26 +169,26 @@ export default class extends Controller {
               </select>
               <div data-metric="reps" ${repsVisible ? "" : 'style="display:none"'}>
                 <input name="sections[${sectionId}][exercises][${exId}][reps]" type="number" min="1" placeholder="Reps"
-                  class="w-20 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                  class="w-20 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
               </div>
               <div data-metric="calories" ${calVisible ? "" : 'style="display:none"'}>
                 <input name="sections[${sectionId}][exercises][${exId}][calories]" type="number" min="1" placeholder="Calories"
-                  class="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                  class="w-24 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
               </div>
               <div data-metric="distance" style="display:none">
                 <input name="sections[${sectionId}][exercises][${exId}][distance_m]" type="number" min="1" placeholder="Metres"
-                  class="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                  class="w-24 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
               </div>
               <div data-metric="duration" style="display:none" class="flex items-center gap-1">
                 <input name="sections[${sectionId}][exercises][${exId}][duration_m]" type="number" min="0" placeholder="Mins"
-                  class="w-16 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                  class="w-16 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
                 <span class="text-xs text-gray-600">m</span>
                 <input name="sections[${sectionId}][exercises][${exId}][duration_s_part]" type="number" min="0" max="59" placeholder="Secs"
-                  class="w-16 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                  class="w-16 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
                 <span class="text-xs text-gray-600">s</span>
               </div>
               <input name="sections[${sectionId}][exercises][${exId}][weight_kg]" type="number" min="0" step="0.5" placeholder="kg (opt.)"
-                class="w-24 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors">
+                class="w-24 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors">
             </div>
           </div>
           <button type="button" data-action="builder#removeExercise"

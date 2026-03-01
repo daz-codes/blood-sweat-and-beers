@@ -8,24 +8,24 @@
   </div>
 
   <%# Session card header %>
-  <div class="bg-gray-900 border border-gray-700/80 rounded-2xl overflow-hidden shadow-sm mb-4">
+  <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden shadow-sm mb-4">
 
     <div class="px-5 pt-5 pb-4">
       <%# Workout name + meta %>
       <div class="flex items-start gap-4 mb-4">
         <%# Duration circle %>
-        <div class="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-orange-500 shadow-md shadow-orange-500/30 flex-shrink-0 mt-0.5">
-          <span class="text-white font-black text-lg leading-none"><%= @workout.duration_mins %></span>
-          <span class="text-orange-100 text-[9px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
+        <div class="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-volt shadow-md shadow-volt/20 flex-shrink-0 mt-0.5">
+          <span class="text-zinc-950 font-black text-lg leading-none"><%= @workout.duration_mins %></span>
+          <span class="text-zinc-800 text-[9px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
         </div>
         <div class="flex-1 min-w-0">
           <h1 class="text-2xl font-bold text-white tracking-tight leading-tight" style="font-family: 'Jost', sans-serif"><%= @workout.name.presence || "Workout" %></h1>
           <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-            <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-gray-800/60 text-gray-300">
+            <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300">
               <%= @workout.difficulty.capitalize %>
             </span>
             <% @workout_log.tags.first(4).each do |tag| %>
-              <span class="text-xs bg-orange-500/10 border border-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-semibold"><%= tag.name %></span>
+              <%= link_to tag.name, feed_path(tag_id: tag.id), class: "text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 hover:text-white hover:border-lime-400 px-2 py-0.5 rounded-full font-semibold transition-colors" %>
             <% end %>
           </div>
         </div>
@@ -41,7 +41,7 @@
             <% end %>
           </p>
           <% if @workout_log.visibility == "private" %>
-            <span class="text-xs text-gray-600 border border-gray-700 px-2 py-0.5 rounded-full mt-1 inline-block">Private</span>
+            <span class="text-xs text-gray-600 border border-zinc-600 px-2 py-0.5 rounded-full mt-1 inline-block">Private</span>
           <% end %>
         </div>
 
@@ -59,12 +59,12 @@
 
     <%# Photo %>
     <% if @workout_log.photo.attached? %>
-      <%= image_tag @workout_log.photo, class: "w-full max-h-72 object-cover border-t border-gray-800" %>
+      <%= image_tag @workout_log.photo, class: "w-full max-h-72 object-cover border-t border-zinc-700" %>
     <% end %>
 
     <%# Notes %>
     <% if @workout_log.notes.present? %>
-      <div class="px-5 py-4 border-t border-gray-800">
+      <div class="px-5 py-4 border-t border-zinc-700">
         <p class="text-xs text-gray-500 uppercase tracking-wider mb-1.5">Notes</p>
         <p class="text-gray-200 text-sm whitespace-pre-wrap leading-relaxed"><%= @workout_log.notes %></p>
       </div>
@@ -73,8 +73,8 @@
   </div>
 
   <%# Workout structure %>
-  <div class="bg-gray-900 border border-gray-700/80 rounded-2xl overflow-hidden shadow-sm mb-4">
-    <div class="px-5 py-3 border-b border-gray-800">
+  <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden shadow-sm mb-4">
+    <div class="px-5 py-3 border-b border-zinc-700">
       <p class="text-xs font-black text-gray-500 uppercase tracking-widest">Workout</p>
     </div>
     <% if @workout.structure.is_a?(Hash) %>
@@ -91,8 +91,8 @@
       <% @workout.structure.each do |step| %>
         <% is_run = step["type"] == "run" %>
         <% log_entry = @exercise_logs[step["order"].to_i] %>
-        <div class="flex items-center gap-4 px-5 py-3 border-b border-gray-800 last:border-0 <%= is_run ? 'bg-gray-950/40' : '' %>">
-          <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center <%= is_run ? 'bg-blue-500/15 text-blue-400' : 'bg-orange-500/15 text-orange-400' %> text-xs font-black">
+        <div class="flex items-center gap-4 px-5 py-3 border-b border-zinc-700 last:border-0 <%= is_run ? 'bg-zinc-900/40' : '' %>">
+          <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center <%= is_run ? 'bg-blue-500/15 text-blue-400' : 'bg-yellow-400/15 text-lime-400' %> text-xs font-black">
             <%= is_run ? "▶" : (step["order"].to_i / 2).to_s %>
           </div>
           <div class="flex-1 min-w-0">
@@ -124,7 +124,7 @@
   <%# Actions %>
   <div class="flex gap-3 mt-4">
     <%= link_to "Back to Feed", root_path,
-        class: "flex-1 text-center border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white font-bold py-3 rounded-xl text-sm transition-colors" %>
+        class: "flex-1 text-center border border-zinc-600 hover:border-gray-500 text-gray-300 hover:text-white font-bold py-3 rounded-xl text-sm transition-colors" %>
   </div>
 
 </div>

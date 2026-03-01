@@ -1,25 +1,25 @@
-<div class="mt-6 bg-gray-900 border border-gray-700/80 rounded-2xl overflow-hidden shadow-sm">
+<div class="mt-6 bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden shadow-sm">
 
   <%# Header: name + meta %>
-  <div class="px-5 pt-5 pb-4 border-b border-gray-800">
+  <div class="px-5 pt-5 pb-4 border-b border-zinc-700">
     <% if workout.name.present? %>
       <h2 class="text-2xl text-gray-300 tracking-tight leading-tight mb-3 font-jost uppercase"><%= workout.name %></h2>
     <% end %>
 
     <div class="flex items-center gap-3 flex-wrap">
       <%# Duration circle %>
-      <div class="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-orange-500 shadow-md shadow-orange-500/30 flex-shrink-0">
-        <span class="text-white font-black text-lg leading-none"><%= workout.duration_mins %></span>
-        <span class="text-orange-100 text-[9px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
+      <div class="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-volt shadow-md shadow-volt/20 flex-shrink-0">
+        <span class="text-zinc-950 font-black text-lg leading-none"><%= workout.duration_mins %></span>
+        <span class="text-zinc-800 text-[9px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
       </div>
       <div>
-        <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-gray-800/60 text-gray-300">
+        <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300">
           <%= workout.difficulty.capitalize %>
         </span>
         <% if workout.tags.any? %>
           <div class="flex flex-wrap gap-1.5 mt-2">
             <% workout.tags.each do |tag| %>
-              <span class="text-xs bg-orange-500/10 border border-orange-500/20 text-orange-400 px-2.5 py-0.5 rounded-full font-semibold"><%= tag.name %></span>
+              <%= link_to tag.name, library_path(tag_id: tag.id), class: "text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 hover:text-white hover:border-lime-400 px-2.5 py-0.5 rounded-full font-semibold transition-colors" %>
             <% end %>
           </div>
         <% end %>
@@ -42,25 +42,28 @@
   <%# Actions %>
   <% own_preview = Current.user == workout.user && workout.status == "preview" %>
   <% own_active  = Current.user == workout.user && workout.status != "preview" %>
-  <div class="bg-gray-950 border-t border-gray-800 px-5 py-4 flex gap-3 flex-wrap">
+  <div class="bg-zinc-900 border-t border-zinc-700 px-5 py-4 flex flex-col sm:flex-row gap-3">
     <button type="button"
             onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
-            class="flex-1 text-center bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-black py-3 rounded-xl text-sm transition-colors uppercase tracking-wide shadow-sm shadow-orange-500/30 cursor-pointer">
+            class="sm:flex-1 text-center bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 font-black py-3 rounded-xl text-sm transition-colors uppercase tracking-wide shadow-sm shadow-volt/20 cursor-pointer">
       Do this
     </button>
     <% if own_active %>
       <%= link_to "Edit", edit_workout_path(workout),
           data: { turbo_frame: "workout_preview" },
-          class: "px-4 py-3 border border-gray-700 hover:border-orange-500 hover:text-orange-400 text-gray-300 font-bold rounded-xl text-sm transition-colors" %>
+          class: "text-center py-3 px-4 border border-zinc-600 hover:border-lime-400 hover:text-lime-400 text-gray-300 font-bold rounded-xl text-sm transition-colors" %>
     <% end %>
     <% unless own_active %>
       <%= button_to "Save to Library", save_workout_path(workout), method: :post,
           data: { turbo_frame: "_top" },
-          class: "px-4 py-3 border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white font-bold rounded-xl text-sm transition-colors cursor-pointer" %>
+          form: { class: "contents" },
+          class: "text-center py-3 px-4 border border-zinc-600 hover:border-gray-500 text-gray-300 hover:text-white font-bold rounded-xl text-sm transition-colors cursor-pointer" %>
     <% end %>
     <% if own_preview %>
-      <%= link_to "Regenerate", new_workout_path,
-          class: "px-4 py-3 text-gray-500 hover:text-gray-300 font-semibold text-sm transition-colors" %>
+      <%= button_to "Regenerate", regenerate_workout_path(workout), method: :post,
+          data: { turbo_submits_with: "Regenerating…" },
+          form: { data: { turbo_frame: "_top" }, class: "contents" },
+          class: "text-center py-3 text-gray-500 hover:text-gray-300 font-semibold text-sm transition-colors cursor-pointer" %>
     <% end %>
   </div>
 

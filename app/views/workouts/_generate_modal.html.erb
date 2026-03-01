@@ -7,7 +7,7 @@
     </div>
     <button type="button"
             data-action="click->dialog#close"
-            class="flex-shrink-0 ml-2 flex items-center justify-center w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-gray-800 transition-colors"
+            class="flex-shrink-0 ml-2 flex items-center justify-center w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-zinc-700 transition-colors focus:outline-none"
             aria-label="Close">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -26,7 +26,7 @@
           <% existing_tags.each do |tag| %>
             <label class="cursor-pointer">
               <%= check_box_tag "tag_ids[]", tag.id, false, id: "modal_tag_#{tag.id}", class: "peer sr-only" %>
-              <span class="inline-block border-2 border-gray-700 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-orange-500 peer-checked:bg-orange-500/20 peer-checked:text-orange-400 transition-all select-none">
+              <span class="inline-block border-2 border-zinc-600 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-lime-400 peer-checked:bg-lime-400/15 peer-checked:text-lime-400 transition-all select-none">
                 <%= tag.name %>
               </span>
             </label>
@@ -35,7 +35,7 @@
       <% end %>
       <%= text_field_tag :new_tag_name, nil,
           placeholder: "Enter areas to focus on, comma separated…",
-          class: "w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500 transition-colors" %>
+          class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
     </div>
 
     <%# Duration %>
@@ -48,7 +48,7 @@
         </p>
       </div>
       <%= f.range_field :duration_mins, value: 60, min: 5, max: 120, step: 5,
-          class: "w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500",
+          class: "w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-lime-400",
           data: { duration_slider_target: "input", action: "input->duration-slider#update" },
           required: true %>
       <div class="flex justify-between text-xs text-gray-600 mt-1.5">
@@ -64,7 +64,7 @@
         <% [["beginner", "Beginner", "Building base fitness"], ["intermediate", "Intermediate", "Regular training"], ["advanced", "Advanced", "Competition prep"]].each do |value, label, desc| %>
           <label class="relative cursor-pointer">
             <%= f.radio_button :difficulty, value, class: "peer sr-only", checked: value == "intermediate" %>
-            <div class="border-2 border-gray-700 rounded-xl p-3 peer-checked:border-orange-500 peer-checked:bg-orange-500/10 transition-all text-center">
+            <div class="border-2 border-zinc-600 rounded-xl p-3 peer-checked:border-lime-400 peer-checked:bg-lime-400/10 transition-all text-center">
               <p class="font-semibold text-sm"><%= label %></p>
               <p class="text-gray-500 text-xs mt-0.5"><%= desc %></p>
             </div>
@@ -74,7 +74,7 @@
     </div>
 
     <%= f.submit "Generate Workout",
-        class: "w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-3.5 rounded-xl text-lg transition-colors cursor-pointer",
+        class: "w-full bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 font-bold py-3.5 rounded-xl text-lg transition-colors cursor-pointer",
         data: { turbo_submits_with: "Generating…" } %>
 
   <% end %>

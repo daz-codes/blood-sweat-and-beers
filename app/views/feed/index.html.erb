@@ -3,6 +3,14 @@
 
   <div class="max-w-2xl mx-auto">
 
+    <% if @tag %>
+      <div class="flex items-center gap-2 mb-4">
+        <span class="text-sm text-gray-400">Tagged:</span>
+        <span class="text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 px-2.5 py-1 rounded-full font-semibold"><%= @tag.name %></span>
+        <%= link_to "✕ clear", feed_path, class: "text-xs text-gray-500 hover:text-gray-300 transition-colors" %>
+      </div>
+    <% end %>
+
     <% if @workout_logs.empty? %>
       <div class="text-center py-20">
         <p class="text-5xl mb-4">🏋️</p>
@@ -10,7 +18,7 @@
         <p class="text-gray-500 text-sm mb-6">Generate your first workout or find people to follow.</p>
         <div class="flex items-center justify-center gap-3 flex-wrap">
           <button type="button" data-action="click->dialog#open"
-                  class="bg-orange-500 hover:bg-orange-400 text-white font-bold px-6 py-3 rounded-xl transition-colors cursor-pointer">Generate Workout</button>
+                  class="bg-volt hover:bg-volt/80 text-zinc-950 font-bold px-6 py-3 rounded-xl transition-colors cursor-pointer">Generate Workout</button>
           <%= link_to "Find People", users_path, class: "border border-gray-600 hover:border-gray-400 text-gray-300 font-bold px-6 py-3 rounded-xl transition-colors" %>
         </div>
       </div>

@@ -8,6 +8,10 @@ class WorkoutsController < ApplicationController
                        .where.not(status: "preview")
                        .includes(:tags)
                        .order(created_at: :desc)
+    if params[:tag_id].present?
+      @tag = Tag.find_by(id: params[:tag_id])
+      @workouts = @workouts.joins(:tags).where(tags: { id: params[:tag_id] }) if @tag
+    end
   end
 
   # GET /workouts/new  — manual builder
@@ -101,6 +105,28 @@ class WorkoutsController < ApplicationController
     )
     copy.tags = source.tags
     redirect_to library_path, notice: "\"#{copy.name}\" saved to your library."
+  end
+
+  # POST /workouts/:id/regenerate
+  def regenerate
+    old = Current.user.workouts.find(params[:id])
+    unless old.status == "preview"
+      redirect_to workout_path(old) and return
+    end
+
+    fresh = WorkoutLLMGenerator.call(
+      user:          Current.user,
+      tag_ids:       old.tag_ids,
+      duration_mins: old.duration_mins,
+      difficulty:    old.difficulty
+    )
+    old.destroy
+    redirect_to workout_path(fresh)
+  rescue WorkoutLLMGenerator::WorkoutGenerationError => e
+    redirect_to workout_path(old), alert: e.message
+  rescue => e
+    Rails.logger.error "Regenerate failed: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}"
+    redirect_to workout_path(old), alert: "Something went wrong. Please try again."
   end
 
   # GET /workouts/:id/log

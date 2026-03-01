@@ -3,6 +3,7 @@
 @theme {
   --font-jost: 'Jost', sans-serif;
   --font-slab: 'Alfa Slab One', serif;
+  --color-volt: #eafc23;
 }
 
 /* Native dialog/modal */

@@ -13,6 +13,11 @@ class FeedController < ApplicationController
                      .includes(:user, :tags, photo_attachment: :blob, workout: [ :tags, :workout_likes ])
                      .recent
 
+    if params[:tag_id].present?
+      @tag = Tag.find_by(id: params[:tag_id])
+      logs = logs.joins(workout: :tags).where(tags: { id: params[:tag_id] }) if @tag
+    end
+
     results = logs.offset(offset).limit(PAGE_SIZE + 1).to_a
 
     @has_more      = results.size > PAGE_SIZE
