@@ -3,7 +3,7 @@
 <div class="max-w-2xl mx-auto">
   <h1 class="text-2xl font-bold mb-6">Find People</h1>
 
-  <%= form_with url: users_path, method: :get, data: { turbo_frame: "search_results" } do |f| %>
+  <%= form_with url: users_path, method: :get do |f| %>
     <div class="relative mb-6">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
            class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
@@ -16,29 +16,27 @@
     </div>
   <% end %>
 
-  <%= turbo_frame_tag "search_results" do %>
-    <% if params[:q].present? && @users.empty? %>
-      <p class="text-gray-500 text-sm text-center py-8">No users found for "<%= params[:q] %>".</p>
-    <% elsif @users.any? %>
-      <div class="space-y-2">
-        <% @users.each do |user| %>
-          <div class="flex items-center justify-between border border-zinc-600 rounded-xl px-4 py-3 hover:border-gray-600 transition-colors">
-            <div>
-              <%= link_to user_path(user), class: "font-semibold text-white hover:text-lime-400 transition-colors" do %>
-                <%= user.display %>
-              <% end %>
-              <% if user.username.present? %>
-                <p class="text-gray-600 text-xs">@<%= user.username %></p>
-              <% end %>
-            </div>
-            <% follow_state = Current.user.follow_state_for(user) %>
-            <% follow = Current.user.follows_as_follower.find_by(following: user) %>
-            <%= render "shared/follow_button", user: user, follow_state: follow_state, follow: follow %>
+  <% if params[:q].present? && @users.empty? %>
+    <p class="text-gray-500 text-sm text-center py-8">No users found for "<%= params[:q] %>".</p>
+  <% elsif @users.any? %>
+    <div class="space-y-2">
+      <% @users.each do |user| %>
+        <div class="flex items-center justify-between border border-zinc-600 rounded-xl px-4 py-3 hover:border-gray-600 transition-colors">
+          <div>
+            <%= link_to user_path(user), class: "font-semibold text-white hover:text-lime-400 transition-colors" do %>
+              <%= user.display %>
+            <% end %>
+            <% if user.username.present? %>
+              <p class="text-gray-600 text-xs">@<%= user.username %></p>
+            <% end %>
           </div>
-        <% end %>
-      </div>
-    <% elsif params[:q].blank? %>
-      <p class="text-gray-600 text-sm text-center py-8">Type a name or username to search.</p>
-    <% end %>
+          <% follow_state = Current.user.follow_state_for(user) %>
+          <% follow = Current.user.follows_as_follower.find_by(following: user) %>
+          <%= render "shared/follow_button", user: user, follow_state: follow_state, follow: follow %>
+        </div>
+      <% end %>
+    </div>
+  <% elsif params[:q].blank? %>
+    <p class="text-gray-600 text-sm text-center py-8">Type a name or username to search.</p>
   <% end %>
 </div>
