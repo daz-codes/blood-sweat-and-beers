@@ -5,7 +5,7 @@ class UsersController < ApplicationController
   def index
     if params[:q].present?
       q = "%#{params[:q].gsub('%', '').gsub('_', '\\_')}%"
-      @users = User.where("username ILIKE :q OR display_name ILIKE :q", q: q)
+      @users = User.where("username ILIKE :q OR display_name ILIKE :q OR email ILIKE :q", q: q)
                    .where.not(id: Current.user.id)
                    .limit(20)
     else
