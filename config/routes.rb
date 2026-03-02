@@ -33,7 +33,7 @@ Rails.application.routes.draw do
   end
 
   get "feed", to: "feed#index", as: :feed
-  resource :profile, only: [ :edit, :update ]
+  resource :profile, only: [ :show, :edit, :update ]
 
   resources :users, only: [ :index, :show ]
   resources :follows, only: [ :create, :destroy, :index ] do
