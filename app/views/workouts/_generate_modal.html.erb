@@ -21,7 +21,13 @@
     <div class="mb-6">
       <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Main Focus</p>
       <p class="text-xs text-gray-500 mb-3">The sport or event driving this session.</p>
-      <% main_tags = Tag.main_focus.order(:name) %>
+      <% main_tags = Tag.main_focus
+                        .joins(:taggings)
+                        .joins("INNER JOIN workouts ON taggings.taggable_type = 'Workout' AND taggings.taggable_id = workouts.id")
+                        .where(workouts: { user_id: Current.user.id })
+                        .group("tags.id")
+                        .order(Arel.sql("COUNT(taggings.id) DESC"))
+                        .limit(5) %>
       <div class="flex flex-wrap gap-2">
         <label class="cursor-pointer">
           <%= radio_button_tag "main_tag_id", "", true, id: "main_tag_none", class: "peer sr-only" %>

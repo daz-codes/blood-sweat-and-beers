@@ -68,14 +68,16 @@
   <% Array(section["exercises"]).each do |exercise| %>
     <div class="px-3 py-2.5 border-t border-zinc-700/50">
       <p class="text-white text-sm font-semibold"><%= exercise["name"] %></p>
-      <% has_metric = exercise["distance_m"] || exercise["calories"] || exercise["reps"] || exercise["duration_s"] || exercise["weight_kg"] %>
+      <% is_tabata = sec_format == "tabata" %>
+      <% has_metric = exercise["distance_m"] || exercise["duration_s"] || exercise["weight_kg"] ||
+                      (!is_tabata && (exercise["calories"] || exercise["reps"])) %>
       <% if has_metric || exercise["notes"].present? %>
         <div class="flex items-center gap-1.5 mt-1 flex-wrap">
           <% if exercise["distance_m"] %>
             <span class="text-xs font-bold text-lime-400"><%= exercise["distance_m"] %>m</span>
-          <% elsif exercise["calories"] %>
+          <% elsif !is_tabata && exercise["calories"] %>
             <span class="text-xs font-bold text-lime-400"><%= exercise["calories"] %> cal</span>
-          <% elsif exercise["reps"] %>
+          <% elsif !is_tabata && exercise["reps"] %>
             <span class="text-xs font-bold text-lime-400"><%= exercise["reps"] %> reps</span>
           <% elsif exercise["duration_s"] %>
             <% ds = exercise["duration_s"].to_i; dm = ds / 60; dr = ds % 60 %>

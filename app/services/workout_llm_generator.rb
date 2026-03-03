@@ -191,7 +191,7 @@ class WorkoutLLMGenerator
       #{sport_rule}
       #{pace_limits}
       - FORMAT SELECTION — choose the best format for each section. Actively vary formats across sections (do not use the same format for every section):
-        * tabata — high-intensity cardio bursts or bodyweight finishers. 20s on / 10s off × 8 rounds (~4 min). Great for: assault bike, ski erg, burpees, KB swings, box jumps, jump rope.
+        * tabata — high-intensity cardio bursts or bodyweight finishers. 20s on / 10s off × 8 rounds (~4 min). Great for: assault bike, ski erg, burpees, KB swings, box jumps, jump rope. Do NOT add reps or calories to tabata exercises — the 20s interval is the constraint. You may specify distance_m or weight_kg where relevant.
         * emom — strength, skill work, or paced conditioning. Each minute: do the prescribed reps, rest for the remainder. E.g. "EMOM 10 min: 5 thrusters + 5 pull-ups". Great for: barbell work, gymnastics, moderate cardio intervals.
         * amrap — clock-driven main set. Complete as many rounds as possible. E.g. "AMRAP 12 min: 10 KB swings + 10 box jumps + 200m run". Great for: mixed modal circuits.
         * for_time — single-effort challenge, record finishing time. E.g. "100 wall balls for time" or "5 rounds: 400m run + 20 push-ups". Great for: benchmark efforts, race-pace work.
