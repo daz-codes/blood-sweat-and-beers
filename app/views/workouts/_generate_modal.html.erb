@@ -17,15 +17,42 @@
 
   <%= form_with url: workouts_path do |f| %>
 
-    <%# Tags %>
+    <%# Main Focus — radio pills, pick one %>
     <div class="mb-6">
-      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Focus</p>
-      <% existing_tags = Tag.top_used_on_workouts(10) %>
-      <% if existing_tags.any? %>
+      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Main Focus</p>
+      <p class="text-xs text-gray-500 mb-3">The sport or event driving this session.</p>
+      <% main_tags = Tag.main_focus.order(:name) %>
+      <div class="flex flex-wrap gap-2">
+        <label class="cursor-pointer">
+          <%= radio_button_tag "main_tag_id", "", true, id: "main_tag_none", class: "peer sr-only" %>
+          <span class="inline-block border-2 border-zinc-600 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-lime-400 peer-checked:bg-lime-400/15 peer-checked:text-lime-400 transition-all select-none">
+            General Fitness
+          </span>
+        </label>
+        <% main_tags.each do |tag| %>
+          <label class="cursor-pointer">
+            <%= radio_button_tag "main_tag_id", tag.id, false, id: "main_tag_#{tag.id}", class: "peer sr-only" %>
+            <span class="inline-block border-2 border-zinc-600 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-lime-400 peer-checked:bg-lime-400 peer-checked:text-zinc-900 peer-checked:font-bold transition-all select-none">
+              <%= tag.name %>
+            </span>
+          </label>
+        <% end %>
+      </div>
+      <%= text_field_tag :new_main_tag_name, nil,
+          placeholder: "Or type a custom main focus…",
+          class: "mt-2 w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
+    </div>
+
+    <%# Minor Focuses — checkboxes, pick many %>
+    <div class="mb-6">
+      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Minor Focuses</p>
+      <p class="text-xs text-gray-500 mb-3">Aspects to include in the session.</p>
+      <% minor_tags = Tag.minor_focus.top_used_on_workouts(10) %>
+      <% if minor_tags.any? %>
         <div class="flex flex-wrap gap-2 mb-3">
-          <% existing_tags.each do |tag| %>
+          <% minor_tags.each do |tag| %>
             <label class="cursor-pointer">
-              <%= check_box_tag "tag_ids[]", tag.id, false, id: "modal_tag_#{tag.id}", class: "peer sr-only" %>
+              <%= check_box_tag "minor_tag_ids[]", tag.id, false, id: "minor_tag_#{tag.id}", class: "peer sr-only" %>
               <span class="inline-block border-2 border-zinc-600 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-lime-400 peer-checked:bg-lime-400/15 peer-checked:text-lime-400 transition-all select-none">
                 <%= tag.name %>
               </span>
@@ -34,7 +61,7 @@
         </div>
       <% end %>
       <%= text_field_tag :new_tag_name, nil,
-          placeholder: "Enter areas to focus on, comma separated…",
+          placeholder: "Add more focuses, comma separated…",
           class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
     </div>
 

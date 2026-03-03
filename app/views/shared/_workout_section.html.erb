@@ -37,7 +37,9 @@
    when "emom"
      section["duration_mins"] ? "Every Minute On the Minute · #{section["duration_mins"]} min" : "Every Minute On the Minute"
    when "tabata"
-     "8 rounds · 20s work · 30s rest"
+     "Tabata · 8 rounds · 20s work · 10s rest"
+   when "for_time"
+     "For Time"
    when "ladder", "mountain"
      parts = [ ladder_seq_str ]
      parts << "#{section["rest_between_rungs"]}s rest between rungs" if section["rest_between_rungs"].to_i > 0

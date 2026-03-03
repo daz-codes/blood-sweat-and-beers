@@ -58,7 +58,7 @@ class WorkoutLLMGenerator
                 required: %w[name format],
                 properties: {
                   name:               { type: "string" },
-                  format:             { type: "string", enum: %w[straight amrap rounds emom tabata ladder mountain] },
+                  format:             { type: "string", enum: %w[straight amrap rounds emom tabata for_time ladder mountain], description: "straight=sets with rest, rounds=multiple rounds of the same set, amrap=as many rounds as possible in a time cap, emom=every minute on the minute, tabata=20s work/10s rest×8, for_time=complete prescribed reps/distance as fast as possible (record finishing time), ladder/mountain=reps/distance change each round" },
                   duration_mins:      { type: "integer" },
                   rounds:             { type: "integer" },
                   rest_secs:          { type: "integer" },
@@ -94,13 +94,16 @@ class WorkoutLLMGenerator
     }
   }.freeze
 
-  def self.call(user:, duration_mins:, difficulty:, tag_ids: [], source_workout: nil)
-    new(user: user, tag_ids: tag_ids, duration_mins: duration_mins, difficulty: difficulty, source_workout: source_workout).call
+  def self.call(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], tag_ids: [], source_workout: nil)
+    new(user: user, main_tag_id: main_tag_id, minor_tag_ids: minor_tag_ids, tag_ids: tag_ids, duration_mins: duration_mins, difficulty: difficulty, source_workout: source_workout).call
   end
 
-  def initialize(user:, duration_mins:, difficulty:, tag_ids: [], source_workout: nil)
+  def initialize(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], tag_ids: [], source_workout: nil)
     @user           = user
-    @tag_ids        = Array(tag_ids).map(&:to_i).reject(&:zero?)
+    @main_tag       = main_tag_id.present? ? Tag.find_by(id: main_tag_id) : nil
+    @minor_tags     = Tag.where(id: Array(minor_tag_ids).map(&:to_i).reject(&:zero?))
+    # tag_ids kept for backwards compat (remix path uses source workout tags directly)
+    @tag_ids        = tag_ids.any? ? Array(tag_ids).map(&:to_i).reject(&:zero?) : ([@main_tag&.id] + @minor_tags.map(&:id)).compact
     @duration_mins  = duration_mins.to_i
     @difficulty     = difficulty
     @source_workout = source_workout
@@ -114,71 +117,165 @@ class WorkoutLLMGenerator
       create_workout(workout_data, tag_names)
     else
       context_workouts = fetch_context
-      tag_names        = Tag.where(id: @tag_ids).order(:name).pluck(:name)
-      prompt           = build_prompt(tag_names, context_workouts)
+      prompt           = build_prompt(context_workouts)
       workout_data     = call_llm(prompt)
-      create_workout(workout_data, tag_names)
+      all_tag_names    = ([@main_tag&.name] + @minor_tags.map(&:name)).compact
+      create_workout(workout_data, all_tag_names)
     end
   end
 
   private
 
   def fetch_context
-    ids = @tag_ids.any? ? Workout.most_liked_with_tags(@tag_ids, limit: 25).pluck(:id) : []
-    if ids.size < 5
+    ids = @tag_ids.any? ? Workout.most_liked_with_tags(@tag_ids, limit: 5).pluck(:id) : []
+    if ids.size < 3
       ids = Workout.left_joins(:workout_likes)
                    .group(:id)
                    .order(Arel.sql("COUNT(DISTINCT workout_likes.id) DESC"))
-                   .limit(25)
+                   .limit(5)
                    .pluck(:id)
     end
     return [] if ids.empty?
     Workout.where(id: ids).includes(:tags)
   end
 
-  def build_prompt(tag_names, context_workouts)
-    tag_str = tag_names.any? ? tag_names.join(", ") : "general fitness"
-    context_json = context_workouts.map do |w|
-      { name: w.name, tags: w.tags.map(&:name), duration_mins: w.duration_mins,
-        difficulty: w.difficulty, structure: w.structure }
-    end.to_json
+  def build_prompt(context_workouts)
+    main_name  = @main_tag&.name || "general fitness"
+    minor_str  = @minor_tags.map(&:name).join(", ")
+
+    task_sentence = if minor_str.present?
+      "Generate a #{@duration_mins}-minute #{@difficulty} #{main_name} workout that focuses on the following aspects: #{minor_str}."
+    else
+      "Generate a #{@duration_mins}-minute #{@difficulty} #{main_name} workout."
+    end
 
     sections = []
 
     sections << <<~BASE
-      You are a personal trainer specialising in functional fitness (Hyrox, Deka, obstacle racing).
+      You are a personal trainer specialising in writing fun and exciting workouts that improve people's overall fitness.
 
-      Generate a #{@duration_mins}-minute #{@difficulty} workout for someone training in: #{tag_str}.
+      #{task_sentence}
     BASE
 
+    sport_context = load_sport_context([@main_tag&.name].compact)
+    sections << sport_context if sport_context.present?
+
+    # Only include community workouts when there's no sport-specific context —
+    # otherwise they add noise that overwhelms the athlete constraints.
+    if sport_context.blank? && context_workouts.any?
+      context_json = context_workouts.map do |w|
+        { name: w.name, tags: w.tags.map(&:name), duration_mins: w.duration_mins,
+          difficulty: w.difficulty, structure: w.structure }
+      end.to_json
+      sections << <<~COMMUNITY
+        Here are #{context_workouts.size} popular community workouts for inspiration:
+        #{context_json}
+      COMMUNITY
+    end
+
+    # Athlete context goes last before rules — closest to generation, hardest to ignore.
     user_context = build_user_context
     sections << user_context if user_context.present?
 
-    sport_context = load_sport_context(tag_names)
-    sections << sport_context if sport_context.present?
-
-    sections << <<~COMMUNITY
-      Here are #{context_workouts.size} popular community workouts for inspiration (use their structure and exercise choices as a guide):
-      #{context_json}
-    COMMUNITY
+    sport_rule  = sport_purity_rule
+    pace_limits = pace_limit_rule
 
     sections << <<~RULES
       Use the create_workout tool. Requirements:
       - Total duration close to #{@duration_mins} minutes
-      - Sections format: warm-up, main set, and optional finisher
+      - Sections: warm-up, main set (can be split into multiple sections), optional finisher
+      - Warm-up: easy cardio + a few bodyweight movements to loosen up — keep it brief
+      - Finisher: something punchy and challenging to end on
       - Be specific with reps, distances, and weights
-      - workout_type should always be "custom"
-      - Give it a punchy, memorable name — something a gym community would actually call it, not a generic description
-      - You may use ladder or mountain sections for variety, but ONLY when all exercises share the same metric AND the step size is realistic:
-        * reps ladder: step 1–5. E.g. start:10 end:1 step:1 = 10,9,8...1 reps. Or start:15 end:5 step:5 = 15,10,5 reps.
-        * calories ladder: step 5–10 (never less than 5). E.g. start:20 end:5 step:5 = 20,15,10,5 cal. Or start:30 end:10 step:10 = 30,20,10 cal.
-        * distance_m ladder: step 10–20 (never less than 10). E.g. start:40 end:20 step:10 = 40m,30m,20m. Or start:60 end:20 step:20 = 60m,40m,20m.
-        * kg ladder: step 5–10. E.g. start:60 end:40 step:10 = 60,50,40 kg.
-        * mountain: same rules, ascend then descend. E.g. start:5 peak:15 end:5 step:5 varies:"reps" = 5,10,15,10,5 reps.
-        * INVALID: mixing reps-based, distance-based, and calorie-based exercises in the same ladder. Use rounds or straight instead.
-    RULES
+      - Give it a punchy, memorable name — something a gym community would actually call it (CrossFit-style), not a generic description
+      #{sport_rule}
+      #{pace_limits}
+      - FORMAT SELECTION — choose the best format for each section. Actively vary formats across sections (do not use the same format for every section):
+        * tabata — high-intensity cardio bursts or bodyweight finishers. 20s on / 10s off × 8 rounds (~4 min). Great for: assault bike, ski erg, burpees, KB swings, box jumps, jump rope.
+        * emom — strength, skill work, or paced conditioning. Each minute: do the prescribed reps, rest for the remainder. E.g. "EMOM 10 min: 5 thrusters + 5 pull-ups". Great for: barbell work, gymnastics, moderate cardio intervals.
+        * amrap — clock-driven main set. Complete as many rounds as possible. E.g. "AMRAP 12 min: 10 KB swings + 10 box jumps + 200m run". Great for: mixed modal circuits.
+        * for_time — single-effort challenge, record finishing time. E.g. "100 wall balls for time" or "5 rounds: 400m run + 20 push-ups". Great for: benchmark efforts, race-pace work.
+        * rounds — structured circuit with planned rest. Good for strength, controlled conditioning with recovery.
+        * ladder / mountain — rep or distance progression each rung. ONLY when all exercises share the same metric AND the step size is realistic:
+          - reps: step 1–5. E.g. start:10 end:1 step:1 = 10,9,8...1 reps.
+          - calories: step 5–10. E.g. start:20 end:5 step:5 = 20,15,10,5 cal.
+          - distance_m: step 10–20. E.g. start:40 end:20 step:10 = 40m,30m,20m.
+          - mountain: ascend then descend. E.g. start:5 peak:15 end:5 step:5 = 5,10,15,10,5 reps.
+          - INVALID: mixing reps, distance, and calorie exercises in the same ladder.
+        * straight — fixed sets with rest. Use for simple warm-ups or isolated exercises.
+      RULES
 
     sections.join("\n")
+  end
+
+  # Injects a hard pace ceiling into the rules section so it's fresh immediately
+  # before the LLM generates the workout — not buried in the athlete context above.
+  # Expresses pace limits as whole-distance times (not just splits) so the model
+  # never has to convert — it can read the time directly for whatever distance it picks.
+  def pace_limit_rule
+    pbs = @user.personal_bests || {}
+    lines = []
+
+    ski_split = if pbs["ski_500m"]
+      pbs["ski_500m"].to_i
+    elsif pbs["ski_2000m"]
+      pbs["ski_2000m"].to_i / 4
+    end
+    if ski_split
+      lines << "SkiErg — never faster than: 500m=#{fmt_secs(ski_split)} | 1000m=#{fmt_secs(ski_split * 2)} | 2000m=#{fmt_secs(ski_split * 4)} (these are MAX; programme easier for aerobic work)"
+    end
+
+    row_split = if pbs["row_500m"]
+      pbs["row_500m"].to_i
+    elsif pbs["row_2000m"]
+      pbs["row_2000m"].to_i / 4
+    end
+    if row_split
+      lines << "Row — never faster than: 500m=#{fmt_secs(row_split)} | 1000m=#{fmt_secs(row_split * 2)} | 2000m=#{fmt_secs(row_split * 4)} (these are MAX; programme easier for aerobic work)"
+    end
+
+    run_pace = if pbs["run_5km"]
+      pbs["run_5km"].to_i / 5
+    elsif pbs["run_10km"]
+      pbs["run_10km"].to_i / 10
+    end
+    if run_pace
+      lines << "Running — never faster than: 1km=#{fmt_secs(run_pace)} | 5km=#{fmt_secs(run_pace * 5)} | 10km=#{fmt_secs(run_pace * 10)} (these are MAX; programme easier for aerobic work)"
+    end
+
+    swim_split = if pbs["swim_100m_fc"]
+      pbs["swim_100m_fc"].to_i
+    elsif pbs["swim_400m"]
+      pbs["swim_400m"].to_i / 4
+    end
+    if swim_split
+      lines << "Swim — never faster than: 100m=#{fmt_secs(swim_split)} | 400m=#{fmt_secs(swim_split * 4)} | 1500m=#{fmt_secs(swim_split * 15)} (these are MAX)"
+    end
+
+    return "" if lines.empty?
+
+    "- Athlete pace limits (HARD LIMITS — do not prescribe any time faster than these):\n#{lines.map { |l| "    * #{l}" }.join("\n")}"
+  end
+
+  # Returns a bullet-point rule if the main/minor tags indicate a single-sport session
+  # or an explicit exclusion (e.g. "no-run" minor tag for a Hyrox gym-only session).
+  def sport_purity_rule
+    main_slug   = @main_tag&.slug || ""
+    minor_slugs = @minor_tags.map(&:slug)
+
+    no_run  = minor_slugs.any? { |s| s.in?(%w[no-run no-running no-runs]) }
+    is_run  = !no_run && (main_slug.in?(%w[running run]) || minor_slugs.any? { |s| s.include?("run") || %w[tempo sprint intervals 5k 10k marathon trail].include?(s) })
+    is_swim = main_slug.in?(%w[swimming swim]) || minor_slugs.any? { |s| s.include?("swim") || s.include?("pool") || s == "open-water" }
+
+    if no_run
+      "- Do NOT include any running in this session. Replace any running segments with rowing, SkiErg, bike erg, or other non-running cardio."
+    elsif is_run
+      "- This is a running session — use ONLY running distances and dynamic movement/drills. Do NOT add gym exercises, weights, or machines."
+    elsif is_swim
+      "- This is a swimming session — use ONLY swimming strokes, drills, and kick/pull sets. Do NOT add gym exercises."
+    else
+      ""
+    end
   end
 
   def build_remix_prompt
@@ -190,7 +287,11 @@ class WorkoutLLMGenerator
     }.to_json
 
     <<~PROMPT.strip
-      You are a personal trainer specialising in functional fitness (Hyrox, Deka, obstacle racing).
+      You are a personal trainer specialising in writing fun workouts that athletes enjoy and improves their fitness.
+
+      If the user is doing a run, don't add any gym exercises, just use running and dynamic stretches.
+
+      If the user is doing a swim, only use swimming drills and strokes.
 
       Generate a #{@duration_mins}-minute #{@difficulty} workout inspired by this existing workout:
       #{source_json}
@@ -212,94 +313,215 @@ class WorkoutLLMGenerator
     PROMPT
   end
 
-  # Builds a concise user profile block to inject into the prompt.
+  # Builds a coaching brief to inject into the prompt.
   def build_user_context
-    parts = []
+    sections = []
 
-    physical = []
-    physical << "Age: #{@user.age}" if @user.age.present?
-    physical << "Height: #{@user.height_cm}cm" if @user.height_cm.present?
-    physical << "Weight: #{@user.weight_kg.to_f.round(1)}kg" if @user.weight_kg.present?
-    parts << "Athlete profile: #{physical.join(", ")}" if physical.any?
+    # Opening sentence: natural description of the athlete
+    descriptor = build_athlete_descriptor
+    sections << descriptor if descriptor.present?
 
-    if @user.pool_length.present?
-      parts << "Pool length: #{@user.pool_length}"
-    end
-
+    # Training environment
+    env_parts = []
     if @user.run_preference.present?
-      run_pref = @user.run_preference.capitalize
-      parts << "Run environment: #{run_pref}#{" — always use 1% treadmill incline for outdoor equivalence" if @user.run_preference == "treadmill"}"
+      env_parts << "#{@user.run_preference} running#{" (always programme 1% incline)" if @user.run_preference == "treadmill"}."
     end
+    env_parts << "#{@user.pool_length} pool" if @user.pool_length.present?
+    sections << "Training environment: #{env_parts.join(", ")}." if env_parts.any?
 
     if @user.equipment.present?
-      parts << "Available equipment: #{@user.equipment.join(", ")}"
+      readable = @user.equipment.map(&:humanize).join(", ")
+      sections << "Available equipment: #{readable}."
     end
 
-    pbs = format_personal_bests
-    parts << pbs if pbs.present?
+    benchmarks = format_benchmarks
+    sections << benchmarks if benchmarks.present?
 
-    return nil if parts.empty?
+    return nil if sections.empty?
 
-    <<~CTX
-      ## Athlete Context
-      #{parts.map { |p| "- #{p}" }.join("\n")}
-      Use this information to calibrate weights, distances, and pacing appropriately.
-    CTX
+    "## Athlete Context\n#{sections.join("\n")}\n"
   end
 
-  # Formats personal bests as human-readable strings for the prompt.
-  def format_personal_bests
-    return nil if @user.personal_bests.blank?
+  # Produces a natural opening sentence describing the athlete.
+  def build_athlete_descriptor
+    parts = []
 
-    pbs = @user.personal_bests
-    lines = []
+    age_gender = []
+    age_gender << "#{@user.age}-year-old" if @user.age.present?
+    gender_label = { "male" => "male", "female" => "female", "non_binary" => "non-binary" }[@user.gender]
+    age_gender << gender_label if gender_label
+    parts << age_gender.join(" ") if age_gender.any?
 
-    time_labels = {
-      "run_1mile" => "1 mile run", "run_1_5mile" => "1.5 mile run (Cooper)", "run_5km" => "5km run", "run_10km" => "10km run",
-      "run_half_marathon" => "Half marathon",
-      "swim_100m_fc" => "100m freestyle", "swim_400m" => "400m swim",
-      "swim_1500m" => "1500m swim", "swim_1mile" => "1 mile swim",
-      "row_500m" => "500m row", "row_1000m" => "1000m row", "row_2000m" => "2000m row",
-      "ski_500m" => "500m ski erg", "ski_2000m" => "2000m ski erg",
-      "assault_bike_50cal" => "Assault bike 50cal", "assault_bike_100cal" => "Assault bike 100cal",
-      "floor_to_ceiling_30" => "30x floor-to-ceiling", "thrusters_50" => "50x thrusters",
-      "wall_balls_100" => "100x wall balls", "hyrox_race" => "Hyrox race",
-      "deka_fit" => "Deka Fit"
-    }
+    physical = []
+    physical << "#{@user.height_cm}cm" if @user.height_cm.present?
+    physical << "#{@user.weight_kg.to_f.round(1)}kg" if @user.weight_kg.present?
 
-    weight_labels = {
-      "bench_1rm" => "Bench press 1RM", "squat_1rm" => "Squat 1RM",
+    return nil if parts.empty? && physical.empty?
+
+    if parts.any? && physical.any?
+      "The athlete is a #{parts.join(" ")} (#{physical.join(", ")})."
+    elsif parts.any?
+      "The athlete is a #{parts.join(" ")}."
+    else
+      "The athlete is #{physical.join(", ")}."
+    end
+  end
+
+  # Builds a unified benchmarks block giving the LLM raw PBs plus scaling principles.
+  # The LLM derives contextually appropriate paces and weights from these rather than
+  # receiving pre-computed fixed bands.
+  def format_benchmarks
+    pbs = @user.personal_bests || {}
+    bw  = @user.weight_kg.to_f
+    has_cardio   = false
+    has_strength = false
+
+    cardio_lines    = []
+    strength_lines  = []
+    other_pb_lines  = []
+
+    # ── Cardio PBs — inline pace guides per sport ───────────────────────────
+    # Each line gives: PB → easy → threshold → max sustained → sprint note
+    # Pre-computed so the LLM never has to calculate percentages.
+
+    # Row — split per 500m
+    row_pb = if pbs["row_500m"]
+      pbs["row_500m"].to_i
+    elsif pbs["row_1000m"]
+      pbs["row_1000m"].to_i / 2
+    elsif pbs["row_2000m"]
+      pbs["row_2000m"].to_i / 4
+    end
+    if row_pb
+      label = pbs["row_500m"] ? "500m" : (pbs["row_1000m"] ? "1000m" : "2000m")
+      raw   = pbs["row_500m"] || pbs["row_1000m"] || pbs["row_2000m"]
+      cardio_lines << "Row (PB #{label} #{fmt_secs(raw.to_i)}, = #{fmt_secs(row_pb)}/500m split): " \
+                      "easy #{fmt_secs((row_pb * 1.35).to_i)}/500m | threshold #{fmt_secs((row_pb * 1.08).to_i)}/500m | " \
+                      "max sustained #{fmt_secs(row_pb)}/500m | sprints can go below max"
+    end
+
+    # SkiErg — split per 500m
+    ski_pb = if pbs["ski_500m"]
+      pbs["ski_500m"].to_i
+    elsif pbs["ski_2000m"]
+      pbs["ski_2000m"].to_i / 4
+    end
+    if ski_pb
+      label = pbs["ski_500m"] ? "500m" : "2000m"
+      raw   = pbs["ski_500m"] || pbs["ski_2000m"]
+      cardio_lines << "SkiErg (PB #{label} #{fmt_secs(raw.to_i)}, = #{fmt_secs(ski_pb)}/500m): " \
+                      "easy #{fmt_secs((ski_pb * 1.35).to_i)}/500m | threshold #{fmt_secs((ski_pb * 1.08).to_i)}/500m | " \
+                      "max sustained #{fmt_secs(ski_pb)}/500m | sprints (≤30s) can go below max"
+    end
+
+    # Running — per km pace
+    run_pb_pace = if pbs["run_5km"]
+      pbs["run_5km"].to_i / 5
+    elsif pbs["run_10km"]
+      pbs["run_10km"].to_i / 10
+    elsif pbs["run_half_marathon"]
+      pbs["run_half_marathon"].to_i / 21
+    end
+    if run_pb_pace
+      ref_dist = pbs["run_5km"] ? "5km #{fmt_secs(pbs["run_5km"].to_i)}" : (pbs["run_10km"] ? "10km #{fmt_secs(pbs["run_10km"].to_i)}" : "half marathon #{fmt_secs(pbs["run_half_marathon"].to_i)}")
+      cardio_lines << "Run (PB #{ref_dist}, = #{fmt_secs(run_pb_pace)}/km): " \
+                      "easy #{fmt_secs((run_pb_pace * 1.30).to_i)}/km | threshold #{fmt_secs((run_pb_pace * 1.05).to_i)}/km | " \
+                      "max sustained #{fmt_secs(run_pb_pace)}/km | sprints (≤400m) can go below max"
+    end
+    cardio_lines << "Run 1 mile PB: #{fmt_secs(pbs["run_1mile"].to_i)}" if pbs["run_1mile"] && !run_pb_pace
+    cardio_lines << "Run 1.5 miles (Cooper) PB: #{fmt_secs(pbs["run_1_5mile"].to_i)}" if pbs["run_1_5mile"] && !run_pb_pace
+
+    # Swimming — per 100m pace
+    swim_pb_pace = if pbs["swim_100m_fc"]
+      pbs["swim_100m_fc"].to_i
+    elsif pbs["swim_400m"]
+      pbs["swim_400m"].to_i / 4
+    elsif pbs["swim_1500m"]
+      pbs["swim_1500m"].to_i / 15
+    end
+    if swim_pb_pace
+      ref = pbs["swim_100m_fc"] ? "100m FC #{fmt_secs(pbs["swim_100m_fc"].to_i)}" : (pbs["swim_400m"] ? "400m #{fmt_secs(pbs["swim_400m"].to_i)}" : "1500m #{fmt_secs(pbs["swim_1500m"].to_i)}")
+      cardio_lines << "Swim (PB #{ref}, = #{fmt_secs(swim_pb_pace)}/100m): " \
+                      "easy #{fmt_secs((swim_pb_pace * 1.28).to_i)}/100m | threshold #{fmt_secs((swim_pb_pace * 1.07).to_i)}/100m | " \
+                      "max sustained #{fmt_secs(swim_pb_pace)}/100m | sprints (25–50m) can go below max"
+    end
+    cardio_lines << "Swim 1 mile PB: #{fmt_secs(pbs["swim_1mile"].to_i)}" if pbs["swim_1mile"]
+
+    # Assault / Echo Bike
+    if pbs["assault_bike_50cal"]
+      cardio_lines << "Assault bike 50cal PB: #{fmt_secs(pbs["assault_bike_50cal"].to_i)}"
+    end
+    if pbs["assault_bike_100cal"]
+      cardio_lines << "Assault bike 100cal PB: #{fmt_secs(pbs["assault_bike_100cal"].to_i)}"
+    end
+
+    has_cardio = cardio_lines.any?
+
+    # ── Strength PBs ────────────────────────────────────────────────────────
+    { "bench_1rm" => "Bench press 1RM", "squat_1rm" => "Back squat 1RM",
       "deadlift_1rm" => "Deadlift 1RM", "clean_jerk_1rm" => "Clean & Jerk 1RM",
-      "snatch_1rm" => "Snatch 1RM"
-    }
+      "snatch_1rm" => "Snatch 1RM" }.each do |key, label|
+      next unless pbs[key]
+      strength_lines << "#{label}: #{pbs[key].to_f.round(1)}kg"
+      has_strength = true
+    end
 
-    count_labels = {
-      "press_ups_2min" => "Press-ups in 2 min", "pull_ups_max" => "Max pull-ups",
-      "burpees_1min" => "Burpees in 1 min"
-    }
-
-    time_labels.each do |key, label|
+    # ── Other PBs (functional tests, bodyweight) ─────────────────────────────
+    {
+      "press_ups_2min" => "Press-ups (2 min)", "pull_ups_max" => "Max pull-ups",
+      "burpees_1min"   => "Burpees (1 min)"
+    }.each do |key, label|
+      next unless pbs[key]
+      other_pb_lines << "#{label}: #{pbs[key].to_i} reps"
+    end
+    {
+      "floor_to_ceiling_30" => "30 floor-to-ceilings",
+      "thrusters_50" => "50 thrusters",
+      "wall_balls_100" => "100 wall balls",
+      "hyrox_race" => "Hyrox race",
+      "deka_fit" => "Deka Fit"
+    }.each do |key, label|
       next unless pbs[key]
       secs = pbs[key].to_i
       h, rem = secs.divmod(3600)
-      m, s = rem.divmod(60)
-      formatted = h > 0 ? "#{h}:#{m.to_s.rjust(2, "0")}:#{s.to_s.rjust(2, "0")}" : "#{m}:#{s.to_s.rjust(2, "0")}"
-      lines << "#{label}: #{formatted}"
+      m, s   = rem.divmod(60)
+      t = h > 0 ? "#{h}:#{m.to_s.rjust(2, "0")}:#{s.to_s.rjust(2, "0")}" : "#{m}:#{s.to_s.rjust(2, "0")}"
+      other_pb_lines << "#{label}: #{t}"
     end
 
-    weight_labels.each do |key, label|
-      next unless pbs[key]
-      lines << "#{label}: #{pbs[key].to_f.round(1)}kg"
+    # ── Assemble ─────────────────────────────────────────────────────────────
+    return nil if cardio_lines.empty? && strength_lines.empty? && other_pb_lines.empty? && bw.zero?
+
+    out = []
+
+    if has_cardio
+      out << "Cardio pace guide (use these exact paces — do not invent times outside these ranges):\n" \
+             "#{cardio_lines.map { |l| "  - #{l}" }.join("\n")}"
     end
 
-    count_labels.each do |key, label|
-      next unless pbs[key]
-      lines << "#{label}: #{pbs[key].to_i}"
+    if has_strength || bw > 0
+      strength_block = []
+      strength_block.concat(strength_lines)
+      strength_block << "Body weight: #{bw.round(1)}kg" if bw > 0
+
+      out << <<~STRENGTH.strip
+        Strength benchmarks (use to calibrate all weighted exercises):
+        #{strength_block.map { |l| "  - #{l}" }.join("\n")}
+          Rep-to-weight guide: 3–5 reps ≈ 85–90% 1RM | 8–10 reps ≈ 75% 1RM | 15 reps ≈ 68% 1RM | 20+ reps ≈ 60–65% 1RM. Carries: farmer's carry typically 30–40% of deadlift 1RM per hand; sled/sandbag ≈ 60–80% body weight.
+      STRENGTH
     end
 
-    return nil if lines.empty?
+    unless other_pb_lines.empty?
+      out << "Other PBs:\n#{other_pb_lines.map { |l| "  - #{l}" }.join("\n")}"
+    end
 
-    "Personal bests:\n#{lines.map { |l| "  - #{l}" }.join("\n")}"
+    out.join("\n")
+  end
+
+  def fmt_secs(secs)
+    m = secs / 60
+    s = secs % 60
+    "#{m}:#{s.to_s.rjust(2, "0")}"
   end
 
   # Loads sport-specific context files based on the workout's tags.
@@ -366,7 +588,9 @@ class WorkoutLLMGenerator
   end
 
   def create_workout(data, tag_names)
-    tags = tag_names.map { |name| Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name } }
+    tags = tag_names.map do |name|
+      Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name }
+    end
 
     workout = Workout.create!(
       user:          @user,

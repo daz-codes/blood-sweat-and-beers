@@ -53,29 +53,45 @@
     <%# ── Physical ── %>
     <div class="mb-10">
       <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-4">Physical</h2>
-      <div class="grid grid-cols-3 gap-3">
+      <div class="space-y-5">
 
         <div>
-          <%= f.label :age, "Age", class: "block text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2" %>
-          <%= f.number_field :age, min: 10, max: 100, placeholder: "e.g. 34",
-              class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400" %>
-        </div>
-
-        <div>
-          <%= f.label :height_cm, "Height", class: "block text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2" %>
-          <div class="relative">
-            <%= f.number_field :height_cm, min: 100, max: 250, placeholder: "e.g. 178",
-                class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 pr-10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400" %>
-            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs">cm</span>
+          <%= f.label :gender, "Gender", class: "block text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2" %>
+          <div class="grid grid-cols-4 gap-2">
+            <% [["male", "Male"], ["female", "Female"], ["non_binary", "Non-binary"], ["prefer_not_to_say", "Prefer not to say"]].each do |value, label| %>
+              <label class="cursor-pointer">
+                <%= f.radio_button :gender, value, class: "peer sr-only", checked: @user.gender == value %>
+                <div class="border-2 border-zinc-600 rounded-xl p-2.5 peer-checked:border-lime-400 peer-checked:bg-lime-400/10 transition-all text-center">
+                  <p class="font-semibold text-xs leading-tight"><%= label %></p>
+                </div>
+              </label>
+            <% end %>
           </div>
         </div>
 
-        <div>
-          <%= f.label :weight_kg, "Weight", class: "block text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2" %>
-          <div class="relative">
-            <%= f.number_field :weight_kg, min: 30, max: 300, step: 0.5, placeholder: "e.g. 75",
-                class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 pr-10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400" %>
-            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs">kg</span>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <%= f.label :age, "Age", class: "block text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2" %>
+            <%= f.number_field :age, min: 10, max: 100, placeholder: "e.g. 34",
+                class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400" %>
+          </div>
+
+          <div>
+            <%= f.label :height_cm, "Height", class: "block text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2" %>
+            <div class="relative">
+              <%= f.number_field :height_cm, min: 100, max: 250, placeholder: "e.g. 178",
+                  class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 pr-10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400" %>
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs">cm</span>
+            </div>
+          </div>
+
+          <div>
+            <%= f.label :weight_kg, "Weight", class: "block text-sm font-semibold text-gray-300 uppercase tracking-wide mb-2" %>
+            <div class="relative">
+              <%= f.number_field :weight_kg, min: 30, max: 300, step: 0.5, placeholder: "e.g. 75",
+                  class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 pr-10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400" %>
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 text-xs">kg</span>
+            </div>
           </div>
         </div>
 

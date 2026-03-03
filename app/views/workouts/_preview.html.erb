@@ -19,7 +19,11 @@
         <% if workout.tags.any? %>
           <div class="flex flex-wrap gap-1.5 mt-2">
             <% workout.tags.each do |tag| %>
-              <%= link_to tag.name, library_path(tag_id: tag.id), class: "text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 hover:text-white hover:border-lime-400 px-2.5 py-0.5 rounded-full font-semibold transition-colors" %>
+              <% if tag.main? %>
+                <%= link_to tag.name, library_path(tag_id: tag.id), class: "text-xs bg-lime-400 text-zinc-900 hover:bg-lime-300 px-2.5 py-0.5 rounded-full font-bold transition-colors" %>
+              <% else %>
+                <%= link_to tag.name, library_path(tag_id: tag.id), class: "text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 hover:text-white hover:border-lime-400 px-2.5 py-0.5 rounded-full font-semibold transition-colors" %>
+              <% end %>
             <% end %>
           </div>
         <% end %>

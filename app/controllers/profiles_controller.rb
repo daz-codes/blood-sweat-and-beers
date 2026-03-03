@@ -48,7 +48,7 @@ class ProfilesController < ApplicationController
   def profile_params
     params.require(:user).permit(
       :username, :display_name,
-      :age, :height_cm, :weight_kg,
+      :age, :height_cm, :weight_kg, :gender,
       :pool_length, :run_preference
     )
   end

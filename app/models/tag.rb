@@ -6,6 +6,11 @@ class Tag < ApplicationRecord
 
   before_validation :generate_slug, if: -> { slug.blank? && name.present? }
 
+  enum :tag_type, { main: "main", minor: "minor" }, default: "minor"
+
+  scope :main_focus, -> { where(tag_type: "main") }
+  scope :minor_focus, -> { where(tag_type: "minor") }
+
   scope :used_on_workouts, -> {
     joins(:taggings).where(taggings: { taggable_type: "Workout" }).distinct.order(:name)
   }

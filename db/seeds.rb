@@ -9,8 +9,13 @@ puts "System user: #{system_user.email_address}"
 # ---------------------------------------------------------------------------
 # Helper: find or create a tag by name
 # ---------------------------------------------------------------------------
-def tag_for(name)
-  Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name }
+def tag_for(name, type: "minor")
+  Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name; t.tag_type = type }
+end
+
+# Classify known main-focus tags
+%w[hyrox deka deka-fit deka-strong deka-mile deka-atlas dirty-dozen swimming running].each do |slug|
+  Tag.find_by(slug: slug)&.update!(tag_type: "main")
 end
 
 # ---------------------------------------------------------------------------

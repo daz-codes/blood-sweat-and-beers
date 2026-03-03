@@ -114,9 +114,14 @@ class WorkoutsController < ApplicationController
       redirect_to workout_path(old) and return
     end
 
+    old_tags      = old.tags
+    main_tag      = old_tags.find(&:main?)
+    minor_tag_ids = old_tags.reject(&:main?).map(&:id)
+
     fresh = WorkoutLLMGenerator.call(
       user:          Current.user,
-      tag_ids:       old.tag_ids,
+      main_tag_id:   main_tag&.id,
+      minor_tag_ids: minor_tag_ids,
       duration_mins: old.duration_mins,
       difficulty:    old.difficulty
     )
@@ -180,16 +185,23 @@ class WorkoutsController < ApplicationController
   end
 
   def create_with_llm
-    tag_ids = Array(params[:tag_ids]).reject(&:blank?)
+    if params[:new_main_tag_name].present?
+      custom_main = Tag.find_or_create_by!(slug: params[:new_main_tag_name].strip.parameterize) { |t| t.name = params[:new_main_tag_name].strip; t.tag_type = "main" }
+      main_tag_id = custom_main.id.to_s
+    else
+      main_tag_id = params[:main_tag_id].presence
+    end
+    minor_tag_ids = Array(params[:minor_tag_ids]).reject(&:blank?)
 
     params[:new_tag_name].to_s.split(",").map(&:strip).reject(&:blank?).each do |name|
-      tag = Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name }
-      tag_ids << tag.id.to_s
+      tag = Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name; t.tag_type = "minor" }
+      minor_tag_ids << tag.id.to_s
     end
 
     @workout = WorkoutLLMGenerator.call(
       user:          Current.user,
-      tag_ids:       tag_ids,
+      main_tag_id:   main_tag_id,
+      minor_tag_ids: minor_tag_ids,
       duration_mins: params[:duration_mins],
       difficulty:    params[:difficulty]
     )
