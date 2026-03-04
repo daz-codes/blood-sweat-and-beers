@@ -13,3 +13,7 @@ May include variations of: SkiErg intervals (500m–1000m), Rowing (500m–1000m
 
 ## Training Philosophy
 Training sessions prepare athletes for Deka Mile — they are **not** mini copies of the event. Running economy is critical — mile pace is a key performance driver. Build aerobic capacity, running-to-station transition fitness, and pacing discipline. Sessions should combine running with functional station work; run-heavy sessions are often as valuable as station-focused blocks.
+
+## Zone Usage
+
+The stations and their race-accurate weights/distances are provided in the prompt for the selected zones only. Use only those.

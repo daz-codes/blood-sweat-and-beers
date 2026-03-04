@@ -1,6 +1,18 @@
-<%# Locals: section (Hash) %>
+<%# Locals: section (Hash), distance_sport (Boolean, optional) %>
 <% sec_format = section["format"].to_s %>
-<% sec_mins = section["duration_mins"].to_i > 0 ? section["duration_mins"].to_i : (sec_format == "tabata" ? 7 : nil) %>
+<% sec_mins = sec_format == "tabata" ? 4 : (section["duration_mins"].to_i > 0 ? section["duration_mins"].to_i : nil) %>
+
+<%# Section distance (for distance-based sports) %>
+<% if local_assigns[:distance_sport]
+     _dist_m = section_distance_m(section)
+     if _dist_m >= 1000
+       sec_dist_val  = (_dist_m / 1000.0).round(1).to_s.delete_suffix(".0")
+       sec_dist_unit = "km"
+     elsif _dist_m > 0
+       sec_dist_val  = _dist_m.to_s
+       sec_dist_unit = "m"
+     end
+   end %>
 
 <%# Build sequence string for ladder/mountain sections %>
 <% ladder_seq_str = nil
@@ -52,7 +64,12 @@
   <div class="px-3 py-2.5 bg-zinc-700/40">
     <div class="flex items-center justify-between gap-2">
       <span class="font-black text-white text-xs uppercase tracking-widest" style="font-family: 'Jost', sans-serif"><%= section["name"] %></span>
-      <% if sec_mins %>
+      <% if local_assigns[:distance_sport] && defined?(sec_dist_val) && sec_dist_val %>
+        <div class="flex flex-col items-center justify-center w-8 h-8 rounded-full bg-sky-500 shadow-sm shadow-sky-500/30 flex-shrink-0">
+          <span class="text-white font-black text-[9px] leading-none"><%= sec_dist_val %></span>
+          <span class="text-sky-200 text-[7px] leading-none mt-0.5"><%= sec_dist_unit %></span>
+        </div>
+      <% elsif sec_mins %>
         <div class="flex flex-col items-center justify-center w-8 h-8 rounded-full bg-volt flex-shrink-0">
           <span class="text-zinc-900 font-black text-xs leading-none"><%= sec_mins %></span>
           <span class="text-zinc-700 text-[7px] leading-none mt-0.5">min</span>
@@ -83,7 +100,7 @@
             <% ds = exercise["duration_s"].to_i; dm = ds / 60; dr = ds % 60 %>
             <span class="text-xs font-bold text-lime-400"><%= dm > 0 ? "#{dm}m #{dr > 0 ? "#{dr}s" : ""}".strip : "#{ds}s" %></span>
           <% end %>
-          <% if exercise["weight_kg"] %>
+          <% if exercise["weight_kg"].to_f > 0 %>
             <span class="text-xs font-bold text-lime-400"><%= exercise["weight_kg"] %>kg</span>
           <% end %>
           <% if exercise["notes"].present? %>

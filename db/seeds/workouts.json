@@ -1,0 +1,386 @@
+[
+  {
+    "name": "Engine + Carries",
+    "workout_type": "custom",
+    "duration_mins": 30,
+    "difficulty": "intermediate",
+    "tags": ["deka", "cardio", "carries"],
+    "structure": {
+      "goal": "Heart rate up, never panic breathing. Finish thinking: I could do 5 more minutes.",
+      "sections": [
+        {
+          "name": "Warm-up",
+          "format": "straight",
+          "duration_mins": 5,
+          "notes": "Easy row → bike. A few lunges + light carries."
+        },
+        {
+          "name": "Main Set",
+          "format": "amrap",
+          "duration_mins": 20,
+          "exercises": [
+            { "name": "Row", "distance_m": 400, "notes": "~1:45–1:50 pace" },
+            { "name": "Farmer's Carry", "distance_m": 60, "notes": "heavy but unbroken" },
+            { "name": "Box Step-Overs", "reps": 15, "notes": "controlled" },
+            { "name": "Burpees", "reps": 10 }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Legs + Core + Bike Burn",
+    "workout_type": "custom",
+    "duration_mins": 35,
+    "difficulty": "intermediate",
+    "tags": ["deka", "legs", "cardio"],
+    "structure": {
+      "goal": "Legs under fatigue. Learn to bike while cooked. Keep lunges unbroken.",
+      "sections": [
+        {
+          "name": "Warm-up",
+          "format": "straight",
+          "duration_mins": 5,
+          "notes": "Light movement prep."
+        },
+        {
+          "name": "Main Set",
+          "format": "rounds",
+          "rounds": 4,
+          "rest_secs": 60,
+          "exercises": [
+            { "name": "Reverse Lunges", "reps": 30, "notes": "loaded, unbroken" },
+            { "name": "Dead Ball Wall-Overs", "reps": 20 },
+            { "name": "Med Ball Sit-Up Throws", "reps": 15 },
+            { "name": "Bike Erg", "calories": 25, "notes": "~1:20–1:30 pace" }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "DEKA Simulation Intervals",
+    "workout_type": "custom",
+    "duration_mins": 40,
+    "difficulty": "intermediate",
+    "tags": ["deka", "simulation", "cardio", "carries"],
+    "structure": {
+      "goal": "Practice machine → legs → carry → machine. Control breathing. Fast, calm transitions.",
+      "sections": [
+        {
+          "name": "Warm-up",
+          "format": "straight",
+          "duration_mins": 5,
+          "notes": "Light movement prep."
+        },
+        {
+          "name": "Simulation Intervals",
+          "format": "rounds",
+          "rounds": 3,
+          "rest_secs": 120,
+          "exercises": [
+            { "name": "SkiErg", "distance_m": 500, "notes": "@1:55–2:00 pace" },
+            { "name": "Box Step-Overs", "reps": 20 },
+            { "name": "Farmer's Carry", "distance_m": 100 },
+            { "name": "Bike Erg", "calories": 25, "notes": "~1:25 pace" }
+          ]
+        },
+        {
+          "name": "Finisher",
+          "format": "rounds",
+          "rounds": 2,
+          "exercises": [
+            { "name": "Burpees", "reps": 15 },
+            { "name": "Wall Balls", "reps": 15 }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Half-DEKA Test",
+    "workout_type": "custom",
+    "duration_mins": 20,
+    "difficulty": "intermediate",
+    "tags": ["deka", "simulation", "test"],
+    "structure": {
+      "goal": "If you can finish this not wrecked, you're ready for DEKA.",
+      "sections": [
+        {
+          "name": "Half-DEKA",
+          "format": "for_time",
+          "notes": "For time — but no redlining.",
+          "exercises": [
+            { "name": "Row", "distance_m": 500 },
+            { "name": "Lunges", "reps": 20 },
+            { "name": "SkiErg", "distance_m": 500 },
+            { "name": "Bike Erg", "calories": 25 },
+            { "name": "Farmer's Carry", "distance_m": 100 },
+            { "name": "Wall Balls", "reps": 20 },
+            { "name": "Burpees", "reps": 20 }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Aerobic Descend",
+    "workout_type": "custom",
+    "duration_mins": 60,
+    "difficulty": "intermediate",
+    "tags": ["swim", "freestyle", "pull"],
+    "structure": {
+      "goal": "Negative split control — each 200 must feel genuinely harder, not just faster. Arrive at the end thinking you had more.",
+      "sections": [
+        {
+          "name": "Warm-up",
+          "format": "straight",
+          "duration_mins": 12,
+          "notes": "SKIDS — easy effort, focus on stroke feel and catch position.",
+          "exercises": [
+            { "name": "Freestyle", "distance_m": 100 },
+            { "name": "Kick", "distance_m": 100 },
+            { "name": "IM", "distance_m": 100 },
+            { "name": "Drill", "distance_m": 100 },
+            { "name": "Freestyle", "distance_m": 100 }
+          ]
+        },
+        {
+          "name": "Main Set 1 — Descend",
+          "format": "straight",
+          "duration_mins": 16,
+          "notes": "4 × 200m Freestyle pull. Each rep starts on the clock — the interval shortens, the pace must too.",
+          "exercises": [
+            { "name": "Freestyle Pull", "distance_m": 200, "notes": "send 4:00" },
+            { "name": "Freestyle Pull", "distance_m": 200, "notes": "send 3:50" },
+            { "name": "Freestyle Pull", "distance_m": 200, "notes": "send 3:40" },
+            { "name": "Freestyle Pull", "distance_m": 200, "notes": "send 3:30" }
+          ]
+        },
+        {
+          "name": "Main Set 2",
+          "format": "rounds",
+          "rounds": 3,
+          "duration_mins": 24,
+          "notes": "Maintain Freestyle pace across all rounds. Butterfly on 30s is speed — not survival.",
+          "exercises": [
+            { "name": "3 × 100m Freestyle", "distance_m": 300, "notes": "on 1:45 each" },
+            { "name": "2 × 25m Butterfly", "distance_m": 50, "notes": "on 0:30 each, full speed" },
+            { "name": "50m Kick", "distance_m": 50, "notes": "easy recovery" }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Broken Century",
+    "workout_type": "custom",
+    "duration_mins": 65,
+    "difficulty": "intermediate",
+    "tags": ["swim", "freestyle", "IM", "speed"],
+    "structure": {
+      "goal": "Stay smooth on the 200s and 100s — the 50s are where you earn it. Never redline on the long reps.",
+      "sections": [
+        {
+          "name": "Warm-up",
+          "format": "straight",
+          "duration_mins": 12,
+          "notes": "SKIPS — easy aerobic, wake up the pull and kick.",
+          "exercises": [
+            { "name": "Freestyle", "distance_m": 100 },
+            { "name": "Kick", "distance_m": 100 },
+            { "name": "IM", "distance_m": 100 },
+            { "name": "Freestyle Pull", "distance_m": 100 },
+            { "name": "Freestyle", "distance_m": 100 }
+          ]
+        },
+        {
+          "name": "Pre-set",
+          "format": "straight",
+          "duration_mins": 10,
+          "notes": "IM / Freestyle by 25 — alternate 25m IM then 25m Freestyle each 50. Smooth transitions.",
+          "exercises": [
+            { "name": "IM / Freestyle by 25", "distance_m": 400, "notes": "8 × 50m on 1:00" }
+          ]
+        },
+        {
+          "name": "Main Set",
+          "format": "rounds",
+          "rounds": 2,
+          "duration_mins": 30,
+          "notes": "Descending distance, ascending effort per rep. Keep kick going on the 50s.",
+          "exercises": [
+            { "name": "Freestyle", "distance_m": 200, "notes": "1 × 200m on 3:15" },
+            { "name": "Freestyle", "distance_m": 200, "notes": "2 × 100m on 1:40" },
+            { "name": "Freestyle", "distance_m": 200, "notes": "4 × 50m on 0:50" },
+            { "name": "Kick", "distance_m": 50, "notes": "easy" }
+          ]
+        },
+        {
+          "name": "Speed",
+          "format": "straight",
+          "duration_mins": 6,
+          "notes": "Butterfly or fast Freestyle — full effort, full recovery.",
+          "exercises": [
+            { "name": "Butterfly / Fast Freestyle", "distance_m": 200, "notes": "8 × 25m on 0:30" }
+          ]
+        },
+        {
+          "name": "Cool-down",
+          "format": "straight",
+          "duration_mins": 3,
+          "exercises": [
+            { "name": "Easy choice", "distance_m": 100 }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Ladder Density",
+    "workout_type": "custom",
+    "duration_mins": 65,
+    "difficulty": "intermediate",
+    "tags": ["swim", "freestyle", "pull"],
+    "structure": {
+      "goal": "Race the clock, not yourself. The density ladder builds aerobic pressure — the 25s finish the session, they don't bury it.",
+      "sections": [
+        {
+          "name": "Warm-up",
+          "format": "straight",
+          "duration_mins": 12,
+          "notes": "SKIPS — easy pace, focus on streamline off each wall.",
+          "exercises": [
+            { "name": "Freestyle", "distance_m": 100 },
+            { "name": "Kick", "distance_m": 100 },
+            { "name": "IM", "distance_m": 100 },
+            { "name": "Freestyle Pull", "distance_m": 100 },
+            { "name": "Freestyle", "distance_m": 100 }
+          ]
+        },
+        {
+          "name": "Main Ladder",
+          "format": "straight",
+          "duration_mins": 50,
+          "notes": "400m blocks at every step. Reps double, distance halves — pace should build each group.",
+          "exercises": [
+            { "name": "Freestyle Pull", "distance_m": 400, "notes": "1 × 400m on 7:30" },
+            { "name": "Freestyle Pull", "distance_m": 400, "notes": "2 × 200m on 3:45" },
+            { "name": "Freestyle",      "distance_m": 400, "notes": "4 × 100m on 1:45" },
+            { "name": "Freestyle",      "distance_m": 400, "notes": "8 × 50m on 0:50" },
+            { "name": "Fast Freestyle / Kick", "distance_m": 400, "notes": "16 × 25m on 0:30 — last 4 easy kick" }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Threshold 100s",
+    "workout_type": "custom",
+    "duration_mins": 60,
+    "difficulty": "intermediate",
+    "tags": ["swim", "freestyle", "threshold"],
+    "structure": {
+      "goal": "Honest pace on every 100 — not survival, not cruise. The 25s are pure speed. The kick is recovery, not punishment.",
+      "sections": [
+        {
+          "name": "Warm-up",
+          "format": "straight",
+          "duration_mins": 12,
+          "notes": "SKIPS — build stroke length, easy effort.",
+          "exercises": [
+            { "name": "Freestyle", "distance_m": 100 },
+            { "name": "Kick", "distance_m": 100 },
+            { "name": "IM", "distance_m": 100 },
+            { "name": "Freestyle Pull", "distance_m": 100 },
+            { "name": "Freestyle", "distance_m": 100 }
+          ]
+        },
+        {
+          "name": "Skill Set",
+          "format": "straight",
+          "duration_mins": 18,
+          "notes": "IM / Freestyle by 25 to sharpen turns and stroke change. Pull set to load the arms before the main set.",
+          "exercises": [
+            { "name": "IM / Freestyle by 25", "distance_m": 400, "notes": "8 × 50m on 1:00" },
+            { "name": "Freestyle Pull",       "distance_m": 300, "notes": "6 × 50m on 1:50" }
+          ]
+        },
+        {
+          "name": "Main Set",
+          "format": "rounds",
+          "rounds": 2,
+          "duration_mins": 25,
+          "notes": "100s at honest threshold pace — 1:35–1:45 depending on ability. 25s are sprint efforts with full rest.",
+          "exercises": [
+            { "name": "4 × 100m Freestyle", "distance_m": 400, "notes": "on 1:35–1:45 honest pace" },
+            { "name": "4 × 25m Fast", "distance_m": 100, "notes": "on 0:30 full effort" },
+            { "name": "100m Kick",    "distance_m": 100, "notes": "easy recovery" }
+          ]
+        },
+        {
+          "name": "Cool-down",
+          "format": "straight",
+          "duration_mins": 3,
+          "exercises": [
+            { "name": "Easy Freestyle", "distance_m": 100 }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "Long & Fast",
+    "workout_type": "custom",
+    "duration_mins": 65,
+    "difficulty": "intermediate",
+    "tags": ["swim", "freestyle", "speed"],
+    "structure": {
+      "goal": "Aerobic first, speed second. The odd/even split teaches you to lift pace under fatigue. Cool down easy — you earned it.",
+      "sections": [
+        {
+          "name": "Warm-up",
+          "format": "straight",
+          "duration_mins": 12,
+          "notes": "SKIDS — smooth and easy, build feel for the water.",
+          "exercises": [
+            { "name": "Freestyle", "distance_m": 100 },
+            { "name": "Kick", "distance_m": 100 },
+            { "name": "IM", "distance_m": 100 },
+            { "name": "Drill", "distance_m": 100 },
+            { "name": "Freestyle", "distance_m": 100 }
+          ]
+        },
+        {
+          "name": "Main Set 1 — Aerobic 200s",
+          "format": "straight",
+          "duration_mins": 20,
+          "notes": "5 × 200m FC. Odd reps (1, 3, 5) on 3:40 — comfortable aerobic. Even reps (2, 4) on 3:20 — push the pace.",
+          "exercises": [
+            { "name": "5 × 200m Freestyle", "distance_m": 1000, "notes": "Odds (1, 3, 5) on 3:40 / Evens (2, 4) on 3:20" }
+          ]
+        },
+        {
+          "name": "Main Set 2 — Speed",
+          "format": "rounds",
+          "rounds": 3,
+          "duration_mins": 25,
+          "notes": "Short and sharp. 50s at strong pace, 25s maximum effort, easy 50 to recover.",
+          "exercises": [
+            { "name": "4 × 50m Freestyle",     "distance_m": 200, "notes": "on 0:50" },
+            { "name": "2 × 25m Butterfly / Fast Freestyle", "distance_m": 50,  "notes": "on 0:30 full effort" },
+            { "name": "50m Easy",        "distance_m": 50,  "notes": "choice of stroke" }
+          ]
+        },
+        {
+          "name": "Cool-down",
+          "format": "straight",
+          "duration_mins": 3,
+          "exercises": [
+            { "name": "Easy Freestyle", "distance_m": 100 }
+          ]
+        }
+      ]
+    }
+  }
+]

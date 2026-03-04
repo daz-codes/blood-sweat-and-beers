@@ -13,8 +13,10 @@ def tag_for(name, type: "minor")
   Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name; t.tag_type = type }
 end
 
-# Classify known main-focus tags
-%w[hyrox deka deka-fit deka-strong deka-mile deka-atlas dirty-dozen swimming running].each do |slug|
+# Classify known main-focus (session type) tags
+%w[hyrox deka deka-fit deka-strong deka-mile deka-atlas dirty-dozen
+   swimming running swim run ski ski-erg row rowing
+   cycling bike cycle jog jogging triathlon tempo-run].each do |slug|
   Tag.find_by(slug: slug)&.update!(tag_type: "main")
 end
 

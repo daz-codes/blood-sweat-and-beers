@@ -3,7 +3,7 @@
   <div class="flex items-start justify-between mb-6">
     <div>
       <h1 class="text-2xl font-bold tracking-tight">Generate Workout</h1>
-      <p class="text-gray-400 mt-0.5 text-sm">Pick your focus and we'll build the session.</p>
+      <p class="text-gray-400 mt-0.5 text-sm">Pick your session type and focus, and we'll build it.</p>
     </div>
     <button type="button"
             data-action="click->dialog#close"
@@ -15,29 +15,37 @@
     </button>
   </div>
 
-  <%= form_with url: workouts_path do |f| %>
+  <%= form_with url: workouts_path, data: { controller: "planning-mode" } do |f| %>
 
-    <%# Main Focus — radio pills, pick one %>
+    <%# Hidden mode field — toggled by Stimulus %>
+    <%= hidden_field_tag :planning_mode, "time", data: { "planning-mode-target": "modeField" } %>
+
+    <%# Session Type — radio pills, pick one %>
     <div class="mb-6">
-      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Main Focus</p>
-      <p class="text-xs text-gray-500 mb-3">The sport or event driving this session.</p>
-      <% main_tags = Tag.main_focus
-                        .joins(:taggings)
-                        .joins("INNER JOIN workouts ON taggings.taggable_type = 'Workout' AND taggings.taggable_id = workouts.id")
-                        .where(workouts: { user_id: Current.user.id })
-                        .group("tags.id")
-                        .order(Arel.sql("COUNT(taggings.id) DESC"))
-                        .limit(5) %>
+      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Session Type</p>
+      <p class="text-xs text-gray-500 mb-3">The type of session — swim, Hyrox, running, Deka.</p>
+      <% user_main_tags = Tag.main_focus
+                            .joins(:taggings)
+                            .joins("INNER JOIN workouts ON taggings.taggable_type = 'Workout' AND taggings.taggable_id = workouts.id")
+                            .where(workouts: { user_id: Current.user.id })
+                            .group("tags.id")
+                            .order(Arel.sql("COUNT(taggings.id) DESC"))
+                            .limit(5) %>
+      <% main_tags = user_main_tags.any? ? user_main_tags : Tag.main_focus.top_used_on_workouts(5) %>
       <div class="flex flex-wrap gap-2">
         <label class="cursor-pointer">
-          <%= radio_button_tag "main_tag_id", "", true, id: "main_tag_none", class: "peer sr-only" %>
+          <%= radio_button_tag "main_tag_id", "", true, id: "main_tag_none",
+              class: "peer sr-only",
+              data: { slug: "", action: "change->planning-mode#checkWarning" } %>
           <span class="inline-block border-2 border-zinc-600 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-lime-400 peer-checked:bg-lime-400/15 peer-checked:text-lime-400 transition-all select-none">
             General Fitness
           </span>
         </label>
         <% main_tags.each do |tag| %>
           <label class="cursor-pointer">
-            <%= radio_button_tag "main_tag_id", tag.id, false, id: "main_tag_#{tag.id}", class: "peer sr-only" %>
+            <%= radio_button_tag "main_tag_id", tag.id, false, id: "main_tag_#{tag.id}",
+                class: "peer sr-only",
+                data: { slug: tag.slug, action: "change->planning-mode#checkWarning" } %>
             <span class="inline-block border-2 border-zinc-600 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-lime-400 peer-checked:bg-lime-400 peer-checked:text-zinc-900 peer-checked:font-bold transition-all select-none">
               <%= tag.name %>
             </span>
@@ -45,14 +53,14 @@
         <% end %>
       </div>
       <%= text_field_tag :new_main_tag_name, nil,
-          placeholder: "Or type a custom main focus…",
+          placeholder: "Or type a custom session type…",
           class: "mt-2 w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
     </div>
 
-    <%# Minor Focuses — checkboxes, pick many %>
+    <%# Focus — checkboxes, pick many %>
     <div class="mb-6">
-      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Minor Focuses</p>
-      <p class="text-xs text-gray-500 mb-3">Aspects to include in the session.</p>
+      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Focus</p>
+      <p class="text-xs text-gray-500 mb-3">What to emphasise within the session.</p>
       <% minor_tags = Tag.minor_focus.top_used_on_workouts(10) %>
       <% if minor_tags.any? %>
         <div class="flex flex-wrap gap-2 mb-3">
@@ -71,27 +79,78 @@
           class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
     </div>
 
-    <%# Duration %>
-    <div class="mb-6" data-controller="duration-slider">
-      <div class="flex items-baseline justify-between mb-3">
-        <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Target Duration</p>
-        <p class="text-2xl font-bold text-white">
-          <span data-duration-slider-target="display">60</span>
-          <span class="text-base font-normal text-gray-400">min</span>
-        </p>
+    <%# Duration / Distance toggle %>
+    <div class="mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Target</p>
+        <%# Segmented toggle %>
+        <div class="flex rounded-lg bg-zinc-900 border border-zinc-700 p-0.5 gap-0.5">
+          <button type="button"
+                  data-planning-mode-target="timeBtn"
+                  data-action="click->planning-mode#showTime"
+                  data-active="true"
+                  class="px-3 py-1 text-xs font-bold rounded-md transition-all data-[active=true]:bg-zinc-600 data-[active=true]:text-white data-[active=false]:text-gray-500 data-[active=false]:hover:text-gray-300">
+            Time
+          </button>
+          <button type="button"
+                  data-planning-mode-target="distanceBtn"
+                  data-action="click->planning-mode#showDistance"
+                  data-active="false"
+                  class="px-3 py-1 text-xs font-bold rounded-md transition-all data-[active=true]:bg-zinc-600 data-[active=true]:text-white data-[active=false]:text-gray-500 data-[active=false]:hover:text-gray-300">
+            Distance
+          </button>
+        </div>
       </div>
-      <%= f.range_field :duration_mins, value: 60, min: 5, max: 120, step: 5,
-          class: "w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-lime-400",
-          data: { duration_slider_target: "input", action: "input->duration-slider#update" },
-          required: true %>
-      <div class="flex justify-between text-xs text-gray-600 mt-1.5">
-        <span>5 min</span>
-        <span>2 hrs</span>
+
+      <%# Time panel %>
+      <div data-planning-mode-target="timePanel" data-controller="duration-slider">
+        <div class="flex items-baseline justify-between mb-2">
+          <span class="text-gray-500 text-xs">Duration</span>
+          <p class="text-2xl font-bold text-white">
+            <span data-duration-slider-target="display">60</span>
+            <span class="text-base font-normal text-gray-400">min</span>
+          </p>
+        </div>
+        <%= f.range_field :duration_mins, value: 60, min: 5, max: 120, step: 5,
+            class: "w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-lime-400",
+            data: { duration_slider_target: "input", action: "input->duration-slider#update" },
+            required: true %>
+        <div class="flex justify-between text-xs text-gray-600 mt-1.5">
+          <span>5 min</span>
+          <span>2 hrs</span>
+        </div>
+      </div>
+
+      <%# Distance panel %>
+      <div data-planning-mode-target="distancePanel" hidden>
+        <div class="flex items-baseline justify-between mb-2">
+          <span class="text-gray-500 text-xs">Distance</span>
+          <p class="text-2xl font-bold text-white">
+            <span data-planning-mode-target="distanceDisplay">5</span>
+            <span class="text-base font-normal text-gray-400">km</span>
+          </p>
+        </div>
+        <%= range_field_tag :target_distance_km, 5, min: 0.5, max: 42, step: 0.5,
+            class: "w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-sky-400",
+            data: { "planning-mode-target": "distanceInput",
+                    action: "input->planning-mode#updateDistanceDisplay" } %>
+        <div class="flex justify-between text-xs text-gray-600 mt-1.5">
+          <span data-planning-mode-target="distanceLabelMin">0.5 km</span>
+          <span data-planning-mode-target="distanceLabelMax">42 km</span>
+        </div>
+        <%# Warning — shown when distance mode + non-distance session type %>
+        <div data-planning-mode-target="warning" hidden
+             class="mt-3 flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2.5">
+          <svg class="flex-shrink-0 mt-0.5 text-amber-400" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <p class="text-xs text-amber-300 leading-snug">Distance mode works best with running, swimming, rowing, skiing and cycling. Your current session type may produce unexpected results.</p>
+        </div>
       </div>
     </div>
 
     <%# Difficulty %>
-    <div class="mb-8">
+    <div class="mb-6">
       <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Difficulty</p>
       <div class="grid grid-cols-3 gap-3">
         <% [["beginner", "Beginner", "Building base fitness"], ["intermediate", "Intermediate", "Regular training"], ["advanced", "Advanced", "Competition prep"]].each do |value, label, desc| %>
@@ -104,6 +163,15 @@
           </label>
         <% end %>
       </div>
+    </div>
+
+    <%# Workout Tag %>
+    <div class="mb-8">
+      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Workout Tag</p>
+      <p class="text-xs text-gray-500 mb-3">Tag this workout so your group can find it (e.g. Hyrox Manchester 2026).</p>
+      <%= text_field_tag :group_code, nil,
+          placeholder: "e.g. Hyrox Manchester 2026",
+          class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-400 transition-colors" %>
     </div>
 
     <%= f.submit "Generate Workout",

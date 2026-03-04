@@ -33,7 +33,8 @@
       "WebFetch(domain:www.spartan.com)",
       "WebFetch(domain:fitnessexperiment.co)",
       "WebFetch(domain:www.fitkituk.com)",
-      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" grep:*)"
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" grep:*)",
+      "Bash(sed:*)"
     ]
   }
 }

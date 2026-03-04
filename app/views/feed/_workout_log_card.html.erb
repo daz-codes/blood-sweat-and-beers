@@ -9,6 +9,15 @@
    else
      []
    end %>
+<% main_slug = workout.tags.find(&:main?)&.slug.to_s %>
+<% is_distance_sport = main_slug.match?(/\A(run|swim|row|ski|bike|cycl|jog|tri|duat)/) %>
+<% total_distance_m = is_distance_sport && structure.is_a?(Hash) ?
+     structure["sections"].to_a.sum { |s| section_distance_m(s) } : 0 %>
+<% dist_value, dist_unit = if total_distance_m >= 1000
+     [ (total_distance_m / 1000.0).round(1).to_s.delete_suffix(".0"), "km" ]
+   elsif total_distance_m > 0
+     [ total_distance_m.to_s, "m" ]
+   end %>
 <% summary_text = all_exercises.first(6).join(" · ") %>
 <% summary_text += " +#{all_exercises.size - 6} more" if all_exercises.size > 6 %>
 <% sections = structure.is_a?(Hash) ? Array(structure["sections"]) : [] %>
@@ -27,12 +36,24 @@
       <p class="text-gray-300 text-2xl leading-tight tracking-tight font-jost uppercase">
         <%= workout.name.presence || "Untitled Workout" %>
       </p>
-      <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+      <div class="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
+        <% main_tag = workout.tags.find(&:main?) %>
+        <% if main_tag %>
+          <p class="text-lime-400 font-black text-sm uppercase tracking-wide leading-none"><%= main_tag.name %></p>
+        <% end %>
+        <div class="flex items-center gap-1.5">
         <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300"><%= workout.difficulty.capitalize %></span>
+        <% if dist_value %>
+          <div class="flex flex-col items-center justify-center w-10 h-10 rounded-full bg-sky-500 shadow-sm shadow-sky-500/25 flex-shrink-0">
+            <span class="text-white font-black text-xs leading-none"><%= dist_value %></span>
+            <span class="text-sky-200 text-[7px] font-bold leading-none mt-0.5 uppercase tracking-wide"><%= dist_unit %></span>
+          </div>
+        <% end %>
         <div class="flex flex-col items-center justify-center w-10 h-10 rounded-full bg-volt shadow-sm shadow-volt/25 flex-shrink-0">
           <span class="text-zinc-950 font-black text-sm leading-none"><%= workout.duration_mins %></span>
           <span class="text-zinc-800 text-[7px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
         </div>
+        </div><%# close inner flex row %>
       </div>
     </div>
 
@@ -75,9 +96,9 @@
     <%# Tags %>
     <% if display_tags.any? %>
       <div class="flex items-center gap-1.5 mt-3 flex-wrap">
-        <% display_tags.first(3).each do |tag| %>
-          <% if tag.main? %>
-            <%= link_to tag.name, feed_path(tag_id: tag.id), class: "text-xs bg-lime-400 text-zinc-900 hover:bg-lime-300 px-2 py-0.5 rounded-full font-bold flex-shrink-0 transition-colors" %>
+        <% display_tags.reject(&:main?).first(3).each do |tag| %>
+          <% if tag.group_code? %>
+            <%= link_to "##{tag.name}", feed_path(tag_id: tag.id), class: "text-xs bg-violet-500/15 border border-violet-400/40 text-violet-400 hover:text-white hover:border-violet-400 px-2 py-0.5 rounded-full font-semibold flex-shrink-0 transition-colors" %>
           <% else %>
             <%= link_to tag.name, feed_path(tag_id: tag.id), class: "text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 hover:text-white hover:border-lime-400 px-2 py-0.5 rounded-full font-semibold flex-shrink-0 transition-colors" %>
           <% end %>
@@ -141,7 +162,7 @@
       <%# Expanded sections %>
       <div class="bg-zinc-900 border-t border-zinc-700/40 px-3 py-3 space-y-2">
         <% sections.each do |section| %>
-          <%= render "shared/workout_section", section: section %>
+          <%= render "shared/workout_section", section: section, distance_sport: is_distance_sport %>
         <% end %>
       </div>
     </details>

@@ -6,21 +6,34 @@
       <h2 class="text-2xl text-gray-300 tracking-tight leading-tight mb-3 font-jost uppercase"><%= workout.name %></h2>
     <% end %>
 
-    <div class="flex items-center gap-3 flex-wrap">
-      <%# Duration circle %>
-      <div class="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-volt shadow-md shadow-volt/20 flex-shrink-0">
-        <span class="text-zinc-950 font-black text-lg leading-none"><%= workout.duration_mins %></span>
-        <span class="text-zinc-800 text-[9px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
-      </div>
+    <% main_slug = workout.tags.find(&:main?)&.slug.to_s %>
+    <% is_distance_sport = main_slug.match?(/\A(run|swim|row|ski|bike|cycl|jog|tri|duat)/) %>
+    <% total_distance_m = is_distance_sport && workout.structure.is_a?(Hash) ?
+         workout.structure["sections"].to_a.sum { |s| section_distance_m(s) } : 0 %>
+    <% dist_value, dist_unit = if total_distance_m >= 1000
+         [ (total_distance_m / 1000.0).round(1).to_s.delete_suffix(".0"), "km" ]
+       elsif total_distance_m > 0
+         [ total_distance_m.to_s, "m" ]
+       end %>
+
+    <div class="flex items-start justify-between gap-3">
       <div>
-        <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300">
-          <%= workout.difficulty.capitalize %>
-        </span>
+        <% main_tag = workout.tags.find(&:main?) %>
+        <% if main_tag %>
+          <p class="text-lime-400 font-black text-base uppercase tracking-wide leading-none mb-1"><%= main_tag.name %></p>
+        <% end %>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300">
+            <%= workout.difficulty.capitalize %>
+          </span>
+        </div>
         <% if workout.tags.any? %>
           <div class="flex flex-wrap gap-1.5 mt-2">
             <% workout.tags.each do |tag| %>
               <% if tag.main? %>
-                <%= link_to tag.name, library_path(tag_id: tag.id), class: "text-xs bg-lime-400 text-zinc-900 hover:bg-lime-300 px-2.5 py-0.5 rounded-full font-bold transition-colors" %>
+                <%# main tag shown prominently above — skip in pills %>
+              <% elsif tag.group_code? %>
+                <%= link_to "##{tag.name}", library_path(tag_id: tag.id), class: "text-xs bg-violet-500/15 border border-violet-400/40 text-violet-400 hover:text-white hover:border-violet-400 px-2.5 py-0.5 rounded-full font-semibold transition-colors" %>
               <% else %>
                 <%= link_to tag.name, library_path(tag_id: tag.id), class: "text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 hover:text-white hover:border-lime-400 px-2.5 py-0.5 rounded-full font-semibold transition-colors" %>
               <% end %>
@@ -28,6 +41,19 @@
           </div>
         <% end %>
       </div>
+
+      <%# Single circle — distance for distance sports, time otherwise %>
+      <% if is_distance_sport && dist_value %>
+        <div class="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-sky-500 shadow-md shadow-sky-500/20 flex-shrink-0">
+          <span class="text-white font-black text-sm leading-none"><%= dist_value %></span>
+          <span class="text-sky-200 text-[9px] font-bold leading-none mt-0.5 uppercase tracking-wide"><%= dist_unit %></span>
+        </div>
+      <% else %>
+        <div class="flex flex-col items-center justify-center w-14 h-14 rounded-full bg-volt shadow-md shadow-volt/20 flex-shrink-0">
+          <span class="text-zinc-950 font-black text-lg leading-none"><%= workout.duration_mins %></span>
+          <span class="text-zinc-800 text-[9px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
+        </div>
+      <% end %>
     </div>
 
     <% if workout.structure.is_a?(Hash) && workout.structure["goal"].present? %>
@@ -39,7 +65,7 @@
   <% sections = workout.structure.is_a?(Hash) ? Array(workout.structure["sections"]) : [] %>
   <div class="px-4 py-3 space-y-2">
     <% sections.each do |section| %>
-      <%= render "shared/workout_section", section: section %>
+      <%= render "shared/workout_section", section: section, distance_sport: is_distance_sport %>
     <% end %>
   </div>
 

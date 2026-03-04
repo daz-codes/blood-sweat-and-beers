@@ -116,12 +116,14 @@ class WorkoutsController < ApplicationController
 
     old_tags      = old.tags
     main_tag      = old_tags.find(&:main?)
-    minor_tag_ids = old_tags.reject(&:main?).map(&:id)
+    group_tag     = old_tags.find(&:group_code?)
+    minor_tag_ids = old_tags.select(&:minor?).map(&:id)
 
     fresh = WorkoutLLMGenerator.call(
       user:          Current.user,
       main_tag_id:   main_tag&.id,
       minor_tag_ids: minor_tag_ids,
+      group_code_id: group_tag&.id,
       duration_mins: old.duration_mins,
       difficulty:    old.difficulty
     )
@@ -198,12 +200,20 @@ class WorkoutsController < ApplicationController
       minor_tag_ids << tag.id.to_s
     end
 
+    group_code_id = if params[:group_code].present?
+      tag = Tag.find_or_create_by!(slug: params[:group_code].strip.parameterize) { |t| t.name = params[:group_code].strip; t.tag_type = "group_code" }
+      tag.update!(tag_type: "group_code") unless tag.group_code?
+      tag.id
+    end
+
     @workout = WorkoutLLMGenerator.call(
-      user:          Current.user,
-      main_tag_id:   main_tag_id,
-      minor_tag_ids: minor_tag_ids,
-      duration_mins: params[:duration_mins],
-      difficulty:    params[:difficulty]
+      user:               Current.user,
+      main_tag_id:        main_tag_id,
+      minor_tag_ids:      minor_tag_ids,
+      group_code_id:      group_code_id,
+      duration_mins:      params[:duration_mins],
+      target_distance_km: params[:planning_mode] == "distance" ? params[:target_distance_km].to_f : nil,
+      difficulty:         params[:difficulty]
     )
 
     redirect_to workout_path(@workout)
