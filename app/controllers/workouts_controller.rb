@@ -212,7 +212,8 @@ class WorkoutsController < ApplicationController
       minor_tag_ids: minor_tag_ids,
       group_code_id: group_code_id,
       duration_mins: params[:duration_mins],
-      difficulty:    params[:difficulty]
+      difficulty:    params[:difficulty],
+      session_notes: params[:new_tag_name].presence
     )
 
     redirect_to workout_path(@workout)

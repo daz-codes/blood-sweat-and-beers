@@ -107,8 +107,52 @@ class WorkoutLLMGenerator
     "deka-atlas"  => DEKA_ATLAS_REFERENCE,
   }.freeze
 
+  # Weighted training emphasis options — sampled randomly each generation.
+  # Mixed appears 4× (40%), each pure style appears 2× (20%).
+  # Explicit session_notes from the athlete always override this.
+  TRAINING_EMPHASES = [
+    { label: "Mixed",
+      instruction: "Blend strength and conditioning across the session — some heavier compound sets (6–10 reps), some higher-rep conditioning work (15–20 reps). No single style should dominate. Use varied formats and rest periods to hit different energy systems." },
+    { label: "Mixed",
+      instruction: "Varied session — mix heavier strength sets with moderate conditioning work. Alternate between lower-rep compound movements and higher-rep circuits. Keep the athlete guessing." },
+    { label: "Mixed",
+      instruction: "General fitness session — balance between strength, endurance, and movement quality. Don't lean heavily toward any single quality. A bit of everything." },
+    { label: "Mixed",
+      instruction: "Balanced effort session — moderate loads, moderate reps (8–15), mixed formats. Not a pure strength day and not a pure cardio day. The kind of session that makes you well-rounded." },
+    { label: "Strength",
+      instruction: "Strength focus — heavy compound movements, low reps (3–6 per set), longer rest (90–120s). Loads should be challenging. Prioritise quality of movement and maximal effort over volume or pace." },
+    { label: "Strength",
+      instruction: "Heavy day — prioritise low rep ranges (4–6) with heavy loads, close to the upper end of the athlete's capability. Longer rest periods. Fewer exercises, more sets. Make it feel like a proper lifting session." },
+    { label: "Power",
+      instruction: "Power development — moderate-to-heavy loads (70–80% 1RM) performed with explosive intent. 5–8 reps per set, focus on speed of movement. Mix heavy compound lifts with dynamic or plyometric movements. Rest enough to maintain quality." },
+    { label: "Power",
+      instruction: "Explosive session — blend heavy compound work with dynamic movements (jumps, throws, fast pulls). Moderate reps (6–8), fast concentric, controlled eccentric. Rest 60–90s between sets to maintain power output." },
+    { label: "Conditioning",
+      instruction: "Conditioning focus — higher rep ranges (15–25+), shorter rest, lighter loads. Circuit-style or interval-based. The metabolic challenge is the goal — heart rate should stay elevated throughout. Unbroken sets where possible." },
+    { label: "Conditioning",
+      instruction: "Metabolic session — keep rest short and reps high. Lighter weights, fast transitions, sustained effort. Think: sweat, breathing hard, and muscular fatigue from volume rather than load." },
+  ].freeze
+
   API_URI = URI("https://api.anthropic.com/v1/messages").freeze
   MODEL   = "claude-haiku-4-5-20251001".freeze
+
+  # Lightweight tool used by the research pass (first prompt) to return structured
+  # program info for any tag we don't have a pre-written context file for.
+  RESEARCH_TOOL_DEFINITION = {
+    name: "describe_fitness_program",
+    description: "Describe a fitness training program or style with its key characteristics.",
+    input_schema: {
+      type: "object",
+      required: %w[description modalities typical_exercises session_format equipment],
+      properties: {
+        description:       { type: "string",  description: "1-2 sentence description of this program/style" },
+        modalities:        { type: "array",   items: { type: "string" }, description: "Training modalities used, e.g. 'treadmill running', 'dumbbell strength', 'AMRAP circuits'" },
+        typical_exercises: { type: "array",   items: { type: "string" }, description: "10-15 specific exercises or movements commonly used in this program" },
+        session_format:    { type: "string",  description: "How a typical session is structured, e.g. 'alternating 10-min cardio and strength blocks'" },
+        equipment:         { type: "array",   items: { type: "string" }, description: "Equipment typically available, e.g. 'treadmills', 'dumbbells', 'pull-up bars', 'rowers'" }
+      }
+    }
+  }.freeze
 
   TOOL_DEFINITION = {
     name: "create_workout",
@@ -169,11 +213,11 @@ class WorkoutLLMGenerator
     }
   }.freeze
 
-  def self.call(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], group_code_id: nil, tag_ids: [], source_workout: nil)
-    new(user: user, main_tag_id: main_tag_id, minor_tag_ids: minor_tag_ids, group_code_id: group_code_id, tag_ids: tag_ids, duration_mins: duration_mins, difficulty: difficulty, source_workout: source_workout).call
+  def self.call(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], group_code_id: nil, tag_ids: [], source_workout: nil, session_notes: nil)
+    new(user: user, main_tag_id: main_tag_id, minor_tag_ids: minor_tag_ids, group_code_id: group_code_id, tag_ids: tag_ids, duration_mins: duration_mins, difficulty: difficulty, source_workout: source_workout, session_notes: session_notes).call
   end
 
-  def initialize(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], group_code_id: nil, tag_ids: [], source_workout: nil)
+  def initialize(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], group_code_id: nil, tag_ids: [], source_workout: nil, session_notes: nil)
     @user           = user
     @main_tag       = main_tag_id.present? ? Tag.find_by(id: main_tag_id) : nil
     @minor_tags     = Tag.where(id: Array(minor_tag_ids).map(&:to_i).reject(&:zero?))
@@ -183,6 +227,7 @@ class WorkoutLLMGenerator
     @duration_mins  = duration_mins.to_i
     @difficulty     = difficulty
     @source_workout = source_workout
+    @session_notes  = session_notes.presence
   end
 
   def call
@@ -193,8 +238,10 @@ class WorkoutLLMGenerator
       create_workout(workout_data, tag_names)
     else
       context_workouts = fetch_context
-      prompt           = build_prompt(context_workouts)
+      program_research = research_unknown_program
+      prompt           = build_prompt(context_workouts, program_research)
       workout_data     = call_llm(prompt)
+      workout_data     = validate_and_fix(workout_data)
       workout_data     = collapse_duplicate_exercises(workout_data)
       all_tag_names    = ([@main_tag&.name] + @minor_tags.map(&:name) + [@group_code_tag&.name]).compact
       create_workout(workout_data, all_tag_names)
@@ -268,7 +315,55 @@ class WorkoutLLMGenerator
     workout_data
   end
 
-  def build_prompt(context_workouts)
+  def build_difficulty_guidance
+    case @difficulty
+    when "beginner"
+      <<~DIFF
+        ## Difficulty: Beginner
+        This is a beginner session — scale everything accordingly:
+        - **Reps per set:** 10–15 for bodyweight/conditioning; 8–12 for weighted strength work
+        - **Weights:** ~50–60% of 1RM for barbell lifts; light dumbbells (5–10kg); bodyweight where possible
+        - **Rest:** 90–120s between strength sets; 60–90s between conditioning intervals
+        - **Movement complexity:** stick to simple, low-skill movements — goblet squats not back squats, dumbbell rows not cleans, ring rows not muscle-ups. No Olympic lifting.
+        - **Volume:** keep total working sets low (2–3 per exercise). Do not stack too many exercises per section.
+        - **EMOM:** ≤6 total reps per minute across all exercises
+        - **Intensity:** comfortable effort, never redline. Focus on learning the movements.
+      DIFF
+    when "intermediate"
+      <<~DIFF
+        ## Difficulty: Intermediate
+        This is an intermediate session — the athlete can handle solid effort and moderate complexity:
+        - **Reps per set:** 8–12 for strength; 12–20 for conditioning; higher for bodyweight
+        - **Weights:** ~65–75% of 1RM for barbell lifts; moderate dumbbells/kettlebells (12–24kg)
+        - **Rest:** 60–90s between strength sets; 45–60s between conditioning intervals
+        - **Movement complexity:** barbell squats, deadlifts, press variations fine. Simple kettlebell and gymnastics skills (kipping pull-ups, box jumps, KB swings) are appropriate. Avoid heavy Olympic lifting unless the session specifically calls for it.
+        - **Volume:** 3–4 working sets per exercise. Sections can have 2–4 exercises.
+        - **EMOM:** ≤9 total reps per minute across all exercises
+        - **Intensity:** strong effort, should feel hard but sustainable. Some redline moments in finishers are fine.
+      DIFF
+    when "advanced"
+      <<~DIFF
+        ## Difficulty: Advanced
+        This is an advanced session — the athlete is well-conditioned and can handle high volume, heavy loads, and complex movements:
+        - **Reps per set:** 5–8 for heavy strength (85–90% 1RM); 15–25 for conditioning; higher for lighter bodyweight work
+        - **Weights:** ~75–90% of 1RM for heavy work; RX competition weights for conditioning (e.g. 24kg KB, 20kg wall ball); heavy carries and sleds
+        - **Rest:** 45–60s between conditioning sets; 90–120s only for true max-effort lifts
+        - **Movement complexity:** all barbell movements including cleans, snatches, thrusters at moderate-heavy loads. Gymnastics (strict muscle-ups, handstand push-ups, toes-to-bar). Complex kettlebell work.
+        - **Volume:** 4–5 working sets. Sections can be dense with 3–5 exercises. Total working time should feel relentless.
+        - **EMOM:** ≤12 total reps per minute across all exercises
+        - **Intensity:** should be genuinely hard. Redline in finishers and for-time sections is expected and appropriate.
+      DIFF
+    else
+      ""
+    end
+  end
+
+  def build_training_emphasis
+    emphasis = TRAINING_EMPHASES.sample
+    "## Training Emphasis: #{emphasis[:label]}\n#{emphasis[:instruction]}"
+  end
+
+  def build_prompt(context_workouts, program_research = nil)
     main_name  = @main_tag&.name || "general fitness"
     minor_str  = @minor_tags.map(&:name).join(", ")
 
@@ -291,6 +386,9 @@ class WorkoutLLMGenerator
       #{task_sentence}
     BASE
 
+    sections << build_difficulty_guidance
+    sections << build_training_emphasis
+
     if selected_stations
       # For event sessions with a station selection: inject the training philosophy
       # from the context file but NOT the station table (which causes the LLM to
@@ -308,6 +406,10 @@ class WorkoutLLMGenerator
       sections << sport_context if sport_context.present?
     end
 
+    if program_research
+      sections << build_program_research_context(program_research)
+    end
+
     if context_workouts.any?
       context_json = context_workouts.map do |w|
         { name: w.name, tags: w.tags.map(&:name), duration_mins: w.duration_mins,
@@ -323,7 +425,21 @@ class WorkoutLLMGenerator
     user_context = build_user_context
     sections << user_context if user_context.present?
 
+    if @session_notes.present?
+      sections << <<~NOTES
+        ## Athlete's Requests for This Session
+        The athlete has provided the following instructions — treat these as hard requirements, not suggestions:
+        #{@session_notes}
+
+        Examples of how to interpret requests:
+        - Injury mentions (e.g. "injured knee", "bad shoulder") → avoid exercises that load or stress that area; substitute with movements that work around it
+        - Equipment constraints (e.g. "dumbbells only", "no barbell") → use only the specified equipment throughout
+        - Style preferences (e.g. "heavy lifting", "cardio focus") → weight the session accordingly
+      NOTES
+    end
+
     sport_rule   = sport_purity_rule
+    core_rule    = core_section_rule
     pace_limits  = pace_limit_rule
     station_rule = if selected_stations
       "- ANCHOR MOVEMENTS: #{selected_stations.join(", ")} must be central to the main set. Complement them with toolkit exercises from the sport context — create a complete, varied workout, not a drill of the anchor movements repeated in every section."
@@ -339,13 +455,14 @@ class WorkoutLLMGenerator
       - Warm-up: easy cardio + a few bodyweight movements to loosen up — keep it brief
       - Finisher: something punchy and challenging to end on
       - Cool-down: ALWAYS end with a 5-minute cool-down section (format: straight, duration_mins: 5) containing 3–5 static stretches (e.g. hip flexor stretch, hamstring stretch, chest opener, thoracic rotation). No reps or distances — use notes on each exercise to describe the stretch (e.g. "30s each side").
+      #{core_rule}
       - Be specific with reps, distances, and weights
       - Give it a punchy, memorable name — something a gym community would actually call it (CrossFit-style), not a generic description
       #{sport_rule}
       #{pace_limits}
       - FORMAT SELECTION — choose the best format for each section. Actively vary formats across sections (do not use the same format for every section):
         * tabata — high-intensity cardio bursts or bodyweight finishers. 20s on / 10s off × 8 rounds = exactly 4 minutes. Set duration_mins: 4. Great for: assault bike, ski erg, burpees, KB swings, box jumps, jump rope. Do NOT add reps or calories to tabata exercises — the 20s interval is the constraint. You may specify distance_m or weight_kg where relevant.
-        * emom — strength, skill work, or paced conditioning. Each minute: do the prescribed reps, rest for the remainder. E.g. "EMOM 10 min: 5 thrusters + 5 pull-ups". Great for: barbell work, gymnastics, moderate cardio intervals.
+        * emom — strength, skill work, or paced conditioning. Each minute: do the prescribed reps, rest for the remainder. HARD REP LIMITS — total reps across ALL exercises in one minute: beginner ≤6, intermediate ≤9, advanced ≤12. If using multiple exercises, each equipment transition costs ~10s of that minute, so 2 exercises is usually the max (3 only if all bodyweight and no setup). Examples that WORK: "EMOM 10: 6 thrusters + 4 burpees" | "EMOM 12: 8 KB swings + 4 pull-ups". Examples that DON'T WORK: "EMOM 10: 10 thrusters + 10 pull-ups + 10 squats" (way too much — impossible in 60s). Great for: barbell work, gymnastics, moderate cardio intervals.
         * amrap — clock-driven main set. Complete as many rounds as possible. E.g. "AMRAP 12 min: 10 KB swings + 10 box jumps + 200m run". Great for: mixed modal circuits.
         * for_time — single-effort challenge, record finishing time. E.g. "100 wall balls for time" or "5 rounds: 400m run + 20 push-ups". Great for: benchmark efforts, race-pace work.
         * rounds — structured circuit with planned rest. Good for strength, controlled conditioning with recovery.
@@ -421,6 +538,15 @@ class WorkoutLLMGenerator
     else
       "- Always end with a 5-minute cool-down section (format: straight, duration_mins: 5) of 3–5 static stretches. No reps or distances — use notes to describe hold time (e.g. \"30s each side\")."
     end
+  end
+
+  def core_section_rule
+    minor_slugs = @minor_tags.map(&:slug)
+    return nil if minor_slugs.any? { |s| s.in?(%w[no-core no-abs no-core-work]) }
+    return nil if @duration_mins < 20
+
+    duration_mins = @duration_mins >= 45 ? 10 : 5
+    "- Core section: include a #{duration_mins}-minute dedicated core section (format: straight or rounds) placed towards the end of the session, before the cool-down. Use 3–5 exercises targeting abs and trunk stability (e.g. plank, hollow hold, dead bugs, Russian twist, V-ups, ab wheel rollout, GHD sit-ups, toes-to-bar, L-sit). Be specific with reps or hold times."
   end
 
   def build_remix_prompt
@@ -680,7 +806,7 @@ class WorkoutLLMGenerator
 
   # Meta-instruction minor tags that restrict the session but are NOT focus movements.
   # These must NOT disable station selection (they're constraints, not content choices).
-  META_MINOR_SLUGS = %w[no-run no-running no-runs].freeze
+  META_MINOR_SLUGS = %w[no-run no-running no-runs no-core no-abs no-core-work].freeze
 
   # Randomly selects a subset of event stations for this session.
   # Returns nil if the event has no station pool, or if the user specified actual
@@ -722,6 +848,98 @@ class WorkoutLLMGenerator
     return nil if content.blank?
 
     "## Sport-Specific Guidelines\n#{content}"
+  end
+
+  def validate_and_fix(workout_data)
+    validator = WorkoutValidator.new(workout_data, difficulty: @difficulty, duration_mins: @duration_mins)
+    result    = validator.validate_and_fix
+    validator.fixes.each    { |msg| Rails.logger.info("[WorkoutValidator] Fixed: #{msg}") }
+    validator.warnings.each { |msg| Rails.logger.warn("[WorkoutValidator] Warn:  #{msg}") }
+    result
+  end
+
+  # Returns true when the main tag has pre-written context or is a known event.
+  def known_program?
+    slug = @main_tag&.slug || ""
+    CONTEXT_TAG_MAP.key?(slug) || EVENT_STATIONS.key?(slug)
+  end
+
+  # Fires a fast research call if the main tag is an unknown program/style.
+  # Returns a hash of structured program info, or nil if not applicable / on error.
+  def research_unknown_program
+    return nil if @main_tag.nil?
+    return nil if known_program?
+
+    research_program(@main_tag.name)
+  rescue => e
+    Rails.logger.warn("WorkoutLLMGenerator: research pass failed for '#{@main_tag&.name}': #{e.message}")
+    nil
+  end
+
+  # Makes a fast, cheap LLM call to look up a fitness program by name.
+  def research_program(program_name)
+    api_key = ENV.fetch("ANTHROPIC_API_KEY") { raise WorkoutGenerationError, "ANTHROPIC_API_KEY not configured" }
+
+    prompt = <<~PROMPT
+      You are a fitness expert. Briefly describe the training program or style called "#{program_name}".
+      Use the describe_fitness_program tool to return structured information about it — the typical exercises, equipment, modalities, and session format.
+      If you don't recognise it as a specific program, treat it as a fitness style/theme and describe what that type of training typically looks like.
+    PROMPT
+
+    body = {
+      model:       MODEL,
+      max_tokens:  1024,
+      tools:       [ RESEARCH_TOOL_DEFINITION ],
+      tool_choice: { type: "any" },
+      messages:    [ { role: "user", content: prompt } ]
+    }
+
+    http            = Net::HTTP.new(API_URI.host, API_URI.port)
+    http.use_ssl    = true
+    http.open_timeout = 10
+    http.read_timeout = 30
+
+    request = Net::HTTP::Post.new(API_URI.path)
+    request["Content-Type"]      = "application/json"
+    request["x-api-key"]         = api_key
+    request["anthropic-version"] = "2023-06-01"
+    request.body = body.to_json
+
+    response = http.request(request)
+    return nil unless response.code.to_i == 200
+
+    parsed     = JSON.parse(response.body)
+    tool_block = parsed["content"].find { |b| b["type"] == "tool_use" }
+    return nil unless tool_block
+
+    tool_block["input"]
+  end
+
+  # Formats the research result into a prompt section.
+  def build_program_research_context(research)
+    return nil if research.blank?
+
+    lines = []
+    lines << "## Program Context: #{@main_tag&.name}"
+    lines << research["description"] if research["description"].present?
+    lines << "\n**Typical session format:** #{research["session_format"]}" if research["session_format"].present?
+
+    if Array(research["modalities"]).any?
+      lines << "\n**Training modalities:** #{research["modalities"].join(", ")}"
+    end
+
+    if Array(research["equipment"]).any?
+      lines << "\n**Typical equipment:** #{research["equipment"].join(", ")}"
+    end
+
+    if Array(research["typical_exercises"]).any?
+      lines << "\n**Exercises commonly used in this program:**"
+      research["typical_exercises"].each { |ex| lines << "  - #{ex}" }
+    end
+
+    lines << "\nUse these exercises and modalities to make the workout feel authentically like #{@main_tag&.name}."
+
+    lines.join("\n")
   end
 
   def call_llm(prompt)

@@ -19,13 +19,14 @@ end
   ["Functional Fitness", "main"],
   ["HIIT",               "main"],
   ["Bodyweight",         "main"],
+  ["Kettlebell",         "main"],
 ].each do |name, type|
   Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name; t.tag_type = type }
 end
 
 # Classify known main-focus (session type) tags
 %w[hyrox deka deka-fit deka-strong deka-mile deka-atlas dirty-dozen
-   crossfit functional-fitness hiit bodyweight
+   crossfit functional-fitness hiit bodyweight kettlebell
    ski ski-erg row rowing cycling bike cycle].each do |slug|
   Tag.find_by(slug: slug)&.update!(tag_type: "main")
 end
@@ -581,3 +582,14 @@ Workout.where(user: system_user).each do |workout|
   WorkoutLike.find_or_create_by!(user: system_user, workout: workout)
 end
 puts "Done. #{WorkoutLike.count} workout likes."
+
+# ---------------------------------------------------------------------------
+# Kettlebell weekly programme workouts
+# ---------------------------------------------------------------------------
+load Rails.root.join("db/seeds/kettlebell_workouts.rb")
+
+puts "Seeding kettlebell workout likes..."
+Workout.where(user: system_user).each do |workout|
+  WorkoutLike.find_or_create_by!(user: system_user, workout: workout)
+end
+puts "Done. #{WorkoutLike.count} total workout likes."
