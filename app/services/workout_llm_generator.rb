@@ -16,17 +16,17 @@ require "json"
 class WorkoutLLMGenerator
   # Maps tag slugs/names to context files in app/llm_context/
   CONTEXT_TAG_MAP = {
-    "hyrox"        => "hyrox.md",
-    "deka"         => "deka_fit.md",
-    "deka-fit"     => "deka_fit.md",
-    "deka-strong"  => "deka_strong.md",
-    "deka-mile"    => "deka_mile.md",
-    "deka-atlas"   => "deka_atlas.md",
-    "dirty-dozen"  => "dirty_dozen.md",
-    "swimming"     => "swimming.md",
-    "swim"         => "swimming.md",
-    "running"      => "running.md",
-    "run"          => "running.md",
+    "hyrox"              => "hyrox.md",
+    "deka"               => "deka_fit.md",
+    "deka-fit"           => "deka_fit.md",
+    "deka-strong"        => "deka_strong.md",
+    "deka-mile"          => "deka_mile.md",
+    "deka-atlas"         => "deka_atlas.md",
+    "dirty-dozen"        => "dirty_dozen.md",
+    "crossfit"           => "crossfit.md",
+    "functional-fitness" => "functional.md",
+    "hiit"               => "hiit.md",
+    "bodyweight"         => "bodyweight.md",
   }.freeze
 
   CONTEXT_DIR = Rails.root.join("app", "llm_context").freeze
@@ -169,21 +169,20 @@ class WorkoutLLMGenerator
     }
   }.freeze
 
-  def self.call(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], group_code_id: nil, target_distance_km: nil, tag_ids: [], source_workout: nil)
-    new(user: user, main_tag_id: main_tag_id, minor_tag_ids: minor_tag_ids, group_code_id: group_code_id, target_distance_km: target_distance_km, tag_ids: tag_ids, duration_mins: duration_mins, difficulty: difficulty, source_workout: source_workout).call
+  def self.call(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], group_code_id: nil, tag_ids: [], source_workout: nil)
+    new(user: user, main_tag_id: main_tag_id, minor_tag_ids: minor_tag_ids, group_code_id: group_code_id, tag_ids: tag_ids, duration_mins: duration_mins, difficulty: difficulty, source_workout: source_workout).call
   end
 
-  def initialize(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], group_code_id: nil, target_distance_km: nil, tag_ids: [], source_workout: nil)
-    @user               = user
-    @main_tag           = main_tag_id.present? ? Tag.find_by(id: main_tag_id) : nil
-    @minor_tags         = Tag.where(id: Array(minor_tag_ids).map(&:to_i).reject(&:zero?))
-    @group_code_tag     = group_code_id.present? ? Tag.find_by(id: group_code_id) : nil
-    @target_distance_km = target_distance_km.to_f > 0 ? target_distance_km.to_f : nil
+  def initialize(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], group_code_id: nil, tag_ids: [], source_workout: nil)
+    @user           = user
+    @main_tag       = main_tag_id.present? ? Tag.find_by(id: main_tag_id) : nil
+    @minor_tags     = Tag.where(id: Array(minor_tag_ids).map(&:to_i).reject(&:zero?))
+    @group_code_tag = group_code_id.present? ? Tag.find_by(id: group_code_id) : nil
     # tag_ids kept for backwards compat (remix path uses source workout tags directly)
-    @tag_ids            = tag_ids.any? ? Array(tag_ids).map(&:to_i).reject(&:zero?) : ([@main_tag&.id] + @minor_tags.map(&:id)).compact
-    @duration_mins      = duration_mins.to_i
-    @difficulty         = difficulty
-    @source_workout     = source_workout
+    @tag_ids        = tag_ids.any? ? Array(tag_ids).map(&:to_i).reject(&:zero?) : ([@main_tag&.id] + @minor_tags.map(&:id)).compact
+    @duration_mins  = duration_mins.to_i
+    @difficulty     = difficulty
+    @source_workout = source_workout
   end
 
   def call
@@ -197,12 +196,6 @@ class WorkoutLLMGenerator
       prompt           = build_prompt(context_workouts)
       workout_data     = call_llm(prompt)
       workout_data     = collapse_duplicate_exercises(workout_data)
-      workout_data     = snap_swim_distances(workout_data) if is_swim_session?
-      if @target_distance_km
-        workout_data = call_distance_correction(workout_data)  # LLM correction pass
-        workout_data = snap_swim_distances(workout_data) if is_swim_session?  # re-snap after LLM correction
-        workout_data = adjust_to_target_distance(workout_data)  # silent safety net
-      end
       all_tag_names    = ([@main_tag&.name] + @minor_tags.map(&:name) + [@group_code_tag&.name]).compact
       create_workout(workout_data, all_tag_names)
     end
@@ -275,226 +268,16 @@ class WorkoutLLMGenerator
     workout_data
   end
 
-  # Second LLM pass: shows the model the actual total it produced vs the target and
-  # asks it to fix the discrepancy. Skipped when already exact or within one pool length.
-  def call_distance_correction(workout_data)
-    target_m = (@target_distance_km * 1000).to_i
-    pool_len = [(@user.pool_length.presence || "25m").to_i, 25].max
-
-    sections = workout_data.dig("structure", "sections").to_a
-    actual_m = sections.sum do |s|
-      [s["rounds"].to_i, 1].max * Array(s["exercises"]).sum { |e| e["distance_m"].to_i }
-    end
-
-    diff_m = target_m - actual_m
-    return workout_data if diff_m.abs < pool_len  # already exact enough
-
-    direction = diff_m > 0 ? "#{diff_m}m short" : "#{diff_m.abs}m over"
-
-    prompt = <<~PROMPT
-      A swimming workout was generated targeting #{@target_distance_km}km (#{target_m}m) total.
-      After summing all exercises (accounting for rounds × per-round distances) the actual total is #{actual_m}m — #{direction}.
-
-      Current workout JSON:
-      #{workout_data.to_json}
-
-      Please use the create_workout tool to return a corrected version that totals EXACTLY #{target_m}m.
-
-      Rules:
-      - Adjust one or more exercise distances — extend or add a rep block in the most natural place
-      - Every distance_m must be a whole multiple of #{pool_len}m AND must be 25, 50, or a multiple of 100 (valid: 25, 50, 100, 200, 300, 400… NEVER 75, 125, 150, 175, 225, 250 etc.)
-      - Cool-down section: never exceed 200m total. Use the cool-down as the primary adjustment target when the diff is small
-      - For 'rounds' sections: distance_m is per-round (system multiplies by rounds). Total for a section = sum(distance_m) × rounds
-      - CRITICAL: when you change a distance_m you MUST also update the exercise name and notes to match. E.g. if "8 × 100m" (distance_m:800) becomes 1000m, update to "10 × 100m" in name/notes. Never leave the name/notes describing a different rep count than distance_m.
-      - Verify the sum before returning: list each section's contribution and confirm they total #{target_m}m
-      - Do not change the workout name, goal, session structure, or format types
-    PROMPT
-
-    call_llm(prompt)
-  rescue StandardError
-    workout_data  # if the correction call fails, return the original
-  end
-
-  # Post-processes the LLM output to guarantee the total distance matches the target.
-  # Steps:
-  #   1. Round every distance_m to the nearest pool-length multiple (fixes fractional distances)
-  #   2. Re-sum the actual total
-  #   3. Apply the diff to the best candidate exercise (prefer main sections, straight > rounds)
-  #   4. If no single exercise can absorb it cleanly, add an Easy Freestyle entry to the cool-down
-  def adjust_to_target_distance(workout_data)
-    target_m = (@target_distance_km * 1000).to_i
-    pool_len  = [(@user.pool_length.presence || "25m").to_i, 25].max
-    swim      = is_swim_session?
-
-    sections = workout_data.dig("structure", "sections").to_a
-
-    # ── Step 1: Snap all distances to valid values ───────────────────────────
-    # Swim: 25, 50, or multiples of 100. Others: nearest pool-length multiple.
-    sections.each do |section|
-      Array(section["exercises"]).each do |ex|
-        next unless ex["distance_m"].to_i > 0
-        ex["distance_m"] = if swim
-          snap_swim_distance(ex["distance_m"].to_i)
-        else
-          [((ex["distance_m"].to_f / pool_len).round * pool_len).to_i, pool_len].max
-        end
-      end
-    end
-
-    # ── Step 1b: Cap cool-down at 200m (swim sessions) ───────────────────────
-    if swim
-      cd = sections.find { |s| s["name"].to_s.downcase.match?(/cool|down/) }
-      if cd
-        cd_exs   = Array(cd["exercises"]).select { |e| e["distance_m"].to_i > 0 }
-        cd_total = cd_exs.sum { |e| e["distance_m"].to_i }
-        if cd_total > 200
-          ex = cd_exs.max_by { |e| e["distance_m"].to_i }
-          ex["distance_m"] = snap_swim_distance([ex["distance_m"].to_i - (cd_total - 200), 25].max)
-        end
-      end
-    end
-
-    # ── Step 2: Actual total after snapping ──────────────────────────────────
-    actual_m = sections.sum do |s|
-      [s["rounds"].to_i, 1].max * Array(s["exercises"]).sum { |e| e["distance_m"].to_i }
-    end
-
-    diff_m = target_m - actual_m
-    return workout_data if diff_m.zero?
-
-    # ── Step 3: Find best section/exercise to absorb the diff ────────────────
-    rep_scheme = ->(e) { (e["notes"].to_s + e["name"].to_s).match?(/\d+\s*[×x×]/) }
-
-    # Direction-aware sort:
-    #   Under target (diff > 0): add to cool-down first (it's the intended buffer)
-    #   Over target  (diff < 0): try main sections first — cool-down is small and
-    #     warm/cool sections rarely have enough distance to absorb a large reduction
-    sorted_sections = sections.sort_by do |s|
-      name = s["name"].to_s.downcase
-      is_cd   = name.match?(/cool|down/)
-      is_warm = name.include?("warm")
-      if diff_m > 0
-        is_cd ? 0 : (is_warm ? 1 : 2)   # cool-down first when adding
-      else
-        (is_cd || is_warm) ? 2 : 0       # main sections first when removing
-      end
-    end
-
-    applied = false
-    sorted_sections.each do |section|
-      break if applied
-      is_cooldown = section["name"].to_s.downcase.match?(/cool|down/)
-      rounds = [section["rounds"].to_i, 1].max
-
-      # Under target: skip exercises with embedded rep counts (notes would become inconsistent).
-      # Over target:  allow rep-scheme exercises — swim main sets are almost always named
-      #               "4 × 200m Freestyle" so filtering them out leaves nothing to reduce.
-      dist_exs = Array(section["exercises"])
-                   .select { |e| e["distance_m"].to_i > 0 }
-                   .reject { |e| !is_cooldown && diff_m > 0 && rep_scheme.call(e) }
-      next if dist_exs.empty?
-      next unless (diff_m % rounds).zero?
-
-      per_round = diff_m / rounds
-
-      ex = dist_exs.max_by { |e| e["distance_m"].to_i }
-
-      if is_cooldown && swim
-        # Cool-down buffer: allow 25m granularity, hard cap at 200m total
-        next unless (per_round % pool_len).zero?
-        cd_total  = dist_exs.sum { |e| e["distance_m"].to_i }
-        new_dist  = ex["distance_m"].to_i + per_round
-        new_total = cd_total - ex["distance_m"].to_i + new_dist
-        next if new_dist <= 0 || new_total > 200 || new_total < pool_len
-        ex["distance_m"] = new_dist
-        applied = true
-      elsif swim
-        # Main set: result must snap to a valid swim distance
-        next unless (per_round % pool_len).zero?
-        raw      = ex["distance_m"].to_i + per_round
-        new_dist = snap_swim_distance(raw)
-        next if new_dist <= 0
-        # For positive diffs: only apply if result is already valid (no notes drift)
-        # For negative diffs: apply even if snap adjusts by one step (closer > nothing)
-        next if diff_m > 0 && new_dist != raw
-        ex["distance_m"] = new_dist
-        applied = true
-      else
-        next unless (per_round % pool_len).zero?
-        new_dist = ex["distance_m"].to_i + per_round
-        next if new_dist <= 0
-        ex["distance_m"] = new_dist
-        applied = true
-      end
-    end
-
-    # If step 3 adjusted but snap left a residual diff, recalculate so step 4 can also run
-    if applied
-      actual_m = sections.sum { |s| [s["rounds"].to_i, 1].max * Array(s["exercises"]).sum { |e| e["distance_m"].to_i } }
-      diff_m   = target_m - actual_m
-      applied  = diff_m.zero?
-    end
-
-    # ── Step 4: Fallback — add/remove from cool-down (capped at 200m) ────────
-    unless applied
-      cooldown = sections.find { |s| s["name"].to_s.downcase.match?(/cool/) }
-      unless cooldown
-        cooldown = { "name" => "Cool-down", "format" => "straight", "exercises" => [] }
-        sections << cooldown
-        workout_data["structure"]["sections"] = sections
-      end
-
-      cd_exs   = Array(cooldown["exercises"]).select { |e| e["distance_m"].to_i > 0 }
-      cd_total = cd_exs.sum { |e| e["distance_m"].to_i }
-      gran     = pool_len  # 25m for swim (pool_len == 25), or pool_len for others
-
-      if diff_m > 0
-        # Add up to 200m cap
-        add = [diff_m, 200 - cd_total].min
-        add = (add / gran).to_i * gran  # snap to granularity
-        if add > 0
-          if cd_exs.any?
-            ex = cd_exs.max_by { |e| e["distance_m"].to_i }
-            ex["distance_m"] += add
-          else
-            cooldown["exercises"] ||= []
-            cooldown["exercises"] << { "name" => "Easy Freestyle", "distance_m" => add, "notes" => "easy" }
-          end
-        end
-      elsif diff_m < 0 && cd_exs.any?
-        # Trim cool-down to fix overshoot
-        ex       = cd_exs.max_by { |e| e["distance_m"].to_i }
-        reduce   = (diff_m.abs / gran).to_i * gran
-        new_dist = [ex["distance_m"].to_i - reduce, gran].max
-        ex["distance_m"] = new_dist
-      end
-    end
-
-    # ── Update duration_mins proportionally ─────────────────────────────────
-    if actual_m > 0 && workout_data["duration_mins"].to_i > 0
-      workout_data["duration_mins"] = ((target_m.to_f / actual_m) * workout_data["duration_mins"]).round
-    end
-
-    workout_data
-  end
-
   def build_prompt(context_workouts)
     main_name  = @main_tag&.name || "general fitness"
     minor_str  = @minor_tags.map(&:name).join(", ")
 
-    dist_str = @target_distance_km ? "#{@target_distance_km.to_s.delete_suffix(".0")}km" : nil
-
     selected_stations = pick_event_stations
     station_constraint = if selected_stations
-      n = selected_stations.size
-      " Build the entire session around these #{n} station#{"s" if n > 1} ONLY — #{selected_stations.join(", ")}. Do not include any other #{main_name} stations."
+      " Anchor movements for this session (must appear in the main set): #{selected_stations.join(", ")}. Supplement freely with exercises from the #{main_name} training toolkit."
     end
 
-    task_sentence = if dist_str && minor_str.present?
-      "Generate a #{@difficulty} #{main_name} session covering #{dist_str} with a focus on: #{minor_str}.#{station_constraint}"
-    elsif dist_str
-      "Generate a #{@difficulty} #{main_name} session covering #{dist_str}.#{station_constraint}"
-    elsif minor_str.present?
+    task_sentence = if minor_str.present?
       "Generate a #{@duration_mins}-minute #{@difficulty} #{main_name} session with a focus on: #{minor_str}.#{station_constraint}"
     else
       "Generate a #{@duration_mins}-minute #{@difficulty} #{main_name} session.#{station_constraint}"
@@ -540,27 +323,13 @@ class WorkoutLLMGenerator
     user_context = build_user_context
     sections << user_context if user_context.present?
 
-    sport_rule  = sport_purity_rule
-    pace_limits = pace_limit_rule
+    sport_rule   = sport_purity_rule
+    pace_limits  = pace_limit_rule
     station_rule = if selected_stations
-      n = selected_stations.size
-      "- HARD RULE — STATION CONSTRAINT: Use ONLY #{n} station#{"s" if n > 1} in this session: #{selected_stations.join(", ")}. Every exercise in every main section MUST be one of these. No other #{main_name} stations permitted."
+      "- ANCHOR MOVEMENTS: #{selected_stations.join(", ")} must be central to the main set. Complement them with toolkit exercises from the sport context — create a complete, varied workout, not a drill of the anchor movements repeated in every section."
     end
 
-    duration_rule = if @target_distance_km
-      target_m = (@target_distance_km * 1000).to_i
-      "- TARGET DISTANCE: #{dist_str} (#{target_m}m) total. This overrides any volume budget table in the sport guidelines.\n" \
-      "- DISTANCE ACCOUNTING — the system calculates section totals as follows:\n" \
-      "    * rounds sections: section_total = sum(distance_m per exercise) × rounds\n" \
-      "    * all other sections: section_total = sum(distance_m per exercise)\n" \
-      "- Therefore distance_m in a rounds section must be the PER-ROUND value. NEVER pre-multiply by rounds.\n" \
-      "- Plan before writing: list each section, its format, rounds, and distance. E.g.:\n" \
-      "    Warm-up (straight) 500m + Main Set (rounds×3, 600m/round = 1800m) + Cool-down (straight) 200m = 2500m\n" \
-      "- The planned totals must sum exactly to #{target_m}m before you fill in the tool.\n" \
-      "- Set duration_mins to a realistic time to cover #{dist_str} at #{@difficulty} pace."
-    else
-      "- Total duration close to #{@duration_mins} minutes"
-    end
+    duration_rule = "- Total duration close to #{@duration_mins} minutes"
 
     sections << <<~RULES
       Use the create_workout tool. Requirements:
@@ -642,26 +411,13 @@ class WorkoutLLMGenerator
     "- Athlete pace limits (HARD LIMITS — do not prescribe any time faster than these):\n#{lines.map { |l| "    * #{l}" }.join("\n")}"
   end
 
-  # Returns a bullet-point rule if the main/minor tags indicate a single-sport session
-  # or an explicit exclusion (e.g. "no-run" minor tag for a Hyrox gym-only session).
+  # Returns a bullet-point rule for explicit exclusions (e.g. "no-run" minor tag).
   def sport_purity_rule
-    main_slug   = @main_tag&.slug || ""
     minor_slugs = @minor_tags.map(&:slug)
-
-    no_run  = minor_slugs.any? { |s| s.in?(%w[no-run no-running no-runs]) }
-    is_run  = !no_run && (main_slug.in?(%w[running run]) || minor_slugs.any? { |s| s.include?("run") || %w[tempo sprint intervals 5k 10k marathon trail].include?(s) })
-    is_swim = main_slug.in?(%w[swimming swim]) || minor_slugs.any? { |s| s.include?("swim") || s.include?("pool") || s == "open-water" }
+    no_run = minor_slugs.any? { |s| s.in?(%w[no-run no-running no-runs]) }
 
     if no_run
       "- Do NOT include any running in this session. Replace any running segments with rowing, SkiErg, bike erg, or other non-running cardio."
-    elsif is_run
-      "- This is a running session — use ONLY running distances and dynamic movement/drills. Do NOT add gym exercises, weights, or machines."
-    elsif is_swim
-      "- This is a swimming session — use ONLY swimming strokes, drills, and kick/pull sets. Do NOT add gym exercises.\n" \
-      "- SWIM DISTANCE RULE: every distance_m MUST be 25, 50, or a multiple of 100. " \
-      "Valid: 25, 50, 100, 200, 300, 400, 500, 800, 1000, 1500. " \
-      "NEVER use 75, 125, 150, 175, 225, 250 or any other value — these are not natural pool distances.\n" \
-      "- Cool-down: 100m standard. Never more than 200m."
     else
       "- Always end with a 5-minute cool-down section (format: straight, duration_mins: 5) of 3–5 static stretches. No reps or distances — use notes to describe hold time (e.g. \"30s each side\")."
     end
@@ -940,43 +696,6 @@ class WorkoutLLMGenerator
 
     count = STATION_COUNT_WEIGHTS.sample
     pool.shuffle.first(count)
-  end
-
-  def is_swim_session?
-    slug = @main_tag&.slug || ""
-    slug.in?(%w[swimming swim]) || @minor_tags.any? { |t| t.slug.match?(/swim/) }
-  end
-
-  # Snaps a distance to the valid set for swimming: 25, 50, or nearest multiple of 100.
-  # E.g. 75 → 50, 125 → 100, 150 → 200, 175 → 200.
-  def snap_swim_distance(m)
-    return 0 if m <= 0
-    return 25 if m < 38
-    return 50 if m < 76
-    ((m.to_f / 100).round * 100).clamp(100, 10_000)
-  end
-
-  # Post-processing pass for swim sessions: snaps all exercise distances to the valid set
-  # (25, 50, or multiples of 100) and caps the cool-down at 200m.
-  def snap_swim_distances(workout_data)
-    sections = Array(workout_data.dig("structure", "sections"))
-    sections.each do |section|
-      is_cooldown = section["name"].to_s.downcase.match?(/cool|down/)
-      Array(section["exercises"]).each do |ex|
-        next unless ex["distance_m"].to_i > 0
-        ex["distance_m"] = snap_swim_distance(ex["distance_m"].to_i)
-      end
-      next unless is_cooldown
-      cd_exs   = Array(section["exercises"]).select { |e| e["distance_m"].to_i > 0 }
-      cd_total = cd_exs.sum { |e| e["distance_m"].to_i }
-      if cd_total > 200
-        # Reduce the largest exercise to bring the total back to ≤ 200m
-        ex = cd_exs.max_by { |e| e["distance_m"].to_i }
-        trimmed = [ex["distance_m"].to_i - (cd_total - 200), 25].max
-        ex["distance_m"] = snap_swim_distance(trimmed)
-      end
-    end
-    workout_data
   end
 
   def fmt_secs(secs)

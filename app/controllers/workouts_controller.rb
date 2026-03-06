@@ -207,13 +207,12 @@ class WorkoutsController < ApplicationController
     end
 
     @workout = WorkoutLLMGenerator.call(
-      user:               Current.user,
-      main_tag_id:        main_tag_id,
-      minor_tag_ids:      minor_tag_ids,
-      group_code_id:      group_code_id,
-      duration_mins:      params[:duration_mins],
-      target_distance_km: params[:planning_mode] == "distance" ? params[:target_distance_km].to_f : nil,
-      difficulty:         params[:difficulty]
+      user:          Current.user,
+      main_tag_id:   main_tag_id,
+      minor_tag_ids: minor_tag_ids,
+      group_code_id: group_code_id,
+      duration_mins: params[:duration_mins],
+      difficulty:    params[:difficulty]
     )
 
     redirect_to workout_path(@workout)
