@@ -145,15 +145,20 @@ class WorkoutLLMGenerator
 
   COOLDOWN_OPTIONS = [
     { label: "Lower Body Focus",
-      instruction: "Prioritise hips, hamstrings, quads: hip flexor stretch (kneeling lunge, 30s each side), pigeon pose or figure-four glute stretch (45s each side), seated forward fold (45s), standing quad stretch (30s each leg), lying spinal twist (30s each side)." },
+      duration_s: 45,
+      instruction: "Prioritise hips, hamstrings, quads. 5 stretches, each duration_s: 45. Choose from: hip flexor stretch (kneeling lunge), pigeon pose or figure-four glute stretch, seated forward fold, standing quad stretch, lying spinal twist, butterfly stretch." },
     { label: "Upper Body Focus",
-      instruction: "Prioritise chest, shoulders, lats: chest opener with hands clasped behind back (30s), cross-body shoulder stretch (30s each arm), doorframe pec stretch (30s each side), thread the needle (30s each side), child's pose with arms extended (45s)." },
+      duration_s: 45,
+      instruction: "Prioritise chest, shoulders, lats. 5 stretches, each duration_s: 45. Choose from: chest opener (hands clasped behind back), cross-body shoulder stretch, doorframe pec stretch, thread the needle, child's pose with arms extended, lat stretch in doorframe." },
     { label: "Full Body Stretch",
-      instruction: "Hit everything briefly: hip flexor lunge stretch (30s each side), hamstring forward fold (30s), chest opener (30s), thoracic rotation in quadruped (30s each side), lying glute stretch (30s each side)." },
+      duration_s: 45,
+      instruction: "Cover all major muscle groups. 5 stretches, each duration_s: 45. Pick one lower body, one hip, one hamstring, one chest/shoulder, one spine. Choose from: hip flexor lunge, pigeon pose, forward fold, chest opener, thoracic rotation, lying spinal twist." },
     { label: "Mobility Flow",
-      instruction: "Slow continuous movement rather than held stretches: world's greatest stretch (3 reps each side), deep squat to stand (5 reps), cat-cow (8 reps), thread the needle (3 each side), downward dog pedalling heels (10 reps). Describe movements in notes." },
+      duration_s: 30,
+      instruction: "Movement-based cool-down rather than static holds. 5 exercises, each duration_s: 30. Use slow controlled reps described in notes: world's greatest stretch, deep squat to stand, cat-cow, thread the needle, downward dog with heel pedals." },
     { label: "Recovery Stretch",
-      instruction: "Longer holds, very relaxed: child's pose (60s), butterfly stretch seated (60s), supine hamstring pull (45s each leg), lying spinal twist (45s each side). Only 4 exercises but held longer — designed to genuinely lower heart rate and relax." },
+      duration_s: 60,
+      instruction: "Longer holds, very relaxed. 4 stretches only, each duration_s: 60. Choose from: child's pose, butterfly stretch, supine hamstring pull, lying spinal twist, pigeon pose. Fewer stretches held longer — designed to fully lower heart rate." },
   ].freeze
 
   # Mixed appears 4× (40%), each pure style appears 2× (20%).
@@ -230,7 +235,7 @@ class WorkoutLLMGenerator
                   format:             { type: "string", enum: %w[straight amrap rounds emom tabata for_time ladder mountain matrix], description: "straight=sets with rest, rounds=multiple rounds of the same set, amrap=as many rounds as possible in a time cap, emom=every minute on the minute, tabata=20s work/10s rest×8, for_time=complete prescribed reps/distance as fast as possible (record finishing time), ladder/mountain=reps/distance change each round, matrix=progressive exercise combination (add then remove exercises each round: A → A+B → A+B+C → B+C → C)" },
                   duration_mins:      { type: "integer" },
                   rounds:             { type: "integer" },
-                  rest_secs:          { type: "integer" },
+                  rest_secs:          { type: "integer", description: "Rest in seconds after each round. Must be 30, 45, or 60 only." },
                   notes:              { type: "string" },
                   varies:             { type: "string", enum: %w[reps calories kg distance_m], description: "What changes each rung (ladder/mountain only). CRITICAL: every exercise in this section must share this metric — do not mix rep-based, distance-based, and calorie-based exercises in the same ladder/mountain." },
                   start:              { type: "number", description: "Starting value for ladder/mountain" },
@@ -424,6 +429,7 @@ class WorkoutLLMGenerator
 
       ## Cool-Down Approach: #{cooldown[:label]}
       #{cooldown[:instruction]}
+      IMPORTANT: every cool-down exercise must use duration_s: #{cooldown[:duration_s]} — all the same, no exceptions. Do not mix durations.
     WC
   end
 
@@ -537,7 +543,7 @@ class WorkoutLLMGenerator
           - INVALID: mixing reps, distance, and calorie exercises in the same ladder.
         * straight — fixed sets with rest. Use for simple warm-ups or isolated exercises.
         * matrix — progressive exercise combinations. List 3–5 exercises in order. The section builds up then strips back: for 3 exercises: A, A+B, A+B+C, B+C, C. For 4: A, A+B, A+B+C, A+B+C+D, B+C+D, C+D, D. For 5: A, A+B, A+B+C, A+B+C+D, A+B+C+D+E, B+C+D+E, C+D+E, D+E, E. IMPORTANT: all exercises must use the same metric — either all reps (same count each) or all duration_s (same seconds each). Prefer duration_s: 30 for each exercise most of the time — this is the most common Metafit style. Set rest_secs for the rest between each combination (typically 30–60s).
-      - SINGLE-EXERCISE SECTIONS are valid and often better than circuits, especially for strength and power work. A section with just one exercise is perfectly correct: e.g. '5 × 5 Deadlift (heavy)', 'EMOM 10: 8 Thrusters', '4 × 8 Romanian Deadlift'. Do not feel obligated to bundle every movement into a multi-exercise circuit — for strength sessions in particular, each major lift should usually get its own dedicated section.
+      - SINGLE-EXERCISE SECTIONS are valid and often better than circuits, especially for strength and power work. A section with just one exercise is perfectly correct: e.g. '5 × 5 Deadlift (heavy)', 'EMOM 10: 8 Thrusters', '4 × 8 Romanian Deadlift'. Do not feel obligated to bundle every movement into a multi-exercise circuit — for strength sessions in particular, each major lift should usually get its own dedicated section. HOWEVER: a single-exercise section must always have multiple sets — use rounds: 3–5 (straight/rounds format) or a time cap (emom/amrap). A section with 1 exercise and 1 set of reps is never enough on its own.
       - NEVER list the same exercise more than once in a section's exercises array. If you need the same movement repeated (e.g. 5 × 25m Freestyle), use rounds: 5 with a single exercise entry — not 5 separate entries. Duplicate entries are always wrong.
       RULES
 

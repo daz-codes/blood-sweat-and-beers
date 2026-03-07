@@ -8,7 +8,9 @@
 <div <% if dom_id %>id="<%= dom_id %>"<% end %> class="px-3 py-2.5 border-t border-zinc-700/50"
      <% if swappable && workout %>data-controller="swap-exercise"<% end %>>
   <div class="flex items-start justify-between gap-2">
-    <p class="text-white text-sm font-semibold" <% if swappable && workout %>data-swap-exercise-target="name"<% end %>><%= exercise["name"] %></p>
+    <div>
+      <p class="text-white text-sm font-semibold" <% if swappable && workout %>data-swap-exercise-target="name"<% end %>><%= exercise["name"] %></p>
+    </div>
     <% if swappable && workout %>
       <%= button_to swap_exercise_workout_path(workout),
             params: { section_index: section_index, exercise_index: exercise_index },
@@ -43,7 +45,7 @@
       <% if exercise["weight_kg"].to_f > 0 %>
         <span class="text-xs font-bold text-lime-400"><%= exercise["weight_kg"] %>kg</span>
       <% end %>
-      <% if exercise["notes"].present? %>
+      <% if !is_tabata && exercise["notes"].present? %>
         <span class="text-gray-400 text-xs italic"><%= exercise["notes"] %></span>
       <% end %>
     </div>

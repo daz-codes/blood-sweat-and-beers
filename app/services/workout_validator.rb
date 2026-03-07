@@ -50,6 +50,9 @@ class WorkoutValidator
     end
 
     fix_alternating_reps(sections)
+    fix_rest_secs(sections)
+    fix_single_set_sections(sections)
+    fix_tabata_exercise_notes(sections)
     check_cooldown(sections)
 
     @data
@@ -109,6 +112,39 @@ class WorkoutValidator
               "step #{step} invalid for #{varies} — corrected to #{corrected}"
   end
 
+  # A section with straight/rounds format, exactly 1 exercise, and no rounds set
+  # is almost certainly a mistake — enforce a minimum of 3 rounds.
+  # Skips warm-up, cool-down, tabata, emom, amrap, for_time, ladder, mountain.
+  SINGLE_SET_EXEMPT = %w[tabata emom amrap for_time ladder mountain].freeze
+  WARMUP_COOLDOWN_PATTERN = /warm|cool|stretch|recovery/i
+
+  def fix_single_set_sections(sections)
+    sections.each do |section|
+      next if section["format"].to_s.in?(SINGLE_SET_EXEMPT)
+      next if section["name"].to_s.match?(WARMUP_COOLDOWN_PATTERN)
+      next if section["rounds"].to_i > 1
+      next if Array(section["exercises"]).size != 1
+      section["rounds"]  = 3
+      section["format"]  = "rounds"
+      @fixes << "'#{section["name"]}': single exercise with no rounds — set to 3 rounds"
+    end
+  end
+
+  # Snaps rest_secs to the nearest allowed value: 30, 45, or 60.
+  # Any rest longer than 60s is capped at 60; anything below 30 stays as-is (short transitions are fine).
+  ALLOWED_REST = [30, 45, 60].freeze
+
+  def fix_rest_secs(sections)
+    sections.each do |section|
+      rest = section["rest_secs"].to_i
+      next if rest.zero? || rest <= 20  # no rest or very short transition — leave alone
+      snapped = ALLOWED_REST.min_by { |v| (v - rest).abs }
+      next if snapped == rest
+      @fixes << "'#{section["name"]}': rest_secs #{rest}s → #{snapped}s"
+      section["rest_secs"] = snapped
+    end
+  end
+
   # Alternating/unilateral exercises must have even rep counts so both sides get equal work.
   # Rounds up odd counts by 1 rather than down, so volume is never reduced.
   # Skips ladder/mountain sections — those use progressive rep schemes where odd numbers are fine.
@@ -125,6 +161,19 @@ class WorkoutValidator
     end
   end
 
+
+  # Tabata exercises often get notes like "20s on / 10s off × 8 rounds" from the LLM.
+  # This is already shown in the UI under each exercise name — strip it from notes to avoid duplication.
+  def fix_tabata_exercise_notes(sections)
+    sections.each do |section|
+      next unless section["format"] == "tabata"
+      Array(section["exercises"]).each do |exercise|
+        next unless exercise["notes"].present?
+        exercise.delete("notes")
+        @fixes << "'#{exercise["name"]}' in '#{section["name"]}': removed tabata interval notes (shown in UI)"
+      end
+    end
+  end
 
   # Warn if the last section doesn't look like a cool-down.
   def check_cooldown(sections)

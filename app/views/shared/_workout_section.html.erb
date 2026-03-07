@@ -54,7 +54,7 @@
    when "emom"
      section["duration_mins"] ? "Every Minute On the Minute · #{section["duration_mins"]} min" : "Every Minute On the Minute"
    when "tabata"
-     "Tabata · 8 rounds · 20s work · 10s rest"
+     :tabata
    when "for_time"
      "For Time"
    when "ladder", "mountain"
@@ -79,7 +79,9 @@
         </div>
       <% end %>
     </div>
-    <% if format_desc.present? %>
+    <% if format_desc == :tabata %>
+      <p class="text-gray-400 text-xs mt-1 leading-relaxed italic">Tabata · 8 rounds · <span class="text-lime-400 font-bold not-italic">20s hard effort / 10s easy</span></p>
+    <% elsif format_desc.present? %>
       <p class="text-gray-400 text-xs mt-1 leading-relaxed"><%= format_desc %></p>
     <% end %>
   </div>
