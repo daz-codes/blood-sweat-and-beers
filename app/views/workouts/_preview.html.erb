@@ -63,9 +63,15 @@
 
   <%# Sections %>
   <% sections = workout.structure.is_a?(Hash) ? Array(workout.structure["sections"]) : [] %>
+  <% swappable = Current.user == workout.user %>
   <div class="px-4 py-3 space-y-2">
-    <% sections.each do |section| %>
-      <%= render "shared/workout_section", section: section, distance_sport: is_distance_sport %>
+    <% sections.each_with_index do |section, si| %>
+      <%= render "shared/workout_section",
+            section:        section,
+            distance_sport: is_distance_sport,
+            workout:        workout,
+            section_index:  si,
+            swappable:      swappable %>
     <% end %>
   </div>
 
@@ -78,7 +84,7 @@
             class="sm:flex-1 text-center bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 font-black py-3 rounded-xl text-sm transition-colors uppercase tracking-wide shadow-sm shadow-volt/20 cursor-pointer">
       Do this
     </button>
-    <% if own_active %>
+    <% if own_active || own_preview %>
       <%= link_to "Edit", edit_workout_path(workout),
           data: { turbo_frame: "workout_preview" },
           class: "text-center py-3 px-4 border border-zinc-600 hover:border-lime-400 hover:text-lime-400 text-gray-300 font-bold rounded-xl text-sm transition-colors" %>

@@ -120,13 +120,13 @@ class WorkoutLLMGenerator
     { label: "Mixed",
       instruction: "Balanced effort session — moderate loads, moderate reps (8–15), mixed formats. Not a pure strength day and not a pure cardio day. The kind of session that makes you well-rounded." },
     { label: "Strength",
-      instruction: "Strength focus — heavy compound movements, low reps (3–6 per set), longer rest (90–120s). Loads should be challenging. Prioritise quality of movement and maximal effort over volume or pace." },
+      instruction: "Strength focus — give each major lift its own dedicated section. Single-exercise sets only for the main work: e.g. '5 × 5 Back Squat', '4 × 6 Bench Press', '3 × 5 Deadlift'. Heavy loads (85–90% 1RM), long rest (2–3 min). No circuits — treat each lift as its own event. A conditioning finisher is fine at the end." },
     { label: "Strength",
-      instruction: "Heavy day — prioritise low rep ranges (4–6) with heavy loads, close to the upper end of the athlete's capability. Longer rest periods. Fewer exercises, more sets. Make it feel like a proper lifting session." },
+      instruction: "Heavy lifting day — 2 or 3 big compound lifts, each in their own section with multiple sets and full rest. Examples: '5 × 3 Deadlift (heavy)', 'EMOM 10: 5 Thrusters (heavy)'. Low reps, high load, no rushing. Make it feel like a proper strength session, not a circuit." },
     { label: "Power",
-      instruction: "Power development — moderate-to-heavy loads (70–80% 1RM) performed with explosive intent. 5–8 reps per set, focus on speed of movement. Mix heavy compound lifts with dynamic or plyometric movements. Rest enough to maintain quality." },
+      instruction: "Power development — moderate-to-heavy loads (70–80% 1RM) performed with explosive intent. Use single-exercise sections for the main lifts (e.g. '4 × 5 Power Clean', 'EMOM 8: 5 Box Jumps + 3 Push Press'). 5–8 reps, fast concentric, controlled eccentric. Rest 60–90s to maintain power output." },
     { label: "Power",
-      instruction: "Explosive session — blend heavy compound work with dynamic movements (jumps, throws, fast pulls). Moderate reps (6–8), fast concentric, controlled eccentric. Rest 60–90s between sets to maintain power output." },
+      instruction: "Explosive session — anchor the main set around 1–2 heavy dynamic lifts in dedicated sections (e.g. '5 × 4 Hang Power Clean', '4 × 6 KB Swing heavy'). Complement with plyometrics. Fast and purposeful, not a circuit grind." },
     { label: "Conditioning",
       instruction: "Conditioning focus — higher rep ranges (15–25+), shorter rest, lighter loads. Circuit-style or interval-based. The metabolic challenge is the goal — heart rate should stay elevated throughout. Unbroken sets where possible." },
     { label: "Conditioning",
@@ -473,6 +473,7 @@ class WorkoutLLMGenerator
           - mountain: ascend then descend. E.g. start:5 peak:15 end:5 step:5 = 5,10,15,10,5 reps.
           - INVALID: mixing reps, distance, and calorie exercises in the same ladder.
         * straight — fixed sets with rest. Use for simple warm-ups or isolated exercises.
+      - SINGLE-EXERCISE SECTIONS are valid and often better than circuits, especially for strength and power work. A section with just one exercise is perfectly correct: e.g. '5 × 5 Deadlift (heavy)', 'EMOM 10: 8 Thrusters', '4 × 8 Romanian Deadlift'. Do not feel obligated to bundle every movement into a multi-exercise circuit — for strength sessions in particular, each major lift should usually get its own dedicated section.
       - NEVER list the same exercise more than once in a section's exercises array. If you need the same movement repeated (e.g. 5 × 25m Freestyle), use rounds: 5 with a single exercise entry — not 5 separate entries. Duplicate entries are always wrong.
       RULES
 

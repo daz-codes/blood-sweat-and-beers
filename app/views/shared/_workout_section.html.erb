@@ -1,4 +1,9 @@
-<%# Locals: section (Hash), distance_sport (Boolean, optional) %>
+<%# Locals: section (Hash), distance_sport (Boolean, optional),
+#           workout (Workout, optional), section_index (Integer, optional),
+#           swappable (Boolean, optional) %>
+<% swappable     = local_assigns.fetch(:swappable, false)
+   workout       = local_assigns.fetch(:workout, nil)
+   section_index = local_assigns.fetch(:section_index, nil) %>
 <% sec_format = section["format"].to_s %>
 <% sec_mins = sec_format == "tabata" ? 4 : (section["duration_mins"].to_i > 0 ? section["duration_mins"].to_i : nil) %>
 
@@ -81,34 +86,16 @@
     <% end %>
   </div>
 
-  <%# Exercises — name on top, metrics + notes inline below %>
-  <% Array(section["exercises"]).each do |exercise| %>
-    <div class="px-3 py-2.5 border-t border-zinc-700/50">
-      <p class="text-white text-sm font-semibold"><%= exercise["name"] %></p>
-      <% is_tabata = sec_format == "tabata" %>
-      <% has_metric = exercise["distance_m"] || exercise["duration_s"] || exercise["weight_kg"] ||
-                      (!is_tabata && (exercise["calories"] || exercise["reps"])) %>
-      <% if has_metric || exercise["notes"].present? %>
-        <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-          <% if exercise["distance_m"] %>
-            <span class="text-xs font-bold text-lime-400"><%= exercise["distance_m"] %>m</span>
-          <% elsif !is_tabata && exercise["calories"] %>
-            <span class="text-xs font-bold text-lime-400"><%= exercise["calories"] %> cal</span>
-          <% elsif !is_tabata && exercise["reps"] %>
-            <span class="text-xs font-bold text-lime-400"><%= exercise["reps"] %> reps</span>
-          <% elsif exercise["duration_s"] %>
-            <% ds = exercise["duration_s"].to_i; dm = ds / 60; dr = ds % 60 %>
-            <span class="text-xs font-bold text-lime-400"><%= dm > 0 ? "#{dm}m #{dr > 0 ? "#{dr}s" : ""}".strip : "#{ds}s" %></span>
-          <% end %>
-          <% if exercise["weight_kg"].to_f > 0 %>
-            <span class="text-xs font-bold text-lime-400"><%= exercise["weight_kg"] %>kg</span>
-          <% end %>
-          <% if exercise["notes"].present? %>
-            <span class="text-gray-400 text-xs italic"><%= exercise["notes"] %></span>
-          <% end %>
-        </div>
-      <% end %>
-    </div>
+  <%# Exercises %>
+  <% Array(section["exercises"]).each_with_index do |exercise, ei| %>
+    <%= render "shared/exercise_row",
+          exercise:       exercise,
+          section:        section,
+          workout:        workout,
+          section_index:  section_index,
+          exercise_index: ei,
+          swappable:      swappable,
+          is_tabata:      sec_format == "tabata" %>
   <% end %>
 
   <%# Footer: section notes only %>

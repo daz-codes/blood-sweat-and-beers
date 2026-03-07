@@ -107,6 +107,40 @@ class WorkoutsController < ApplicationController
     redirect_to library_path, notice: "\"#{copy.name}\" saved to your library."
   end
 
+  # POST /workouts/:id/swap_exercise
+  def swap_exercise
+    @workout = Current.user.workouts.find(params[:id])
+    section_index  = params[:section_index].to_i
+    exercise_index = params[:exercise_index].to_i
+
+    replacement = ExerciseSwapService.call(
+      workout:        @workout,
+      section_index:  section_index,
+      exercise_index: exercise_index,
+      reason:         params[:reason].presence
+    )
+
+    section = Array(@workout.structure["sections"])[section_index]
+    render turbo_stream: turbo_stream.replace(
+      "exercise_#{@workout.id}_#{section_index}_#{exercise_index}",
+      partial: "shared/exercise_row",
+      locals: {
+        exercise:       replacement,
+        workout:        @workout,
+        section:        section,
+        section_index:  section_index,
+        exercise_index: exercise_index,
+        swappable:      true
+      }
+    )
+  rescue ExerciseSwapService::SwapError => e
+    Rails.logger.warn "Exercise swap failed: #{e.message}"
+    render turbo_stream: turbo_stream.replace(
+      "exercise_#{@workout.id}_#{section_index}_#{exercise_index}",
+      html: "<div id='exercise_#{@workout.id}_#{section_index}_#{exercise_index}' class='px-3 py-2.5 border-t border-zinc-700/50'><p class='text-red-400 text-xs'>Swap failed — please try again.</p></div>".html_safe
+    )
+  end
+
   # POST /workouts/:id/regenerate
   def regenerate
     old = Current.user.workouts.find(params[:id])
