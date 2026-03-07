@@ -61,6 +61,9 @@
      parts = [ ladder_seq_str ]
      parts << "#{section["rest_between_rungs"]}s rest between rungs" if section["rest_between_rungs"].to_i > 0
      parts.compact.join(" · ").presence
+   when "matrix"
+     rest = section["rest_secs"].to_i > 0 ? "#{section["rest_secs"]}s rest between rounds" : nil
+     ["Matrix", rest].compact.join(" · ")
    end %>
 
 <div class="bg-zinc-900/60 rounded-xl overflow-hidden border border-zinc-600/50">
@@ -74,11 +77,6 @@
           <span class="text-white font-black text-[9px] leading-none"><%= sec_dist_val %></span>
           <span class="text-sky-200 text-[7px] leading-none mt-0.5"><%= sec_dist_unit %></span>
         </div>
-      <% elsif sec_mins %>
-        <div class="flex flex-col items-center justify-center w-8 h-8 rounded-full bg-volt flex-shrink-0">
-          <span class="text-zinc-900 font-black text-xs leading-none"><%= sec_mins %></span>
-          <span class="text-zinc-700 text-[7px] leading-none mt-0.5">min</span>
-        </div>
       <% end %>
     </div>
     <% if format_desc.present? %>
@@ -87,15 +85,35 @@
   </div>
 
   <%# Exercises %>
-  <% Array(section["exercises"]).each_with_index do |exercise, ei| %>
-    <%= render "shared/exercise_row",
-          exercise:       exercise,
-          section:        section,
-          workout:        workout,
-          section_index:  section_index,
-          exercise_index: ei,
-          swappable:      swappable,
-          is_tabata:      sec_format == "tabata" %>
+  <% if sec_format == "matrix" %>
+    <% exercises = Array(section["exercises"]) %>
+    <% n = exercises.size %>
+    <% rounds = (1..n).to_a + (n - 1).downto(1).to_a %>
+    <% rounds.each_with_index do |count, ri| %>
+      <% offset = ri < n ? 0 : ri - n + 1 %>
+      <% combo = exercises[offset, count] %>
+      <div class="px-3 py-2 border-t border-zinc-700/50">
+        <p class="text-white text-sm font-semibold"><%= combo.map { |e|
+          metric = if e["duration_s"].to_i > 0
+            "#{e["duration_s"].to_i}s "
+          elsif e["reps"].to_i > 0
+            "#{e["reps"]} "
+          end
+          "#{metric}#{e["name"]}"
+        }.join(" + ") %></p>
+      </div>
+    <% end %>
+  <% else %>
+    <% Array(section["exercises"]).each_with_index do |exercise, ei| %>
+      <%= render "shared/exercise_row",
+            exercise:       exercise,
+            section:        section,
+            workout:        workout,
+            section_index:  section_index,
+            exercise_index: ei,
+            swappable:      swappable,
+            is_tabata:      sec_format == "tabata" %>
+    <% end %>
   <% end %>
 
   <%# Footer: section notes only %>

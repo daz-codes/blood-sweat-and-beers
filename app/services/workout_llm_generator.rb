@@ -27,6 +27,13 @@ class WorkoutLLMGenerator
     "functional-fitness" => "functional.md",
     "hiit"               => "hiit.md",
     "bodyweight"         => "bodyweight.md",
+    "meta-fit"           => "metafit.md",
+    "metafit"            => "metafit.md",
+    "metafit-bodyweight" => "metafit.md",
+    "barry-s-bootcamp"   => "barrys.md",
+    "barrys-bootcamp"    => "barrys.md",
+    "barrys"             => "barrys.md",
+    "f45"                => "f45.md",
   }.freeze
 
   CONTEXT_DIR = Rails.root.join("app", "llm_context").freeze
@@ -108,6 +115,47 @@ class WorkoutLLMGenerator
   }.freeze
 
   # Weighted training emphasis options — sampled randomly each generation.
+  # Warm-up options — 4 distinct structures, weighted toward simple cardio (3 out of 10).
+  WARMUP_OPTIONS = [
+    # Structure 1: 5 mins easy cardio — 3 entries = 30%
+    { label: "5 Min Easy Cardio",
+      instruction: "One single cardio exercise for the full 5 minutes at an easy conversational pace. Use duration_s: 300. Choose one that suits the session: rowing machine, assault bike, ski erg, light jog, or (if no equipment) jumping jacks or step-touches. Nothing else — no additional exercises." },
+    { label: "5 Min Easy Cardio",
+      instruction: "One single cardio exercise for the full 5 minutes, easy effort. Use duration_s: 300. Pick something different from the session's main cardio — if the session is rowing-heavy, use the bike or ski erg instead. Nothing else." },
+    { label: "5 Min Easy Cardio",
+      instruction: "One single cardio exercise for the full 5 minutes. Use duration_s: 300. Options: assault bike, ski erg, rowing machine, light jog. Easy pace only — this is just to raise body temperature. Nothing else." },
+    # Structure 2: 3 mins cardio + 3 activation exercises 30s each — 3 entries = 30%
+    { label: "Cardio + Activation",
+      instruction: "First exercise: easy cardio for 3 minutes (duration_s: 180) — row, bike, ski erg, or jog. Then 3 activation exercises, 30 seconds each (duration_s: 30), chosen to prime the muscles used in this session. Good options: glute bridges, dead bugs, inchworm to push-up, world's greatest stretch, banded clamshells, arm circles, leg swings, hip circles. 4 exercises total." },
+    { label: "Cardio + Activation",
+      instruction: "First exercise: easy cardio for 3 minutes (duration_s: 180) — vary the machine from the main session. Then 3 activation exercises at 30 seconds each (duration_s: 30) targeting what this session needs: lower body day → glute bridges, leg swings, hip circles. Upper body day → arm circles, band pull-aparts, shoulder rotations. Full body → inchworm, world's greatest stretch, jumping jacks. 4 exercises total." },
+    { label: "Cardio + Activation",
+      instruction: "First exercise: easy cardio for 3 minutes (duration_s: 180). Then 3 dynamic movements at 30 seconds each (duration_s: 30): pick from inchworm to push-up, walking lunges, lateral shuffles, hip 90/90 switches, thoracic rotations, arm crossovers. Choose movements relevant to what's in the main set. 4 exercises total." },
+    # Structure 3: 6 activation exercises 45s each — 2 entries = 20%
+    { label: "Activation Circuit",
+      instruction: "6 activation exercises, 45 seconds each (duration_s: 45), no rest between. No cardio. Choose 6 low-intensity bodyweight movements that prepare the joints and muscles for this session. Examples: glute bridges, cat-cow, dead bugs, world's greatest stretch, leg swings, hip circles, thoracic rotation, arm circles, inchworm, air squats, shoulder rolls, lateral lunges." },
+    { label: "Activation Circuit",
+      instruction: "6 bodyweight activation exercises, 45 seconds each (duration_s: 45), flowing from one to the next with no rest. Pick 6 movements suited to this session's demands — mix lower body, upper body, and trunk. No equipment needed. Keep intensity very low — this is preparation, not training." },
+    # Structure 4: 5 exercises 10 reps each x 2 rounds — 2 entries = 20%
+    { label: "2-Round Bodyweight Circuit",
+      instruction: "Use format: rounds with rounds: 2. 5 exercises, 10 reps each (reps: 10). Choose 5 low-intensity bodyweight exercises that cover the whole body: e.g. air squats, push-ups, glute bridges, inchworms, jumping jacks — or similar movements suited to the session. Easy pace, full range of motion, no rushing." },
+    { label: "2-Round Bodyweight Circuit",
+      instruction: "Use format: rounds with rounds: 2. 5 exercises, 10 reps each (reps: 10). Pick 5 movements relevant to the session's main muscle groups — vary them each time. Keep it easy and controlled. Examples: reverse lunges, push-up to downward dog, hip hinges, lateral lunges, shoulder circles with reach." },
+  ].freeze
+
+  COOLDOWN_OPTIONS = [
+    { label: "Lower Body Focus",
+      instruction: "Prioritise hips, hamstrings, quads: hip flexor stretch (kneeling lunge, 30s each side), pigeon pose or figure-four glute stretch (45s each side), seated forward fold (45s), standing quad stretch (30s each leg), lying spinal twist (30s each side)." },
+    { label: "Upper Body Focus",
+      instruction: "Prioritise chest, shoulders, lats: chest opener with hands clasped behind back (30s), cross-body shoulder stretch (30s each arm), doorframe pec stretch (30s each side), thread the needle (30s each side), child's pose with arms extended (45s)." },
+    { label: "Full Body Stretch",
+      instruction: "Hit everything briefly: hip flexor lunge stretch (30s each side), hamstring forward fold (30s), chest opener (30s), thoracic rotation in quadruped (30s each side), lying glute stretch (30s each side)." },
+    { label: "Mobility Flow",
+      instruction: "Slow continuous movement rather than held stretches: world's greatest stretch (3 reps each side), deep squat to stand (5 reps), cat-cow (8 reps), thread the needle (3 each side), downward dog pedalling heels (10 reps). Describe movements in notes." },
+    { label: "Recovery Stretch",
+      instruction: "Longer holds, very relaxed: child's pose (60s), butterfly stretch seated (60s), supine hamstring pull (45s each leg), lying spinal twist (45s each side). Only 4 exercises but held longer — designed to genuinely lower heart rate and relax." },
+  ].freeze
+
   # Mixed appears 4× (40%), each pure style appears 2× (20%).
   # Explicit session_notes from the athlete always override this.
   TRAINING_EMPHASES = [
@@ -140,16 +188,18 @@ class WorkoutLLMGenerator
   # program info for any tag we don't have a pre-written context file for.
   RESEARCH_TOOL_DEFINITION = {
     name: "describe_fitness_program",
-    description: "Describe a fitness training program or style with its key characteristics.",
+    description: "Describe a fitness training program or style in enough detail to accurately recreate a session.",
     input_schema: {
       type: "object",
-      required: %w[description modalities typical_exercises session_format equipment],
+      required: %w[description session_structure cardio_style strength_style typical_exercises equipment signature_characteristics],
       properties: {
-        description:       { type: "string",  description: "1-2 sentence description of this program/style" },
-        modalities:        { type: "array",   items: { type: "string" }, description: "Training modalities used, e.g. 'treadmill running', 'dumbbell strength', 'AMRAP circuits'" },
-        typical_exercises: { type: "array",   items: { type: "string" }, description: "10-15 specific exercises or movements commonly used in this program" },
-        session_format:    { type: "string",  description: "How a typical session is structured, e.g. 'alternating 10-min cardio and strength blocks'" },
-        equipment:         { type: "array",   items: { type: "string" }, description: "Equipment typically available, e.g. 'treadmills', 'dumbbells', 'pull-up bars', 'rowers'" }
+        description:               { type: "string", description: "2-3 sentence overview of what this program is and who it's for" },
+        session_structure:         { type: "string", description: "Exactly how a typical class/session flows from start to finish — describe each phase or block in order with approximate timing. E.g. 'Barry's: 5-min warmup → 25-min treadmill block (intervals alternating sprints and recovery) → 25-min floor block (dumbbell strength circuits) → 5-min stretch'" },
+        cardio_style:              { type: "string", description: "What the cardio component looks like — equipment used, interval structure, intensity patterns, pacing style" },
+        strength_style:            { type: "string", description: "What the strength/resistance component looks like — rep ranges, loading, circuit style, rest periods, intensity" },
+        typical_exercises:         { type: "array",  items: { type: "string" }, description: "15-20 specific exercises used in this program, with typical rep ranges or durations where known. E.g. 'Dumbbell chest press — 3×12', 'Treadmill sprint intervals — 30s on / 30s off × 8'" },
+        equipment:                 { type: "array",  items: { type: "string" }, description: "Equipment typically available and used in this program" },
+        signature_characteristics: { type: "array",  items: { type: "string" }, description: "3-5 things that make this program distinctive — what gives it its feel and identity" }
       }
     }
   }.freeze
@@ -177,7 +227,7 @@ class WorkoutLLMGenerator
                 required: %w[name format],
                 properties: {
                   name:               { type: "string" },
-                  format:             { type: "string", enum: %w[straight amrap rounds emom tabata for_time ladder mountain], description: "straight=sets with rest, rounds=multiple rounds of the same set, amrap=as many rounds as possible in a time cap, emom=every minute on the minute, tabata=20s work/10s rest×8, for_time=complete prescribed reps/distance as fast as possible (record finishing time), ladder/mountain=reps/distance change each round" },
+                  format:             { type: "string", enum: %w[straight amrap rounds emom tabata for_time ladder mountain matrix], description: "straight=sets with rest, rounds=multiple rounds of the same set, amrap=as many rounds as possible in a time cap, emom=every minute on the minute, tabata=20s work/10s rest×8, for_time=complete prescribed reps/distance as fast as possible (record finishing time), ladder/mountain=reps/distance change each round, matrix=progressive exercise combination (add then remove exercises each round: A → A+B → A+B+C → B+C → C)" },
                   duration_mins:      { type: "integer" },
                   rounds:             { type: "integer" },
                   rest_secs:          { type: "integer" },
@@ -309,7 +359,9 @@ class WorkoutLLMGenerator
 
       section["rounds"]    = new_rounds
       section["format"]    = "rounds" if section["format"] == "straight"
-      section["exercises"] = [ exercises.first ]
+      kept = exercises.first.dup
+      kept.delete("notes") if kept["notes"].to_s.match?(/\Aset\s*\d+\z/i)
+      section["exercises"] = [ kept ]
     end
 
     workout_data
@@ -363,6 +415,18 @@ class WorkoutLLMGenerator
     "## Training Emphasis: #{emphasis[:label]}\n#{emphasis[:instruction]}"
   end
 
+  def build_warmup_cooldown
+    warmup   = WARMUP_OPTIONS.sample
+    cooldown = COOLDOWN_OPTIONS.sample
+    <<~WC
+      ## Warm-Up Approach: #{warmup[:label]}
+      #{warmup[:instruction]}
+
+      ## Cool-Down Approach: #{cooldown[:label]}
+      #{cooldown[:instruction]}
+    WC
+  end
+
   def build_prompt(context_workouts, program_research = nil)
     main_name  = @main_tag&.name || "general fitness"
     minor_str  = @minor_tags.map(&:name).join(", ")
@@ -388,6 +452,7 @@ class WorkoutLLMGenerator
 
     sections << build_difficulty_guidance
     sections << build_training_emphasis
+    sections << build_warmup_cooldown
 
     if selected_stations
       # For event sessions with a station selection: inject the training philosophy
@@ -438,23 +503,21 @@ class WorkoutLLMGenerator
       NOTES
     end
 
-    sport_rule   = sport_purity_rule
-    core_rule    = core_section_rule
-    pace_limits  = pace_limit_rule
-    station_rule = if selected_stations
+    sport_rule      = sport_purity_rule
+    core_rule       = core_section_rule
+    pace_limits     = pace_limit_rule
+    structure_rule  = build_session_structure
+    station_rule    = if selected_stations
       "- ANCHOR MOVEMENTS: #{selected_stations.join(", ")} must be central to the main set. Complement them with toolkit exercises from the sport context — create a complete, varied workout, not a drill of the anchor movements repeated in every section."
     end
 
-    duration_rule = "- Total duration close to #{@duration_mins} minutes"
-
     sections << <<~RULES
       Use the create_workout tool. Requirements:
-      #{duration_rule}
+      #{structure_rule}
       #{station_rule}
-      - Sections: warm-up, main set (can be split into multiple sections), optional finisher, cool-down
-      - Warm-up: easy cardio + a few bodyweight movements to loosen up — keep it brief
-      - Finisher: something punchy and challenging to end on
-      - Cool-down: ALWAYS end with a 5-minute cool-down section (format: straight, duration_mins: 5) containing 3–5 static stretches (e.g. hip flexor stretch, hamstring stretch, chest opener, thoracic rotation). No reps or distances — use notes on each exercise to describe the stretch (e.g. "30s each side").
+      - Warm-up: always 5 minutes (format: straight, duration_mins: 5). Use the Warm-Up Approach specified above — follow it exactly.
+      - Cool-down: always 5 minutes (format: straight, duration_mins: 5). Use the Cool-Down Approach specified above. No reps or distances — hold times only, described in notes (e.g. "30s each side").
+      - Main sets: do NOT set duration_mins on main sets — let the reps, rounds, and format define the work. Only amrap and emom sections need a duration_mins (their time cap). A short punchy finisher (e.g. Tabata, for_time sprint) is a welcome extra at the end of the main work.
       #{core_rule}
       - Be specific with reps, distances, and weights
       - Give it a punchy, memorable name — something a gym community would actually call it (CrossFit-style), not a generic description
@@ -473,6 +536,7 @@ class WorkoutLLMGenerator
           - mountain: ascend then descend. E.g. start:5 peak:15 end:5 step:5 = 5,10,15,10,5 reps.
           - INVALID: mixing reps, distance, and calorie exercises in the same ladder.
         * straight — fixed sets with rest. Use for simple warm-ups or isolated exercises.
+        * matrix — progressive exercise combinations. List 3–5 exercises in order. The section builds up then strips back: for 3 exercises: A, A+B, A+B+C, B+C, C. For 4: A, A+B, A+B+C, A+B+C+D, B+C+D, C+D, D. For 5: A, A+B, A+B+C, A+B+C+D, A+B+C+D+E, B+C+D+E, C+D+E, D+E, E. IMPORTANT: all exercises must use the same metric — either all reps (same count each) or all duration_s (same seconds each). Prefer duration_s: 30 for each exercise most of the time — this is the most common Metafit style. Set rest_secs for the rest between each combination (typically 30–60s).
       - SINGLE-EXERCISE SECTIONS are valid and often better than circuits, especially for strength and power work. A section with just one exercise is perfectly correct: e.g. '5 × 5 Deadlift (heavy)', 'EMOM 10: 8 Thrusters', '4 × 8 Romanian Deadlift'. Do not feel obligated to bundle every movement into a multi-exercise circuit — for strength sessions in particular, each major lift should usually get its own dedicated section.
       - NEVER list the same exercise more than once in a section's exercises array. If you need the same movement repeated (e.g. 5 × 25m Freestyle), use rounds: 5 with a single exercise entry — not 5 separate entries. Duplicate entries are always wrong.
       RULES
@@ -531,23 +595,47 @@ class WorkoutLLMGenerator
 
   # Returns a bullet-point rule for explicit exclusions (e.g. "no-run" minor tag).
   def sport_purity_rule
-    minor_slugs = @minor_tags.map(&:slug)
-    no_run = minor_slugs.any? { |s| s.in?(%w[no-run no-running no-runs]) }
+    rules = []
 
-    if no_run
-      "- Do NOT include any running in this session. Replace any running segments with rowing, SkiErg, bike erg, or other non-running cardio."
-    else
-      "- Always end with a 5-minute cool-down section (format: straight, duration_mins: 5) of 3–5 static stretches. No reps or distances — use notes to describe hold time (e.g. \"30s each side\")."
+    minor_slugs = @minor_tags.map(&:slug)
+    if minor_slugs.any? { |s| s.in?(%w[no-run no-running no-runs]) }
+      rules << "- Do NOT include any running in this session. Replace any running segments with rowing, SkiErg, bike erg, or other non-running cardio."
     end
+
+    if @main_tag&.slug.in?(BODYWEIGHT_ONLY_SLUGS)
+      rules << "- BODYWEIGHT ONLY — this program uses NO equipment whatsoever (no barbells, no dumbbells, no kettlebells, no machines, no cardio equipment). Every exercise must use bodyweight only. Ignore the athlete's strength benchmarks for loading — use bodyweight progressions (pistol squats, archer push-ups, pull-up variations, plyometrics) to adjust difficulty instead."
+    end
+
+    rules.join("\n").presence
   end
 
   def core_section_rule
     minor_slugs = @minor_tags.map(&:slug)
-    return nil if minor_slugs.any? { |s| s.in?(%w[no-core no-abs no-core-work]) }
+    # Explicit no-core tag always wins
+    return "- Do NOT include a dedicated core or abs section in this session." if minor_slugs.any? { |s| s.in?(%w[no-core no-abs no-core-work]) }
     return nil if @duration_mins < 20
 
-    duration_mins = @duration_mins >= 45 ? 10 : 5
-    "- Core section: include a #{duration_mins}-minute dedicated core section (format: straight or rounds) placed towards the end of the session, before the cool-down. Use 3–5 exercises targeting abs and trunk stability (e.g. plank, hollow hold, dead bugs, Russian twist, V-ups, ab wheel rollout, GHD sit-ups, toes-to-bar, L-sit). Be specific with reps or hold times."
+    if rand < 0.67
+      # Explicitly forbid it ~2/3 of the time — silence is not enough, the LLM adds core by default
+      return "- DO NOT include a dedicated core or abs section in this session. No plank circuits, no sit-up blocks, no ab finishers."
+    end
+
+    core_mins = @duration_mins >= 45 ? 10 : 5
+    "- Core section: include a #{core_mins}-minute dedicated core section (format: straight or rounds) placed towards the end of the session, before the cool-down. Use 3–5 exercises targeting abs and trunk stability (e.g. plank, hollow hold, dead bugs, Russian twist, V-ups, ab wheel rollout, GHD sit-ups, toes-to-bar, L-sit). Be specific with reps or hold times."
+  end
+
+  def build_session_structure
+    # Base of 1 main set for 30 min, +1 set per additional 15 min
+    # e.g. 30→1, 45→2, 60→3, 75→4
+    main_sets = [1 + ((@duration_mins - 30) / 15.0).floor, 1].max
+
+    set_word = main_sets == 1 ? "1 main set" : "#{main_sets} main sets"
+
+    "- Session structure: Warm-up (5 min) → #{set_word} → Finisher → Cool-down (5 min). " \
+    "The rule is: 30 min = 1 main set, then add 1 more set for every additional 15 minutes (45 min = 2 sets, 60 min = 3 sets, 75 min = 4 sets). " \
+    "The Finisher is always present — a short punchy section (Tabata = 4 min, or a for_time sprint). " \
+    "DO NOT add more main sets than #{main_sets} — rest and transitions between exercises fill the remaining time naturally. " \
+    "Do NOT set duration_mins on main sets or try to make section durations add up to #{@duration_mins}."
   end
 
   def build_remix_prompt
@@ -809,6 +897,9 @@ class WorkoutLLMGenerator
   # These must NOT disable station selection (they're constraints, not content choices).
   META_MINOR_SLUGS = %w[no-run no-running no-runs no-core no-abs no-core-work].freeze
 
+  # Main tag slugs that are inherently bodyweight-only programs.
+  BODYWEIGHT_ONLY_SLUGS = %w[bodyweight meta-fit metafit metafit-bodyweight].freeze
+
   # Randomly selects a subset of event stations for this session.
   # Returns nil if the event has no station pool, or if the user specified actual
   # focus movements as minor tags (in which case the LLM uses those freely).
@@ -834,8 +925,8 @@ class WorkoutLLMGenerator
   # Loads sport-specific context files based on the workout's tags.
   # Deduplicates — if multiple tags map to the same file, it's only included once.
   def load_sport_context(tag_names)
-    files_to_load = tag_names.filter_map do |name|
-      CONTEXT_TAG_MAP[name.downcase.parameterize]
+    files_to_load = tag_names.flat_map do |name|
+      Array(CONTEXT_TAG_MAP[name.downcase.parameterize])
     end.uniq
 
     return nil if files_to_load.empty?
@@ -879,83 +970,83 @@ class WorkoutLLMGenerator
 
   # Makes a fast, cheap LLM call to look up a fitness program by name.
   def research_program(program_name)
-    api_key = ENV.fetch("ANTHROPIC_API_KEY") { raise WorkoutGenerationError, "ANTHROPIC_API_KEY not configured" }
-
     prompt = <<~PROMPT
-      You are a fitness expert. Briefly describe the training program or style called "#{program_name}".
-      Use the describe_fitness_program tool to return structured information about it — the typical exercises, equipment, modalities, and session format.
-      If you don't recognise it as a specific program, treat it as a fitness style/theme and describe what that type of training typically looks like.
+      You are an expert fitness coach with deep knowledge of group fitness programs, gym classes, and training methodologies.
+
+      Describe the training program or class style called "#{program_name}" in enough detail that a personal trainer could accurately recreate a genuine session.
+
+      Focus on:
+      - The exact flow and structure of a typical session (phases, blocks, timing)
+      - What the cardio component looks like — equipment, intervals, intensity
+      - What the strength/floor work looks like — movements, rep ranges, loading, circuit style
+      - Specific exercises with example prescriptions (reps, weight, duration)
+      - What makes it feel distinctively like "#{program_name}" and not just a generic gym class
+
+      ACCURACY IS CRITICAL — be precise and honest:
+      - Only include equipment that is genuinely used in this specific program. If it is bodyweight-only, say so and do not list gym equipment.
+      - Do not pad the exercise list with generic movements that aren't characteristic of this program.
+      - If you are uncertain about something, be conservative rather than guessing.
+
+      Use the describe_fitness_program tool to return your answer.
     PROMPT
 
-    body = {
-      model:       MODEL,
-      max_tokens:  1024,
-      tools:       [ RESEARCH_TOOL_DEFINITION ],
-      tool_choice: { type: "any" },
-      messages:    [ { role: "user", content: prompt } ]
-    }
-
-    http            = Net::HTTP.new(API_URI.host, API_URI.port)
-    http.use_ssl    = true
-    http.open_timeout = 10
-    http.read_timeout = 30
-
-    request = Net::HTTP::Post.new(API_URI.path)
-    request["Content-Type"]      = "application/json"
-    request["x-api-key"]         = api_key
-    request["anthropic-version"] = "2023-06-01"
-    request.body = body.to_json
-
-    response = http.request(request)
-    return nil unless response.code.to_i == 200
-
-    parsed     = JSON.parse(response.body)
-    tool_block = parsed["content"].find { |b| b["type"] == "tool_use" }
-    return nil unless tool_block
-
-    tool_block["input"]
+    call_llm(prompt, tools: [ RESEARCH_TOOL_DEFINITION ], tool_choice: { type: "any" }, max_tokens: 1500)
   end
 
   # Formats the research result into a prompt section.
   def build_program_research_context(research)
     return nil if research.blank?
+    return nil if research["skipped"].present?
 
     lines = []
     lines << "## Program Context: #{@main_tag&.name}"
     lines << research["description"] if research["description"].present?
-    lines << "\n**Typical session format:** #{research["session_format"]}" if research["session_format"].present?
 
-    if Array(research["modalities"]).any?
-      lines << "\n**Training modalities:** #{research["modalities"].join(", ")}"
+    if research["session_structure"].present?
+      lines << "\n**Session structure — FOLLOW THIS FLOW:**"
+      lines << research["session_structure"]
+    end
+
+    if research["cardio_style"].present?
+      lines << "\n**Cardio component:** #{research["cardio_style"]}"
+    end
+
+    if research["strength_style"].present?
+      lines << "\n**Strength/floor component:** #{research["strength_style"]}"
     end
 
     if Array(research["equipment"]).any?
-      lines << "\n**Typical equipment:** #{research["equipment"].join(", ")}"
+      lines << "\n**Equipment:** #{research["equipment"].join(", ")}"
     end
 
     if Array(research["typical_exercises"]).any?
-      lines << "\n**Exercises commonly used in this program:**"
+      lines << "\n**Exercises from this program (use these — do not substitute generic gym movements):**"
       research["typical_exercises"].each { |ex| lines << "  - #{ex}" }
     end
 
-    lines << "\nUse these exercises and modalities to make the workout feel authentically like #{@main_tag&.name}."
+    if Array(research["signature_characteristics"]).any?
+      lines << "\n**What makes it feel like #{@main_tag&.name}:**"
+      research["signature_characteristics"].each { |c| lines << "  - #{c}" }
+    end
+
+    lines << "\nThe session MUST feel authentically like #{@main_tag&.name}. Follow the structure and use the exercises above — someone who has attended a real class should recognise it immediately."
 
     lines.join("\n")
   end
 
-  def call_llm(prompt)
+  def call_llm(prompt, tools: [ TOOL_DEFINITION ], tool_choice: { type: "any" }, max_tokens: 4096)
     api_key = ENV.fetch("ANTHROPIC_API_KEY") { raise WorkoutGenerationError, "ANTHROPIC_API_KEY not configured" }
 
     body = {
       model:       MODEL,
-      max_tokens:  4096,
-      tools:       [ TOOL_DEFINITION ],
-      tool_choice: { type: "any" },
+      max_tokens:  max_tokens,
+      tools:       tools,
+      tool_choice: tool_choice,
       messages:    [ { role: "user", content: prompt } ]
     }
 
-    http            = Net::HTTP.new(API_URI.host, API_URI.port)
-    http.use_ssl    = true
+    http              = Net::HTTP.new(API_URI.host, API_URI.port)
+    http.use_ssl      = true
     http.open_timeout = 10
     http.read_timeout = 60
 
@@ -965,17 +1056,34 @@ class WorkoutLLMGenerator
     request["anthropic-version"] = "2023-06-01"
     request.body = body.to_json
 
-    response = http.request(request)
-    unless response.code.to_i == 200
-      case response.code.to_i
-      when 529
-        raise WorkoutGenerationError, "The AI service is currently overloaded. Please try again in a moment."
-      when 429
-        raise WorkoutGenerationError, "Too many requests. Please wait a moment and try again."
-      when 500, 502, 503
-        raise WorkoutGenerationError, "The AI service is temporarily unavailable. Please try again shortly."
-      else
-        raise WorkoutGenerationError, "Failed to generate workout (error #{response.code}). Please try again."
+    retries = 0
+    begin
+      response = http.request(request)
+      unless response.code.to_i == 200
+        case response.code.to_i
+        when 529, 503
+          raise WorkoutGenerationError, :overloaded
+        when 429
+          raise WorkoutGenerationError, :rate_limited
+        when 500, 502
+          raise WorkoutGenerationError, :server_error
+        else
+          raise WorkoutGenerationError, "Failed to generate workout (error #{response.code}). Please try again."
+        end
+      end
+    rescue WorkoutGenerationError => e
+      if e.message.to_sym.in?(%i[overloaded rate_limited server_error]) && retries < 3
+        wait = [ 2 ** retries, 8 ].min  # 1s, 2s, 4s (capped at 8s)
+        Rails.logger.warn "LLM call #{e.message} — retry #{retries + 1}/3 after #{wait}s"
+        sleep wait
+        retries += 1
+        retry
+      end
+      raise WorkoutGenerationError, case e.message.to_sym
+      when :overloaded    then "The AI service is currently overloaded. Please try again in a moment."
+      when :rate_limited  then "Too many requests. Please wait a moment and try again."
+      when :server_error  then "The AI service is temporarily unavailable. Please try again shortly."
+      else e.message
       end
     end
 

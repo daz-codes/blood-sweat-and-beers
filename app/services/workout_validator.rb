@@ -50,7 +50,6 @@ class WorkoutValidator
     end
 
     fix_alternating_reps(sections)
-    check_duration_sum(sections)
     check_cooldown(sections)
 
     @data
@@ -126,20 +125,6 @@ class WorkoutValidator
     end
   end
 
-  # Warn if the sum of section durations is more than 25% off the target.
-  # We don't auto-fix this — adjusting individual sections without understanding
-  # the workout structure would likely make things worse.
-  def check_duration_sum(sections)
-    total = sections.sum { |s| s["duration_mins"].to_i }
-    return if total.zero? || @duration_mins.zero?
-
-    diff_pct = ((total - @duration_mins).abs.to_f / @duration_mins * 100).round
-    return if diff_pct <= 25
-
-    direction = total > @duration_mins ? "over" : "under"
-    @warnings << "Duration #{direction} by #{diff_pct}%: sections total #{total} min " \
-                 "vs target #{@duration_mins} min"
-  end
 
   # Warn if the last section doesn't look like a cool-down.
   def check_cooldown(sections)
