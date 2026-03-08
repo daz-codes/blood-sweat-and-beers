@@ -21,14 +21,23 @@
     <div class="mb-6">
       <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Session Type</p>
       <p class="text-xs text-gray-500 mb-3">The type of session — CrossFit, Hyrox, HIIT, Deka, and more.</p>
-      <% user_main_tags = Tag.main_focus
-                            .joins(:taggings)
-                            .joins("INNER JOIN workouts ON taggings.taggable_type = 'Workout' AND taggings.taggable_id = workouts.id")
-                            .where(workouts: { user_id: Current.user.id })
-                            .group("tags.id")
-                            .order(Arel.sql("COUNT(taggings.id) DESC"))
-                            .limit(10) %>
-      <% main_tags = user_main_tags.any? ? user_main_tags : Tag.main_focus.top_used_on_workouts(10) %>
+      <%# Core tags always shown, in this order (slugs match what .parameterize produces) %>
+      <% core_slugs = %w[hyrox deka crossfit functional-fitness functional-muscle hiit
+                         bodyweight kettlebell metafit f45 strength] %>
+      <% core_tags = Tag.main_focus.where(slug: core_slugs)
+                                   .sort_by { |t| core_slugs.index(t.slug).to_i } %>
+      <%# Returning users: last 3 distinct main tags by most recent workout %>
+      <% recent_tags = Tag.main_focus
+                          .joins(:taggings)
+                          .joins("INNER JOIN workouts ON taggings.taggable_type = 'Workout' AND taggings.taggable_id = workouts.id")
+                          .where(workouts: { user_id: Current.user.id })
+                          .select("tags.*, MAX(workouts.created_at) AS last_used_at")
+                          .group("tags.id")
+                          .order("last_used_at DESC")
+                          .limit(3)
+                          .to_a %>
+      <% recent_ids = recent_tags.map(&:id).to_set %>
+      <% main_tags = recent_tags + core_tags.reject { |t| recent_ids.include?(t.id) } %>
       <div class="flex flex-wrap gap-2">
         <label class="cursor-pointer">
           <%= radio_button_tag "main_tag_id", "", true, id: "main_tag_none",
@@ -54,11 +63,12 @@
           class: "mt-2 w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
     </div>
 
-    <%# Focus — free text %>
+    <%# Session Notes — free text, anything goes %>
     <div class="mb-6">
-      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Areas of Focus</p>
+      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Session Notes</p>
+      <p class="text-xs text-gray-500 mb-3">Injuries, equipment, intensity, focus — anything that should shape this session.</p>
       <%= text_field_tag :new_tag_name, nil,
-          placeholder: "e.g. legs, core, no running",
+          placeholder: "e.g. injured knee · hotel gym · zone 2 only · upper body · no running",
           class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
     </div>
 

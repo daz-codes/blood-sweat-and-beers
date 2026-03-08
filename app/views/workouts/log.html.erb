@@ -37,7 +37,7 @@
       <% @workout.structure.each do |step| %>
         <% is_run = step["type"] == "run" %>
         <div class="flex items-center gap-4 px-4 py-3 border-b border-zinc-700 last:border-0 <%= is_run ? 'bg-zinc-900/60' : '' %>">
-          <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center <%= is_run ? 'bg-blue-500/15 text-blue-400' : 'bg-yellow-400/15 text-lime-400' %> text-xs font-bold">
+          <div class="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center <%= is_run ? 'bg-sky-200/15 text-sky-200' : 'bg-yellow-400/15 text-lime-400' %> text-xs font-bold">
             <%= is_run ? "▶" : (step["order"].to_i / 2).to_s %>
           </div>
           <div class="flex-1 min-w-0">

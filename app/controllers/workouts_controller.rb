@@ -4,7 +4,8 @@ class WorkoutsController < ApplicationController
 
   # GET /library
   def index
-    @workouts = Current.user.workouts
+    @previews  = Current.user.workouts.where(status: "preview").includes(:tags).order(created_at: :desc)
+    @workouts  = Current.user.workouts
                        .where.not(status: "preview")
                        .includes(:tags)
                        .order(created_at: :desc)
@@ -252,10 +253,41 @@ class WorkoutsController < ApplicationController
 
     redirect_to workout_path(@workout)
   rescue WorkoutLLMGenerator::WorkoutGenerationError => e
-    redirect_to new_workout_path, alert: e.message
+    Rails.logger.warn "LLM generation failed (#{e.message}) — attempting fallback workout"
+    fallback = find_fallback_workout(main_tag_id, params[:difficulty])
+    if fallback
+      redirect_to workout_path(fallback), alert: "#{e.message} Here's a popular workout to get you moving — try generating again when the AI is back."
+    else
+      redirect_to root_path, alert: "#{e.message} Please try again in a moment."
+    end
   rescue => e
     Rails.logger.error "Workout generation failed: #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}"
-    redirect_to new_workout_path, alert: "Something went wrong generating your workout. Please try again."
+    redirect_to root_path, alert: "Something went wrong generating your workout. Please try again."
+  end
+
+  # When the LLM is unavailable, find a popular existing workout with the same tag
+  # to show the user instead of an error page. Tries tag match first, falls back to any workout.
+  def find_fallback_workout(main_tag_id, difficulty)
+    scope = Workout.where(status: "active").where.not(structure: nil)
+
+    if main_tag_id.present?
+      tag_match = scope.joins(:taggings)
+                       .where(taggings: { tag_id: main_tag_id, taggable_type: "Workout" })
+                       .where(difficulty: difficulty.presence || "intermediate")
+                       .order("RANDOM()")
+                       .first
+      return tag_match if tag_match
+
+      # Relax difficulty constraint
+      tag_match = scope.joins(:taggings)
+                       .where(taggings: { tag_id: main_tag_id, taggable_type: "Workout" })
+                       .order("RANDOM()")
+                       .first
+      return tag_match if tag_match
+    end
+
+    # Last resort — any active workout
+    scope.order("RANDOM()").first
   end
 
   def save_workout_tags(workout)

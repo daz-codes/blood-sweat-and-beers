@@ -13,22 +13,49 @@ def tag_for(name, type: "minor")
   Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name; t.tag_type = type }
 end
 
-# Ensure new gym session type tags exist as main tags
+# Ensure all core session-type tags exist as main tags (these always show in the generate modal)
 [
+  ["Hyrox",              "main"],
+  ["Deka",               "main"],
+  ["Dirty Dozen",        "main"],
   ["CrossFit",           "main"],
   ["Functional Fitness", "main"],
+  ["Functional Muscle",  "main"],
   ["HIIT",               "main"],
   ["Bodyweight",         "main"],
   ["Kettlebell",         "main"],
+  ["Metafit",            "main"],
+  ["F45",                "main"],
+  ["Barry's Bootcamp",   "main"],
+  ["Strength",           "main"],
 ].each do |name, type|
   Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name; t.tag_type = type }
 end
 
-# Classify known main-focus (session type) tags
-%w[hyrox deka deka-fit deka-strong deka-mile deka-atlas dirty-dozen
-   crossfit functional-fitness hiit bodyweight kettlebell
-   ski ski-erg row rowing cycling bike cycle].each do |slug|
-  Tag.find_by(slug: slug)&.update!(tag_type: "main")
+# Ensure any older slug variants are also classified as main, and normalise display names
+{
+  "hyrox"              => "Hyrox",
+  "deka"               => "Deka",
+  "dirty-dozen"        => "Dirty Dozen",
+  "crossfit"           => "CrossFit",
+  "functional-fitness"  => "Functional Fitness",
+  "functional-muscle"   => "Functional Muscle",
+  "hiit"               => "HIIT",
+  "bodyweight"         => "Bodyweight",
+  "kettlebell"         => "Kettlebell",
+  "metafit"            => "Metafit",
+  "f45"                => "F45",
+  "barry-s-bootcamp"   => "Barry's Bootcamp",
+  "strength"           => "Strength",
+  "ski"                => "Ski",
+  "ski-erg"            => "SkiErg",
+  "row"                => "Row",
+  "rowing"             => "Rowing",
+  "cycling"            => "Cycling",
+  "bike"               => "Bike",
+  "cycle"              => "Cycle",
+}.each do |slug, name|
+  Tag.find_by(slug: slug)&.update!(tag_type: "main", name: name)
 end
 
 # Demote swim/run to minor focus tags (not session types)

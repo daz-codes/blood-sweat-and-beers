@@ -36,7 +36,9 @@ Rails.application.routes.draw do
   get "feed", to: "feed#index", as: :feed
   resource :profile, only: [ :show, :edit, :update ]
 
-  resources :users, only: [ :index, :show ]
+  resources :users, only: [ :index, :show ] do
+    collection { post :contacts_search }
+  end
   resources :follows, only: [ :create, :destroy, :index ] do
     collection { get :pending_count }
   end

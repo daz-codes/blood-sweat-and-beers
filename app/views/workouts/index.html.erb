@@ -17,6 +17,34 @@
     <% end %>
   </div>
 
+  <% if @previews.any? %>
+    <div class="mb-6">
+      <p class="text-xs font-bold uppercase tracking-widest text-amber-400 mb-3">Unsaved Previews</p>
+      <div class="space-y-2">
+        <% @previews.each do |workout| %>
+          <div class="bg-zinc-800 border border-amber-500/30 rounded-2xl overflow-hidden shadow-sm">
+            <div class="px-4 py-3 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="flex flex-col items-center justify-center w-10 h-10 rounded-full bg-volt flex-shrink-0">
+                  <span class="text-zinc-950 font-black text-sm leading-none"><%= workout.duration_mins %></span>
+                  <span class="text-zinc-800 text-[8px] font-bold leading-none mt-0.5 uppercase">min</span>
+                </div>
+                <p class="text-gray-300 font-jost uppercase tracking-tight truncate"><%= workout.name.presence || "Untitled Workout" %></p>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <%= link_to "View", workout_path(workout), class: "text-xs font-bold border border-zinc-600 hover:border-lime-400 hover:text-lime-400 text-gray-400 px-3 py-1.5 rounded-lg transition-colors" %>
+                <%= link_to "Edit", edit_workout_path(workout), class: "text-xs font-bold border border-zinc-600 hover:border-lime-400 hover:text-lime-400 text-gray-400 px-3 py-1.5 rounded-lg transition-colors" %>
+                <%= button_to "Save", save_workout_path(workout), method: :post,
+                      form: { class: "contents" },
+                      class: "text-xs font-black bg-volt hover:bg-volt/80 text-zinc-950 px-3 py-1.5 rounded-lg transition-colors cursor-pointer" %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
   <% if @workouts.empty? %>
     <div class="text-center py-20">
       <p class="text-5xl mb-4">📋</p>

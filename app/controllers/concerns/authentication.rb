@@ -51,6 +51,9 @@ private
 
     def request_authentication
       session[:return_to_after_authenticating] = request.url
+      # If this is a Turbo Frame request, tell Turbo to do a full-page redirect
+      # rather than showing "Content missing" inside the frame.
+      response.set_header("Turbo-Frame", "_top") if request.headers["Turbo-Frame"]
       redirect_to new_session_path
     end
 

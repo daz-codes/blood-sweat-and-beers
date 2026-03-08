@@ -13,6 +13,16 @@ class UsersController < ApplicationController
     end
   end
 
+  # POST /users/contacts_search — called by the Contact Picker Stimulus controller.
+  # Receives an array of emails from the device contacts, returns matched users
+  # and a list of unmatched emails so the UI can offer invites.
+  def contacts_search
+    emails = Array(params[:emails]).map { |e| e.strip.downcase }.uniq.first(200)
+    @matched   = User.where(email_address: emails).where.not(id: Current.user.id).limit(50)
+    matched_emails = @matched.pluck(:email_address)
+    @unmatched_count = (emails - matched_emails - [Current.user.email_address]).size
+  end
+
   # GET /users/:id
   def show
     @profile_user = User.find(params[:id])

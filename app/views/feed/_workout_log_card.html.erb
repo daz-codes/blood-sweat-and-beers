@@ -62,7 +62,7 @@
       <div class="flex items-center gap-2 min-w-0 flex-wrap">
         <%= render "shared/avatar", user: workout_log.user %>
         <%= link_to workout_log.user.display, user_path(workout_log.user),
-              class: "text-xs font-bold text-gray-300 hover:text-blue-400 transition-colors" %>
+              class: "text-xs font-bold text-gray-300 hover:text-sky-200 transition-colors" %>
         <span class="text-gray-700 text-xs">·</span>
         <div class="flex gap-px flex-shrink-0">
           <% 5.times do |i| %>
@@ -85,12 +85,12 @@
 
     <%# Goal / coaching cue %>
     <% if goal.present? %>
-      <p class="text-lime-400/80 text-xs italic mt-2.5 leading-snug font-medium"><%= goal %></p>
+      <p class="text-gray-500 text-xs italic mt-2.5 leading-snug"><%= goal %></p>
     <% end %>
 
     <%# Exercise summary %>
     <% if summary_text.present? %>
-      <p class="text-gray-500 text-xs mt-1 leading-relaxed"><%= summary_text %></p>
+      <p class="text-volt text-xs font-bold mt-1 leading-relaxed"><%= summary_text %></p>
     <% end %>
 
     <%# Tags %>
@@ -115,10 +115,41 @@
   <% end %>
 
   <%# ── Footer ── %>
+  <%# Shared action button partials to avoid duplication %>
+  <% remix_btn = capture do %>
+    <button type="button"
+            onclick="event.stopPropagation(); document.getElementById('remix_<%= workout.id %>').showModal()"
+            class="flex items-center justify-center gap-1.5 text-xs font-black border border-gray-600 hover:border-lime-400 hover:text-lime-400 text-gray-400 px-3 py-2 rounded-xl transition-colors cursor-pointer uppercase tracking-wide flex-1">
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+        <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+      </svg>
+      Remix
+    </button>
+  <% end %>
+  <% save_btn = capture do %>
+    <%= button_to save_workout_path(workout), method: :post,
+          form: { class: "contents" },
+          class: "flex items-center justify-center gap-1 text-xs font-black border border-gray-600 hover:border-sky-400 hover:text-sky-400 text-gray-400 px-3 py-2 rounded-xl transition-colors cursor-pointer uppercase tracking-wide flex-1" do %>
+      <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+      </svg>
+      Save
+    <% end %>
+  <% end %>
+  <% do_this_btn = capture do %>
+    <button type="button"
+            onclick="event.stopPropagation(); document.getElementById('complete_workout_<%= workout.id %>').showModal()"
+            class="flex items-center justify-center text-xs font-black bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 px-3 py-2 rounded-xl transition-colors cursor-pointer shadow-sm shadow-volt/25 uppercase tracking-wide flex-1">
+      Do this
+    </button>
+  <% end %>
+
   <% if sections.any? %>
     <details class="group">
       <summary class="bg-zinc-900 border-t border-zinc-700 px-4 py-3 list-none cursor-pointer select-none">
-        <div class="flex items-center justify-between gap-2">
+        <%# Row 1: social + workout toggle %>
+        <div class="flex items-center justify-between gap-2 mb-2.5">
           <div class="flex items-center gap-3">
             <%= render "workouts/like_button", workout: workout, liked: liked, like_count: like_count %>
             <%= link_to workout_log_comments_path(workout_log),
@@ -130,34 +161,16 @@
               <span id="comment_count_<%= workout_log.id %>" class="text-xs font-semibold"><%= workout_log.comments_count %></span>
             <% end %>
           </div>
-          <div class="flex items-center gap-2 flex-shrink-0">
-            <button type="button"
-                    onclick="document.getElementById('remix_<%= workout.id %>').showModal()"
-                    class="flex items-center gap-1.5 text-xs font-black border border-gray-600 hover:border-lime-400 hover:text-lime-400 text-gray-400 px-3 py-1.5 rounded-xl transition-colors cursor-pointer uppercase tracking-wide">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-              </svg>
-              Remix
-            </button>
-            <%= button_to save_workout_path(workout), method: :post,
-                  form: { class: "contents" },
-                  class: "flex items-center gap-1 text-xs font-black border border-gray-600 hover:border-sky-400 hover:text-sky-400 text-gray-400 px-3 py-1.5 rounded-xl transition-colors cursor-pointer uppercase tracking-wide" do %>
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-              </svg>
-              Save
-            <% end %>
-            <button type="button"
-                    onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
-                    class="text-xs font-black bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 px-3 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm shadow-volt/25 uppercase tracking-wide">
-              Do this
-            </button>
-            <span class="text-gray-500 hover:text-gray-300 text-xs font-bold flex items-center gap-1 transition-colors uppercase tracking-wide">
-              <span class="group-open:hidden">▾ Workout</span>
-              <span class="hidden group-open:inline">▴ Hide</span>
-            </span>
-          </div>
+          <span class="text-gray-500 text-xs font-bold flex items-center gap-1 uppercase tracking-wide">
+            <span class="group-open:hidden">▾ Workout</span>
+            <span class="hidden group-open:inline">▴ Hide</span>
+          </span>
+        </div>
+        <%# Row 2: action buttons — always full width, always visible %>
+        <div class="flex items-center gap-2">
+          <%= remix_btn %>
+          <%= save_btn %>
+          <%= do_this_btn %>
         </div>
       </summary>
 
@@ -171,42 +184,23 @@
 
   <% else %>
     <div class="bg-zinc-900 border-t border-zinc-700 px-4 py-3">
-      <div class="flex items-center justify-between gap-2">
-        <div class="flex items-center gap-3">
-          <%= render "workouts/like_button", workout: workout, liked: liked, like_count: like_count %>
-          <%= link_to workout_log_comments_path(workout_log),
-                data: { turbo_frame: dom_id(workout_log, :comments) },
-                class: "flex items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors" do %>
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-            <span id="comment_count_<%= workout_log.id %>" class="text-xs font-semibold"><%= workout_log.comments_count %></span>
-          <% end %>
-        </div>
-        <div class="flex items-center gap-2">
-          <button type="button"
-                  onclick="document.getElementById('remix_<%= workout.id %>').showModal()"
-                  class="flex items-center gap-1.5 text-xs font-black border border-gray-600 hover:border-lime-400 hover:text-lime-400 text-gray-400 px-3 py-1.5 rounded-xl transition-colors cursor-pointer uppercase tracking-wide">
-            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-              <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-            </svg>
-            Remix
-          </button>
-          <%= button_to save_workout_path(workout), method: :post,
-                form: { class: "contents" },
-                class: "flex items-center gap-1 text-xs font-black border border-gray-600 hover:border-sky-400 hover:text-sky-400 text-gray-400 px-3 py-1.5 rounded-xl transition-colors cursor-pointer uppercase tracking-wide" do %>
-            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-            </svg>
-            Save
-          <% end %>
-          <button type="button"
-                  onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
-                  class="text-xs font-black bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 px-3 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm shadow-volt/25 uppercase tracking-wide">
-            Do this
-          </button>
-        </div>
+      <%# Row 1: social %>
+      <div class="flex items-center gap-3 mb-2.5">
+        <%= render "workouts/like_button", workout: workout, liked: liked, like_count: like_count %>
+        <%= link_to workout_log_comments_path(workout_log),
+              data: { turbo_frame: dom_id(workout_log, :comments) },
+              class: "flex items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors" do %>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span id="comment_count_<%= workout_log.id %>" class="text-xs font-semibold"><%= workout_log.comments_count %></span>
+        <% end %>
+      </div>
+      <%# Row 2: action buttons %>
+      <div class="flex items-center gap-2">
+        <%= remix_btn %>
+        <%= save_btn %>
+        <%= do_this_btn %>
       </div>
     </div>
   <% end %>

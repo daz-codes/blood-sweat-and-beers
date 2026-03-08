@@ -1,0 +1,36 @@
+<%= turbo_stream.replace "contacts_results" do %>
+  <div id="contacts_results">
+    <% if @matched.any? %>
+      <div class="mb-4">
+        <p class="text-sm font-bold text-gray-300 mb-3"><%= @matched.size %> contact<%= @matched.size == 1 ? "" : "s" %> already on Volt</p>
+        <div class="space-y-2">
+          <% @matched.each do |user| %>
+            <div class="flex items-center justify-between border border-zinc-600 rounded-xl px-4 py-3">
+              <div>
+                <%= link_to user_path(user), class: "font-semibold text-white hover:text-lime-400 transition-colors" do %>
+                  <%= user.display %>
+                <% end %>
+                <% if user.username.present? %>
+                  <p class="text-gray-600 text-xs">@<%= user.username %></p>
+                <% end %>
+              </div>
+              <% follow_state = Current.user.follow_state_for(user) %>
+              <% follow = Current.user.follows_as_follower.find_by(following: user) %>
+              <%= render "shared/follow_button", user: user, follow_state: follow_state, follow: follow %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    <% else %>
+      <p class="text-gray-500 text-sm mb-4">None of your contacts are on Volt yet.</p>
+    <% end %>
+
+    <% if @unmatched_count > 0 %>
+      <div class="border border-zinc-700 rounded-xl px-4 py-3 text-sm text-gray-400">
+        <%= @unmatched_count %> contact<%= @unmatched_count == 1 ? "" : "s" %> not on Volt yet —
+        <a href="mailto:?subject=Join me on Volt&body=Hey! I've been using Volt to generate and track my workouts. Come join me! <%= root_url %>"
+           class="text-lime-400 hover:text-white font-semibold transition-colors">invite them</a>
+      </div>
+    <% end %>
+  </div>
+<% end %>

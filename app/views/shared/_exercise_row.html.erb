@@ -36,17 +36,17 @@
   <% if has_metric || exercise["notes"].present? %>
     <div class="flex items-center gap-1.5 mt-1 flex-wrap" <% if swappable && workout %>data-swap-exercise-target="details"<% end %>>
       <% if exercise["distance_m"] %>
-        <span class="text-xs font-bold text-sky-400"><%= exercise["distance_m"] %>m</span>
+        <span class="text-xs font-bold text-sky-200"><%= exercise["distance_m"] %>m</span>
       <% elsif !is_tabata && exercise["calories"] %>
-        <span class="text-xs font-bold text-sky-400"><%= exercise["calories"] %> cal</span>
+        <span class="text-xs font-bold text-sky-200"><%= exercise["calories"] %> cal</span>
       <% elsif !is_tabata && exercise["reps"] %>
-        <span class="text-xs font-bold text-sky-400"><%= exercise["reps"] %> reps</span>
+        <span class="text-xs font-bold text-sky-200"><%= exercise["reps"] %> reps</span>
       <% elsif exercise["duration_s"] %>
         <% ds = exercise["duration_s"].to_i; dm = ds / 60; dr = ds % 60 %>
-        <span class="text-xs font-bold text-sky-400"><%= dm > 0 ? "#{dm}min #{dr > 0 ? "#{dr}s" : ""}".strip : "#{ds}s" %></span>
+        <span class="text-xs font-bold text-sky-200"><%= dm > 0 ? "#{dm}min #{dr > 0 ? "#{dr}s" : ""}".strip : "#{ds}s" %></span>
       <% end %>
       <% if exercise["weight_kg"].to_f > 0 %>
-        <span class="text-xs font-bold text-sky-400"><%= exercise["weight_kg"] %>kg</span>
+        <span class="text-xs font-bold text-sky-200"><%= exercise["weight_kg"] %>kg</span>
       <% end %>
       <% if !is_tabata && exercise["notes"].present? %>
         <span class="text-gray-400 text-xs italic"><%= exercise["notes"] %></span>

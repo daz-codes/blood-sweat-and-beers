@@ -24,7 +24,8 @@ class WorkoutLLMGenerator
     "deka-atlas"         => "deka_atlas.md",
     "dirty-dozen"        => "dirty_dozen.md",
     "crossfit"           => "crossfit.md",
-    "functional-fitness" => "functional.md",
+    "functional-fitness"  => "functional.md",
+    "functional-muscle"   => "functional_muscle.md",
     "hiit"               => "hiit.md",
     "bodyweight"         => "bodyweight.md",
     "meta-fit"           => "metafit.md",
@@ -141,6 +142,9 @@ class WorkoutLLMGenerator
       instruction: "Use format: rounds with rounds: 2. 5 exercises, 10 reps each (reps: 10). Choose 5 low-intensity bodyweight exercises that cover the whole body: e.g. air squats, push-ups, glute bridges, inchworms, jumping jacks — or similar movements suited to the session. Easy pace, full range of motion, no rushing." },
     { label: "2-Round Bodyweight Circuit",
       instruction: "Use format: rounds with rounds: 2. 5 exercises, 10 reps each (reps: 10). Pick 5 movements relevant to the session's main muscle groups — vary them each time. Keep it easy and controlled. Examples: reverse lunges, push-up to downward dog, hip hinges, lateral lunges, shoulder circles with reach." },
+    # Structure 5: resistance band activation — 1 entry
+    { label: "Resistance Band Activation",
+      instruction: "5–6 resistance band exercises, each 12–15 reps (use reps: 12 or reps: 15) or 30–45 seconds (use duration_s: 30 or duration_s: 45). Choose band movements that directly prime the muscles used in today's main session: lower body day → banded clamshells, banded glute bridges, banded squat walks, banded pull-throughs; upper body day → band pull-aparts, banded face pulls, banded external rotations, banded chest press; full body → mix of above. Use format: straight. Light resistance only — this is activation, not training." },
   ].freeze
 
   COOLDOWN_OPTIONS = [
@@ -296,7 +300,8 @@ class WorkoutLLMGenerator
       context_workouts  = fetch_context
       program_research  = research_unknown_program
       recent_names      = fetch_recent_workout_names
-      prompt            = build_prompt(context_workouts, program_research, recent_names)
+      recent_fm_formats = fetch_recent_fm_formats
+      prompt            = build_prompt(context_workouts, program_research, recent_names, recent_fm_formats)
       workout_data     = call_llm(prompt)
       workout_data     = validate_and_fix(workout_data)
       workout_data     = collapse_duplicate_exercises(workout_data)
@@ -352,6 +357,40 @@ class WorkoutLLMGenerator
     scope = @user.workouts.where(status: "active").order(created_at: :desc)
     scope = scope.joins(:taggings).where(taggings: { tag_id: @main_tag.id }) if @main_tag
     scope.limit(5).pluck(:name).compact
+  end
+
+  # For Functional Muscle sessions: extract block types and key exercises from the
+  # last 3 sessions so the LLM can deliberately vary the structure and compound choices.
+  def fetch_recent_fm_formats
+    return nil unless @main_tag&.slug == "functional-muscle"
+
+    recent = @user.workouts
+                  .where(status: "active")
+                  .joins(:taggings)
+                  .where(taggings: { tag_id: @main_tag.id })
+                  .order(created_at: :desc)
+                  .limit(3)
+
+    return nil if recent.empty?
+
+    summaries = recent.map do |w|
+      sections = Array(w.structure&.dig("sections"))
+      formats  = sections.map { |s| s["format"] }.compact.uniq
+      tabatas  = sections.select { |s| s["format"] == "tabata" }
+                         .flat_map { |s| Array(s["exercises"]).map { |e| e["name"] } }
+      machines = sections.select { |s| s["name"].to_s.match?(/strength/i) }
+                         .flat_map { |s| Array(s["exercises"]).map { |e| e["name"] } }
+      finisher = sections.find { |s| s["format"] == "hundred" }&.dig("exercises", 0, "name")
+
+      parts = [ "\"#{w.name}\"" ]
+      parts << "blocks: #{formats.join(", ")}" if formats.any?
+      parts << "tabata compounds: #{tabatas.join("; ")}" if tabatas.any?
+      parts << "machines: #{machines.join(", ")}" if machines.any?
+      parts << "finisher: #{finisher}" if finisher
+      parts.join(" | ")
+    end
+
+    summaries.join("\n")
   end
 
   # Detects sections where every exercise entry is identical (same name + metrics)
@@ -470,6 +509,16 @@ class WorkoutLLMGenerator
   end
 
   def build_warmup_cooldown
+    if @duration_mins < 30
+      return <<~WC
+        ## Warm-Up Approach: Light Cardio (3 min)
+        Use a single exercise: 3 minutes of easy cardio (e.g. light jog, easy row, easy bike). format: straight, duration_mins: 3, one exercise with duration_s: 180.
+
+        ## Cool-Down Approach: Quick Stretch (2 min)
+        Use a single exercise: 2 minutes of loosening off and stretching. format: straight, duration_mins: 2, one exercise with duration_s: 120.
+      WC
+    end
+
     warmup   = WARMUP_OPTIONS.sample
     cooldown = COOLDOWN_OPTIONS.sample
     <<~WC
@@ -482,7 +531,7 @@ class WorkoutLLMGenerator
     WC
   end
 
-  def build_prompt(context_workouts, program_research = nil, recent_names = [])
+  def build_prompt(context_workouts, program_research = nil, recent_names = [], recent_fm_formats = nil)
     main_name  = @main_tag&.name || "general fitness"
     minor_str  = @minor_tags.map(&:name).join(", ")
 
@@ -558,24 +607,31 @@ class WorkoutLLMGenerator
       NOTES
     end
 
-    sport_rule      = sport_purity_rule
-    core_rule       = core_section_rule
-    pace_limits     = pace_limit_rule
-    structure_rule  = build_session_structure
+    sport_rule          = sport_purity_rule
+    core_rule           = core_section_rule
+    pace_limits         = pace_limit_rule
+    structure_rule      = build_session_structure
+    training_rule       = training_rep_rule
+    race_sim_rule       = race_simulation_rule
+    func_muscle_rule    = functional_muscle_rule
     station_rule    = if selected_stations
       "- ANCHOR MOVEMENTS: #{selected_stations.join(", ")} must be central to the main set. Complement them with toolkit exercises from the sport context — create a complete, varied workout, not a drill of the anchor movements repeated in every section."
     end
 
     sections << <<~RULES
       Use the create_workout tool. Requirements:
+      #{race_sim_rule}
+      #{func_muscle_rule}
       #{structure_rule}
       #{station_rule}
-      - Warm-up: always 5 minutes (format: straight, duration_mins: 5). Use the Warm-Up Approach specified above — follow it exactly.
-      - Cool-down: always 5 minutes (format: straight, duration_mins: 5). Use the Cool-Down Approach specified above. No reps or distances — hold times only, described in notes (e.g. "30s each side").
+      - Warm-up: #{@duration_mins < 30 ? "3 minutes (format: straight, duration_mins: 3)" : "5 minutes (format: straight, duration_mins: 5)"}. Use the Warm-Up Approach specified above — follow it exactly.
+      - Cool-down: #{@duration_mins < 30 ? "2 minutes (format: straight, duration_mins: 2)" : "5 minutes (format: straight, duration_mins: 5)"}. Use the Cool-Down Approach specified above. No reps or distances — hold times only, described in notes (e.g. "30s each side").
       - Main sets: do NOT set duration_mins on main sets — let the reps, rounds, and format define the work. Only amrap and emom sections need a duration_mins (their time cap). A short punchy finisher (e.g. Tabata, The Hundred/Centurion, for_time sprint) is a welcome extra at the end of the main work.
       #{core_rule}
+      #{training_rule}
       - Be specific with reps, distances, and weights
       - Give it a punchy, memorable name — something a gym community would actually call it. Be creative and unpredictable: draw from feelings, imagery, places, days, animals, weather, mythology, slang — anything vivid. Actively vary the style each time (e.g. a cheeky two-worder one time, a dramatic three-worder the next, a dry/ironic name after that). BANNED WORDS — never use: Iron, Gauntlet, Grinder, Thunder, Beast, Inferno, Blitz, Crusher, Destroyer, Titan. #{recent_names.any? ? "The user's recent workout names are: #{recent_names.map { |n| "\"#{n}\"" }.join(", ")}. Do NOT reuse any word or theme from these." : ""}
+      #{recent_fm_formats.present? ? "- CONTEXT — the user's recent Functional Muscle sessions were:\n#{recent_fm_formats.lines.map { |l| "        #{l}" }.join}\n      Use this to understand what they've been doing. Aim for natural variety across sessions — draw from the full range of available blocks and options each time." : ""}
       #{sport_rule}
       #{pace_limits}
       - FORMAT SELECTION — choose the best format for each section. Actively vary formats across sections (do not use the same format for every section):
@@ -672,7 +728,7 @@ class WorkoutLLMGenerator
     minor_slugs = @minor_tags.map(&:slug)
     # Explicit no-core tag always wins
     return "- Do NOT include a dedicated core or abs section in this session." if minor_slugs.any? { |s| s.in?(%w[no-core no-abs no-core-work]) }
-    return nil if @duration_mins < 20
+    return "- Do NOT include a dedicated core or abs section — this is a short session, keep it focused on the main work." if @duration_mins < 30
 
     if rand < 0.67
       # Explicitly forbid it ~2/3 of the time — silence is not enough, the LLM adds core by default
@@ -683,7 +739,154 @@ class WorkoutLLMGenerator
     "- Core section: include a #{core_mins}-minute dedicated core section (format: straight or rounds) placed towards the end of the session, before the cool-down. Use 3–5 exercises targeting abs and trunk stability (e.g. plank, hollow hold, dead bugs, Russian twist, V-ups, ab wheel rollout, GHD sit-ups, toes-to-bar, L-sit). Be specific with reps or hold times."
   end
 
+  # Returns true when the user requested a race simulation via minor tag.
+  def race_simulation?
+    @minor_tags.any? { |t| t.slug.in?(RACE_SIM_SLUGS) }
+  end
+
+  # Hard rules specific to Functional Muscle sessions.
+  def functional_muscle_rule
+    return nil unless @main_tag&.slug == "functional-muscle"
+
+    <<~RULE.strip
+      - FUNCTIONAL MUSCLE — IGNORE ALL GENERAL WORKOUT DESIGN INSTINCTS. This is a specific class format. Follow this SESSION ORDER exactly — do not rearrange it:
+
+      1. WARM-UP (always first): format: straight, duration_mins: 5. ONE exercise only — a single cardio machine (assault bike, rower, or ski erg) at easy pace. No mobility, no activation, no circuits. One machine, 5 mins.
+
+      2. METABOLIC BLOCKS (always before strength): Pick 2–4 from below. IMPORTANT: vary which blocks you use — do NOT default to the 12-min continuous block every time. Use it in roughly half of sessions at most. Other blocks are equally valid as the main conditioning block.
+
+        [A] 12-MIN CONTINUOUS — format: emom, emom_style: rotating, duration_mins: 12, exactly 3 exercises. One cardio machine (ski/row/bike) + one KB or barbell movement + one abs or bodyweight movement. NO reps on any exercise — each fills the full minute. Weight only where relevant. Calorie target in notes on cardio exercise only.
+
+        [B] INTERVAL CIRCUIT — format: rounds, rounds: 5. 2–3 exercises performed every 2 minutes (add this to section notes). Include specific reps and weights. E.g. 20 KB swings + 10 slams + 5 thrusters.
+
+        [C] 10-1 LADDER — format: ladder, start: 10, end: 1, step: 1. ALWAYS exactly 3 exercises from contrasting movement patterns (push + pull + legs, or swing + slam + squat etc).
+
+        [D] CARDIO INTERVALS — format: rounds, rounds: 5. 1 min hard / 1 min rest on a single machine. Ski (target 10 cal/min), Row (target 200m/min), Bike (10–15 cal).
+
+        [E] EVERY-2-MIN EMOM — format: emom, emom_style: circuit, duration_mins: 10. 3 exercises done together at the start of every 2-minute window, rest for remainder. E.g. 5 clean and press + 10 swings + 10 box jumps every 2 mins.
+
+        [F] 20-20 BLOCK — format: rounds, rounds: 10. Every 2 mins: 20 cal cardio + 20 reps of a punchy movement (KB swings, slams, jump squats). 20-minute total block.
+
+        [G] DEATH RACE — format: rounds, rounds: 5. 10–15 cal bike + 10 burpees. All out.
+
+        [H] TABATA — Include 2–3 SEPARATE tabata sections spread through the metabolic blocks — this is a signature feature. Each tabata section typically has 2 compound exercises alternating (ABABABAB = 4 rounds each) — aim for this most of the time. EVERY exercise MUST be a compound (two movements fused into one rep, name must contain "and", "with", "to", or "+"). Choose DIFFERENT compound exercises for each tabata — never repeat the same compound in one session. Draw from the full list in the sport context and invent new combinations: "Squat Curl and Press", "KB Swing with Side Lunge", "Wood Chop with Reverse Lunge", "Bent Over Row to Deadlift", "Side Lunge and Lateral Raise", "Lunge and Overhead Tricep Extension", "Hop onto Box and Bicep Curl", "Clean and Lateral Lunge", "Squat Jump and Shoulder Press", "Plate Halo and Twist", "Push Up to T-Rotation", "Renegade Row and Jump to Deadlift". Be inventive. Single movements (burpees, KB swings alone, mountain climbers) are NEVER acceptable here.
+
+        [I] BEAR MOUNTAIN — format: mountain, start: 1, peak: 5, end: 1, step: 1 (1-2-3-4-5-4-3-2-1 reps). One exercise only: "Bear" (clean → press → front squat → press → back squat = 1 rep). Use a moderate barbell weight. Rest as needed between rungs. A signature strength-skill block — use it occasionally, especially when no 10-1 ladder is in the session.
+
+      3. UPPER BODY STRENGTH (after all metabolic blocks): ONE section only, named "Upper Body Strength". format: rounds, rounds: 5, rest_secs: 60, reps: 10. Exactly ONE exercise — pick randomly from this list, varying each session: Low Row, Lat Pulldown, Bench Press, Shoulder Press, Chest Fly, Reverse Fly, Side Raises, Front Raises. One exercise, 5 rounds, 10 reps. Nothing else.
+
+      4. LOWER BODY STRENGTH (after upper body): ONE section only, named "Lower Body Strength". format: rounds, rounds: 5, rest_secs: 60, reps: 10. Exactly ONE exercise — pick randomly from this list, varying each session: Leg Press, Leg Extension, Leg Curl, Seated Calf Raise, Squats, Deadlifts, Lunges. One exercise, 5 rounds, 10 reps. Nothing else.
+
+      5. PILATES 100 / ABS (after strength): format: hundred. Always 100 reps of ONE exercise for time. Vary this every session — do NOT always use wall ball slams. Options: wall ball slams, bicep curls (light), lateral raises (light), plate serves (front raise to overhead), sit-ups, overhead crunches. Choose based on what hasn't been hammered in the metabolic blocks.
+
+      6. COOL-DOWN (always last): format: straight, duration_mins: 5. Simple stretch, 2–3 holds only.
+
+      BANNED in Functional Muscle: activation blocks, mobility warm-up sequences, AMRAP, single sets of any weighted exercise, any rep scheme other than 5×10 or 5×5 for the strength sections, reps on 12-min rotating EMOM exercises, powerlifting-style main sets.
+    RULE
+  end
+
+  # When the session is an event-type (Hyrox/Deka) but NOT a race simulation,
+  # tell the LLM to use 50–65% of competition rep counts in multi-round training sets.
+  def training_rep_rule
+    return nil unless event_session?
+    return nil if race_simulation?
+
+    main_slug = @main_tag&.slug || ""
+
+    case main_slug
+    when "deka", "deka-fit", "deka-strong", "deka-mile"
+      <<~RULE.strip
+        - TRAINING REP COUNTS (Deka): When using Deka zone movements in multi-round sets (rounds ≥ 2), use 50–65% of competition reps — NOT full race amounts. Race = training reference only. Examples:
+            * RAM Reverse Lunges: race 30 reps → training 15–20/round
+            * Box Jump / Step Over: race 20 reps → training 10–13/round
+            * Med Ball Sit-up Throw: race 25 reps → training 12–16/round
+            * Air Bike: race 25 cal → training 12–16 cal/round
+            * Dead Ball Yoke Over: race 20 reps → training 10–13/round
+            * RAM Weighted Burpees: race 20 reps → training 10–13/round
+          Distance zones (Row 500m, SkiErg 500m, Sled, Farmer's Carry) may keep full or reduced distance depending on session focus.
+      RULE
+    when "deka-atlas"
+      <<~RULE.strip
+        - TRAINING REP COUNTS (Deka Atlas): When using Deka Atlas movements in multi-round sets (rounds ≥ 2), use 50–65% of competition reps. All stations are 20 reps at competition (except Jump Rope = 100). Training: 10–13 reps/round for 20-rep stations; 50–65 reps/round for Jump Rope.
+      RULE
+    when "hyrox"
+      <<~RULE.strip
+        - TRAINING REP COUNTS (Hyrox): When using Hyrox stations in multi-round sets (rounds ≥ 2), use reduced training volumes — NOT full race amounts. Examples:
+            * Wall Balls: race 100 reps → training 40–65/round
+            * Sandbag Lunges: race 100m → training 40–65m/round
+            * Farmers Carry: race 200m → training 50–80m/round
+            * Sled: reduce load to 60–70% of competition weight
+          Do NOT prescribe a full 1km SkiErg or Row as part of a multi-round circuit — reserve that for single-effort time trials.
+      RULE
+    end
+  end
+
+  # When the "race-simulation" or "race-sim" minor tag is present, override the session
+  # with a full competition run-through at exact race weights/distances/reps in race order.
+  def race_simulation_rule
+    return nil unless race_simulation?
+
+    main_slug = @main_tag&.slug || ""
+
+    case main_slug
+    when "deka", "deka-fit"
+      <<~RULE.strip
+        - RACE SIMULATION MODE (Deka Fit): Generate an exact Deka Fit event run-through. Use ALL 10 zones in official race order with full competition specs. Format each zone as its own for_time section. No warm-up or cool-down — this is a competition-day simulation. Zone order:
+            1. RAM Reverse Lunges: 30 reps (15/leg) | 25kg (M) / 15kg (F)
+            2. Row: 500m
+            3. Box Jump / Step Over: 20 reps | 24" box
+            4. Med Ball Sit-up Throw: 25 reps | 9kg (M) / 6.5kg (F)
+            5. SkiErg: 500m
+            6. Farmer's Carry: 100m | 27kg each hand (M) / 18kg (F)
+            7. Air Bike: 25 calories
+            8. Dead Ball Yoke Over: 20 reps (10/side) | 27kg (M) / 18kg (F)
+            9. Sled Push / Pull: 100m (push 10m + pull 10m × 5)
+            10. RAM Weighted Burpees: 20 reps | 20kg (M) / 10kg (F)
+          Between each zone athletes transition themselves — model this as a single workout with 10 for_time sections, one per zone.
+      RULE
+    when "deka-strong"
+      <<~RULE.strip
+        - RACE SIMULATION MODE (Deka Strong): Generate an exact Deka Strong event run-through. Same 10 zones as Deka Fit but with heavier loads and different distances. Use official Deka Strong competition specs for weights/distances in race order. Format each zone as its own for_time section. No warm-up/cool-down.
+      RULE
+    when "deka-atlas"
+      <<~RULE.strip
+        - RACE SIMULATION MODE (Deka Atlas): Generate an exact Deka Atlas event run-through. Use ALL 10 stations in official race order with full competition specs. Format each station as its own for_time section. No warm-up/cool-down. Station order:
+            1. Barbell Thrusters: 20 reps | 45kg (M) / 30kg (F)
+            2. Bar-Facing Burpees Over Bar: 20 reps
+            3. Surrender Lunges (weighted): 20 reps | 22.5kg (M) / 15kg (F)
+            4. Single Arm DB Ground to Overhead (alternating): 20 reps | 22.5kg (M) / 15kg (F)
+            5. Dumbbell Bear Crawl: 40m | 22.5kg (M) / 15kg (F)
+            6. Weighted Sit-ups: 20 reps | 15kg (M) / 9kg (F)
+            7. Farmer's Carry: 60m | 45kg each hand (M) / 32kg each hand (F)
+            8. DB Shoulder to Overhead Press: 20 reps | 22.5kg (M) / 15kg (F)
+            9. Jump Rope Single Unders: 100 reps
+            10. Atlas Shoulder to Carry: 100m | 45kg (M) / 32kg (F)
+      RULE
+    when "hyrox"
+      <<~RULE.strip
+        - RACE SIMULATION MODE (Hyrox): Generate an exact Hyrox event run-through. Structure: 8 × (1km run → 1 functional station). Model each run and each station as its own for_time section. Use full competition specs. Station order:
+            1. 1km run → SkiErg 1000m
+            2. 1km run → Sled Push 50m | Open: 152kg (M) / 102kg (F) | Pro: 202kg (M) / 152kg (F)
+            3. 1km run → Sled Pull 50m | Open: 103kg (M) / 78kg (F) | Pro: 153kg (M) / 103kg (F)
+            4. 1km run → Burpee Broad Jumps 80m
+            5. 1km run → Rowing 1000m
+            6. 1km run → Farmers Carry 200m | Open: 2×24kg (M) / 2×16kg (F) | Pro: 2×32kg (M) / 2×24kg (F)
+            7. 1km run → Sandbag Lunges 100m | Open: 20kg (M) / 10kg (F) | Pro: 30kg (M) / 20kg (F)
+            8. 1km run → Wall Balls 100 reps | Open: 6kg to 10ft (M) / 4kg to 9ft (F) | Pro: 9kg to 10ft (M) / 6kg to 9ft (F)
+          No warm-up/cool-down — this is a competition-day simulation.
+      RULE
+    else
+      "- RACE SIMULATION MODE: Generate a full event run-through for #{@main_tag&.name} using competition-accurate reps, distances, and weights in race order. Format as for_time sections. No warm-up/cool-down."
+    end
+  end
+
   def build_session_structure
+    if @duration_mins < 30
+      return "- Session structure: Warm-up (3 min) → 1 main set → Cool-down (2 min). " \
+             "This is a short session — keep it tight. No finisher. 1 main set only. " \
+             "Do NOT set duration_mins on the main set."
+    end
+
     # Base of 1 main set for 30 min, +1 set per additional 15 min
     # e.g. 30→1, 45→2, 60→3, 75→4
     main_sets = [1 + ((@duration_mins - 30) / 15.0).floor, 1].max
@@ -786,6 +989,51 @@ class WorkoutLLMGenerator
     end
   end
 
+  # Pre-computes actual training weights at common rep ranges from 1RM values.
+  # Returns a formatted string with per-lift, per-rep-range weights so the LLM
+  # never has to calculate percentages — it can just read the target kg directly.
+  def build_strength_weight_guide(pbs, bw)
+    lines = []
+
+    # 1RM → training weight at standard rep ranges (Epley approximation)
+    # 3-5 reps=87% | 6-8 reps=80% | 10 reps=75% | 15 reps=68% | 20+ reps=62%
+    lift_map = {
+      "deadlift_1rm"   => "Deadlift / Trap Bar Deadlift / RDL / Sumo Deadlift",
+      "squat_1rm"      => "Back Squat / Front Squat / Bulgarian Split Squat",
+      "bench_1rm"      => "Bench Press / Incline Press / DB Press / Push Press",
+      "clean_jerk_1rm" => "Clean & Jerk / Power Clean / Hang Clean / Hang Power Clean",
+      "snatch_1rm"     => "Snatch / Hang Snatch / Power Snatch",
+    }
+
+    lift_map.each do |key, label|
+      next unless pbs[key]
+      rm = pbs[key].to_f
+      lines << "  #{label} (1RM #{rm.round}kg): " \
+               "3–5 reps=#{(rm * 0.87).round}kg | " \
+               "6–8 reps=#{(rm * 0.80).round}kg | " \
+               "10 reps=#{(rm * 0.75).round}kg | " \
+               "15 reps=#{(rm * 0.68).round}kg | " \
+               "20+ reps=#{(rm * 0.62).round}kg — NEVER exceed the 1RM of #{rm.round}kg"
+    end
+
+    # Derive carry / unilateral loads from deadlift 1RM if available
+    if pbs["deadlift_1rm"]
+      dl = pbs["deadlift_1rm"].to_f
+      fc_lo = (dl * 0.30).round
+      fc_hi = (dl * 0.40).round
+      sb_lo = (bw * 0.50).round
+      sb_hi = (bw * 0.75).round
+      lines << "  Farmer's Carry: #{fc_lo}–#{fc_hi}kg per hand (30–40% of deadlift 1RM)"
+      lines << "  Sandbag / Yoke / Atlas stone: #{sb_lo}–#{sb_hi}kg (50–75% body weight)" if bw > 0
+    end
+
+    lines << "  Body weight: #{bw.round(1)}kg" if bw > 0
+    lines << "  CRITICAL: These are absolute maximums — the athlete cannot lift more than their 1RM. " \
+             "Scale all prescribed weights to the values above. A 120kg deadlift 1RM means 0 reps at 180kg."
+
+    lines.join("\n")
+  end
+
   # Builds a unified benchmarks block giving the LLM raw PBs plus scaling principles.
   # The LLM derives contextually appropriate paces and weights from these rather than
   # receiving pre-computed fixed bands.
@@ -796,7 +1044,6 @@ class WorkoutLLMGenerator
     has_strength = false
 
     cardio_lines    = []
-    strength_lines  = []
     other_pb_lines  = []
 
     # ── Cardio PBs — inline pace guides per sport ───────────────────────────
@@ -876,13 +1123,9 @@ class WorkoutLLMGenerator
 
     has_cardio = cardio_lines.any?
 
-    # ── Strength PBs ────────────────────────────────────────────────────────
-    { "bench_1rm" => "Bench press 1RM", "squat_1rm" => "Back squat 1RM",
-      "deadlift_1rm" => "Deadlift 1RM", "clean_jerk_1rm" => "Clean & Jerk 1RM",
-      "snatch_1rm" => "Snatch 1RM" }.each do |key, label|
-      next unless pbs[key]
-      strength_lines << "#{label}: #{pbs[key].to_f.round(1)}kg"
-      has_strength = true
+    # ── Strength PBs — detect presence for the output block ─────────────────
+    %w[bench_1rm squat_1rm deadlift_1rm clean_jerk_1rm snatch_1rm].each do |key|
+      has_strength = true if pbs[key]
     end
 
     # ── Other PBs (functional tests, bodyweight) ─────────────────────────────
@@ -919,15 +1162,8 @@ class WorkoutLLMGenerator
     end
 
     if has_strength || bw > 0
-      strength_block = []
-      strength_block.concat(strength_lines)
-      strength_block << "Body weight: #{bw.round(1)}kg" if bw > 0
-
-      out << <<~STRENGTH.strip
-        Strength benchmarks (use to calibrate all weighted exercises):
-        #{strength_block.map { |l| "  - #{l}" }.join("\n")}
-          Rep-to-weight guide: 3–5 reps ≈ 85–90% 1RM | 8–10 reps ≈ 75% 1RM | 15 reps ≈ 68% 1RM | 20+ reps ≈ 60–65% 1RM. Carries: farmer's carry typically 30–40% of deadlift 1RM per hand; sled/sandbag ≈ 60–80% body weight.
-      STRENGTH
+      strength_guide = build_strength_weight_guide(pbs, bw)
+      out << "Strength weight guide — HARD LIMITS, do not exceed these:\n#{strength_guide}"
     end
 
     unless other_pb_lines.empty?
@@ -954,7 +1190,8 @@ class WorkoutLLMGenerator
 
   # Meta-instruction minor tags that restrict the session but are NOT focus movements.
   # These must NOT disable station selection (they're constraints, not content choices).
-  META_MINOR_SLUGS = %w[no-run no-running no-runs no-core no-abs no-core-work].freeze
+  META_MINOR_SLUGS = %w[no-run no-running no-runs no-core no-abs no-core-work race-simulation race-sim].freeze
+  RACE_SIM_SLUGS   = %w[race-simulation race-sim].freeze
 
   # Main tag slugs that are inherently bodyweight-only programs.
   BODYWEIGHT_ONLY_SLUGS = %w[bodyweight meta-fit metafit metafit-bodyweight].freeze
@@ -1002,7 +1239,7 @@ class WorkoutLLMGenerator
   end
 
   def validate_and_fix(workout_data)
-    validator = WorkoutValidator.new(workout_data, difficulty: @difficulty, duration_mins: @duration_mins)
+    validator = WorkoutValidator.new(workout_data, difficulty: @difficulty, duration_mins: @duration_mins, main_tag_slug: @main_tag&.slug)
     result    = validator.validate_and_fix
     validator.fixes.each    { |msg| Rails.logger.info("[WorkoutValidator] Fixed: #{msg}") }
     validator.warnings.each { |msg| Rails.logger.warn("[WorkoutValidator] Warn:  #{msg}") }
@@ -1131,17 +1368,18 @@ class WorkoutLLMGenerator
         end
       end
     rescue WorkoutGenerationError => e
-      if e.message.to_sym.in?(%i[overloaded rate_limited server_error]) && retries < 3
-        wait = [ 2 ** retries, 8 ].min  # 1s, 2s, 4s (capped at 8s)
-        Rails.logger.warn "LLM call #{e.message} — retry #{retries + 1}/3 after #{wait}s"
+      if e.message.to_sym.in?(%i[overloaded rate_limited server_error]) && retries < 5
+        # 5, 10, 20, 30, 30 seconds — Anthropic outages typically clear within a minute
+        wait = [ 5 * (2 ** retries), 30 ].min
+        Rails.logger.warn "LLM call #{e.message} — retry #{retries + 1}/5 after #{wait}s"
         sleep wait
         retries += 1
         retry
       end
       raise WorkoutGenerationError, case e.message.to_sym
-      when :overloaded    then "The AI service is currently overloaded. Please try again in a moment."
-      when :rate_limited  then "Too many requests. Please wait a moment and try again."
-      when :server_error  then "The AI service is temporarily unavailable. Please try again shortly."
+      when :overloaded    then "The AI is overloaded right now."
+      when :rate_limited  then "Too many requests right now."
+      when :server_error  then "The AI service is temporarily unavailable."
       else e.message
       end
     end

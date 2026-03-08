@@ -10,7 +10,7 @@ class RegistrationsController < ApplicationController
 
      if @user.save
        start_new_session_for @user
-       redirect_to after_authentication_url, notice: "You have successfully registered!"
+       redirect_to edit_profile_path, notice: "Welcome! Set up your profile so we can personalise your workouts."
      else
        render :new, status: :unprocessable_entity
      end

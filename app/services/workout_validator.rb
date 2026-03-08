@@ -27,10 +27,11 @@ class WorkoutValidator
 
   attr_reader :fixes, :warnings
 
-  def initialize(workout_data, difficulty:, duration_mins:)
+  def initialize(workout_data, difficulty:, duration_mins:, main_tag_slug: nil)
     @data          = workout_data
     @difficulty    = difficulty
     @duration_mins = duration_mins.to_i
+    @main_tag_slug = main_tag_slug.to_s
     @fixes         = []
     @warnings      = []
   end
@@ -58,6 +59,15 @@ class WorkoutValidator
     fix_single_set_sections(sections)
     fix_tabata_exercise_notes(sections)
     check_cooldown(sections)
+
+    if @main_tag_slug == "functional-muscle"
+      fix_fm_remove_activation(sections)
+      fix_fm_rotating_emom_reps(sections)
+      fix_fm_tabata_remove_non_compounds(sections)
+      fix_fm_merge_strength_sections(sections)
+      fix_fm_strength_sets(sections)
+      fix_fm_warmup(sections)
+    end
 
     @data
   end
@@ -234,6 +244,166 @@ class WorkoutValidator
       ex["reps"] = 100
       @fixes << "Hundred '#{section["name"]}': reps #{old} → 100"
     end
+  end
+
+  # FM: strip any section whose name looks like an activation/mobility warm-up block.
+  # These don't belong in Functional Muscle — warm-up is cardio machine only.
+  FM_ACTIVATION_PATTERN = /activation|mobility|prep|dynamic warm|movement prep/i.freeze
+
+  def fix_fm_remove_activation(sections)
+    removed = sections.select { |s| s["name"].to_s.match?(FM_ACTIVATION_PATTERN) }
+    removed.each do |s|
+      sections.delete(s)
+      @fixes << "FM: removed activation/mobility block '#{s["name"]}' — FM warm-up is cardio only"
+    end
+  end
+
+  # FM: rotating EMOM exercises (12-min continuous block) fill the full minute —
+  # they must NOT have reps, calories, or distance set. Strip them.
+  def fix_fm_rotating_emom_reps(sections)
+    sections.each do |section|
+      next unless section["format"] == "emom" && section["emom_style"] == "rotating"
+      Array(section["exercises"]).each do |ex|
+        stripped = []
+        %w[reps calories distance_m].each do |field|
+          if ex[field].present?
+            stripped << "#{field}: #{ex[field]}"
+            ex.delete(field)
+          end
+        end
+        next if stripped.empty?
+        @fixes << "FM rotating EMOM '#{section["name"]}': removed #{stripped.join(", ")} from '#{ex["name"]}' — exercise fills the full minute"
+      end
+    end
+  end
+
+  # FM: strength sections (straight/rounds format, not warm-up/cool-down) must be
+  # exactly 5 rounds with either 5 or 10 reps. Fix rounds to 5; snap reps to nearest.
+  FM_STRENGTH_EXEMPT = %w[tabata emom amrap for_time ladder mountain matrix hundred].freeze
+  FM_VALID_REPS      = [5, 10].freeze
+
+  def fix_fm_strength_sets(sections)
+    sections.each do |section|
+      next if section["format"].to_s.in?(FM_STRENGTH_EXEMPT)
+      next if section["name"].to_s.match?(WARMUP_COOLDOWN_PATTERN)
+
+      # Fix rounds to 5
+      if section["rounds"].to_i != 5
+        old = section["rounds"]
+        section["rounds"] = 5
+        @fixes << "FM '#{section["name"]}': rounds #{old.inspect} → 5 (Functional Muscle requires 5 rounds)"
+      end
+
+      # Snap reps to 5 or 10
+      Array(section["exercises"]).each do |ex|
+        reps = ex["reps"].to_i
+        next if reps.zero?
+        next if FM_VALID_REPS.include?(reps)
+        snapped = FM_VALID_REPS.min_by { |v| (v - reps).abs }
+        ex["reps"] = snapped
+        @fixes << "FM '#{ex["name"]}' in '#{section["name"]}': reps #{reps} → #{snapped} (FM only allows 5×5 or 5×10)"
+      end
+    end
+  end
+
+  # FM: warm-up must be a single cardio machine exercise (bike/row/ski), 5 mins, straight format.
+  # If multiple exercises are found in the warm-up, trim to the first one.
+  def fix_fm_warmup(sections)
+    warmup = sections.find { |s| s["name"].to_s.match?(/warm/i) }
+    return unless warmup
+
+    exercises = Array(warmup["exercises"])
+    if exercises.size > 1
+      warmup["exercises"] = exercises.first(1)
+      @fixes << "FM warm-up trimmed to 1 exercise (was #{exercises.size}) — FM warm-up is cardio machine only"
+    end
+
+    if warmup["duration_mins"].to_i != 5
+      old = warmup["duration_mins"]
+      warmup["duration_mins"] = 5
+      @fixes << "FM warm-up duration #{old} → 5 mins"
+    end
+  end
+
+  # FM: remove non-compound exercises from tabata sections.
+  # A compound must contain a connector word joining two movements.
+  # After removal the tabata exercise count fixer will snap to the next valid count.
+  COMPOUND_CONNECTORS = /\band\b|\bwith\b|\bto\b|\binto\b|\b\+\b/i.freeze
+
+  # FM: flag non-compound tabata exercises in the notes so they're visible,
+  # but keep them rather than stripping (an empty tabata is worse).
+  def fix_fm_tabata_remove_non_compounds(sections)
+    sections.each do |section|
+      next unless section["format"] == "tabata"
+      Array(section["exercises"]).each do |ex|
+        next if ex["name"].to_s.match?(COMPOUND_CONNECTORS)
+        ex["notes"] = "⚠ Should be a compound movement (e.g. '#{ex["name"]} and Bicep Curl')"
+        @warnings << "FM Tabata '#{section["name"]}': '#{ex["name"]}' is not a compound — flagged in notes"
+      end
+    end
+  end
+
+  # FM: collect ALL straight/rounds strength sections and consolidate into exactly
+  # two: "Upper Body Strength" and "Lower Body Strength", each with rounds: 5.
+  # Splits exercises by lower-body keyword; anything that doesn't match goes upper.
+  LOWER_BODY_PATTERN = /squat|lunge|deadlift|romanian|leg press|leg extension|calf|glute|hip|hamstring|step.?up|box jump/i.freeze
+  FM_STRENGTH_EXEMPT_FORMATS = %w[tabata emom amrap for_time ladder mountain matrix hundred].freeze
+  FM_STRENGTH_EXEMPT_NAMES   = /warm|cool|stretch|recovery|pilates|abs|hundred/i.freeze
+
+  # Only these exercise name patterns are acceptable in FM strength sections (machines only).
+  FM_UPPER_MACHINE_PATTERN = /low row|lat pull|bench press|shoulder press|chest fly|reverse fly|side raise|front raise/i.freeze
+  FM_LOWER_MACHINE_PATTERN = /leg press|leg extension|leg curl|hamstring curl|calf raise|squat|deadlift|lunge/i.freeze
+
+  def fix_fm_merge_strength_sections(sections)
+    strength_sections = sections.reject do |s|
+      s["format"].to_s.in?(FM_STRENGTH_EXEMPT_FORMATS) ||
+        s["name"].to_s.match?(FM_STRENGTH_EXEMPT_NAMES)
+    end
+
+    return if strength_sections.empty?
+
+    all_exercises = strength_sections.flat_map { |s| Array(s["exercises"]) }.uniq { |e| e["name"] }
+    return if all_exercises.empty?
+
+    # Split into upper and lower — pick ONE exercise each
+    lower_exercises = all_exercises.select { |e| e["name"].to_s.match?(LOWER_BODY_PATTERN) }
+    upper_exercises = all_exercises.reject { |e| e["name"].to_s.match?(LOWER_BODY_PATTERN) }
+
+    # Prefer machine exercises; fall back to first available if none match
+    upper_pick = upper_exercises.find { |e| e["name"].to_s.match?(FM_UPPER_MACHINE_PATTERN) } || upper_exercises.first
+    lower_pick = lower_exercises.find { |e| e["name"].to_s.match?(FM_LOWER_MACHINE_PATTERN) } || lower_exercises.first
+
+    # Ensure reps: 10
+    [upper_pick, lower_pick].compact.each { |ex| ex["reps"] = 10 }
+
+    # Remove all existing strength sections
+    strength_sections.each { |s| sections.delete(s) }
+
+    # Insert before pilates/abs/cooldown
+    insert_at = sections.index { |s| s["name"].to_s.match?(/pilates|abs|hundred|cool|stretch/i) } || sections.size
+
+    new_sections = []
+    if upper_pick
+      new_sections << {
+        "name"      => "Upper Body Strength",
+        "format"    => "rounds",
+        "rounds"    => 5,
+        "rest_secs" => 60,
+        "exercises" => [ upper_pick ]
+      }
+    end
+    if lower_pick
+      new_sections << {
+        "name"      => "Lower Body Strength",
+        "format"    => "rounds",
+        "rounds"    => 5,
+        "rest_secs" => 60,
+        "exercises" => [ lower_pick ]
+      }
+    end
+
+    sections.insert(insert_at, *new_sections)
+    @fixes << "FM: strength → #{new_sections.map { |s| "'#{s["name"]}': #{Array(s["exercises"]).first["name"]} 5×10" }.join(", ")}"
   end
 
   # Warn if the last section doesn't look like a cool-down.
