@@ -140,17 +140,19 @@
               </svg>
               Remix
             </button>
+            <%= button_to save_workout_path(workout), method: :post,
+                  form: { class: "contents" },
+                  class: "flex items-center gap-1 text-xs font-black border border-gray-600 hover:border-sky-400 hover:text-sky-400 text-gray-400 px-3 py-1.5 rounded-xl transition-colors cursor-pointer uppercase tracking-wide" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+              </svg>
+              Save
+            <% end %>
             <button type="button"
                     onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
                     class="text-xs font-black bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 px-3 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm shadow-volt/25 uppercase tracking-wide">
               Do this
             </button>
-            <% unless is_own %>
-              <%= button_to save_workout_path(workout), method: :post,
-                    class: "text-xs font-bold border border-gray-600 hover:border-lime-400 hover:text-lime-400 text-gray-400 px-3 py-1.5 rounded-lg transition-colors cursor-pointer" do %>
-                + Save
-              <% end %>
-            <% end %>
             <span class="text-gray-500 hover:text-gray-300 text-xs font-bold flex items-center gap-1 transition-colors uppercase tracking-wide">
               <span class="group-open:hidden">▾ Workout</span>
               <span class="hidden group-open:inline">▴ Hide</span>
@@ -191,17 +193,19 @@
             </svg>
             Remix
           </button>
+          <%= button_to save_workout_path(workout), method: :post,
+                form: { class: "contents" },
+                class: "flex items-center gap-1 text-xs font-black border border-gray-600 hover:border-sky-400 hover:text-sky-400 text-gray-400 px-3 py-1.5 rounded-xl transition-colors cursor-pointer uppercase tracking-wide" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Save
+          <% end %>
           <button type="button"
                   onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
                   class="text-xs font-black bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 px-3 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm shadow-volt/25 uppercase tracking-wide">
             Do this
           </button>
-          <% unless is_own %>
-            <%= button_to save_workout_path(workout), method: :post,
-                  class: "text-xs font-bold border border-gray-600 hover:border-lime-400 hover:text-lime-400 text-gray-400 px-3 py-1.5 rounded-lg transition-colors cursor-pointer" do %>
-              + Save
-            <% end %>
-          <% end %>
         </div>
       </div>
     </div>

@@ -43,27 +43,45 @@
      ladder_seq_str = "#{seq} #{varies_lbl}".strip
    end %>
 
-<% format_desc = case sec_format
+<%# fmt_label = bold green modality name, fmt_detail = gray italic description, fmt_interval = bold green suffix (tabata only) %>
+<% fmt_label, fmt_detail, fmt_interval = case sec_format
    when "rounds"
-     parts = []
-     parts << "#{section["rounds"]} rounds" if section["rounds"].to_i > 0
-     parts << "#{section["rest_secs"]}s rest after each round" if section["rest_secs"].to_i > 0
-     parts.join(" · ").presence
+     label  = section["rounds"].to_i > 0 ? "#{section["rounds"]} rounds" : nil
+     detail = section["rest_secs"].to_i > 0 ? "#{section["rest_secs"]}s rest after each round" : nil
+     [label, detail]
    when "amrap"
-     section["duration_mins"] ? "AMRAP · #{section["duration_mins"]} min" : "AMRAP"
+     ["AMRAP", section["duration_mins"] ? "#{section["duration_mins"]} min" : nil]
    when "emom"
-     section["duration_mins"] ? "Every Minute On the Minute · #{section["duration_mins"]} min" : "Every Minute On the Minute"
+     detail_parts = []
+     detail_parts << "#{section["duration_mins"]} min" if section["duration_mins"]
+     if section["emom_style"] == "rotating"
+       n = Array(section["exercises"]).size
+       rounds_each = n > 0 && section["duration_mins"].to_i > 0 ? section["duration_mins"].to_i / n : nil
+       detail_parts << (rounds_each ? "#{n} exercises · #{rounds_each} rounds each" : "#{n} exercises rotating")
+     end
+     ["EMOM", detail_parts.join(" · ").presence]
    when "tabata"
-     :tabata
+     n = Array(section["exercises"]).size
+     rotation = case n
+       when 2 then "alternating · 4 rounds each"
+       when 4 then "rotating · 2 rounds each"
+       when 8 then "1 round each"
+       else "8 rounds"
+       end
+     ["Tabata", rotation]
    when "for_time"
-     "For Time"
+     ["For Time", nil]
+   when "hundred"
+     ["100 Reps", "For Time"]
    when "ladder", "mountain"
      parts = [ ladder_seq_str ]
      parts << "#{section["rest_between_rungs"]}s rest between rungs" if section["rest_between_rungs"].to_i > 0
-     parts.compact.join(" · ").presence
+     [sec_format.capitalize, parts.compact.join(" · ").presence]
    when "matrix"
      rest = section["rest_secs"].to_i > 0 ? "#{section["rest_secs"]}s rest between rounds" : nil
-     ["Matrix", rest].compact.join(" · ")
+     ["Matrix", rest]
+   else
+     [nil, nil]
    end %>
 
 <div class="bg-zinc-900/60 rounded-xl overflow-hidden border border-zinc-600/50">
@@ -79,10 +97,12 @@
         </div>
       <% end %>
     </div>
-    <% if format_desc == :tabata %>
-      <p class="text-gray-400 text-xs mt-1 leading-relaxed italic">Tabata · 8 rounds · <span class="text-lime-400 font-bold not-italic">20s hard effort / 10s easy</span></p>
-    <% elsif format_desc.present? %>
-      <p class="text-gray-400 text-xs mt-1 leading-relaxed"><%= format_desc %></p>
+    <% if fmt_label.present? %>
+      <p class="text-xs mt-1 leading-relaxed">
+        <span class="text-lime-400 font-bold"><%= fmt_label %></span>
+        <% if fmt_detail.present? %><span class="text-gray-400 italic"> · <%= fmt_detail %></span><% end %>
+        <% if fmt_interval.present? %><span class="text-gray-400 italic"> · <%= fmt_interval %></span><% end %>
+      </p>
     <% end %>
   </div>
 

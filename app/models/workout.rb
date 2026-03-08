@@ -9,7 +9,7 @@ class Workout < ApplicationRecord
   TYPES       = %w[hyrox deka custom].freeze
   DIFFICULTIES = %w[beginner intermediate advanced].freeze
   STATUSES    = %w[active template queued preview].freeze
-  FORMATS     = %w[straight rounds amrap emom tabata ladder mountain matrix].freeze
+  FORMATS     = %w[straight rounds amrap emom tabata for_time ladder mountain matrix hundred].freeze
 
   def self.valid_formats = FORMATS
 

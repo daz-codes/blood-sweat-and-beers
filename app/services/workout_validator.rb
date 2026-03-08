@@ -41,11 +41,15 @@ class WorkoutValidator
     sections.each_with_index do |section, idx|
       case section["format"]
       when "emom"
+        fix_emom_structure(section, idx)
         fix_emom_reps(section, idx)
       when "tabata"
         fix_tabata_duration(section, idx)
+        fix_tabata_exercise_count(section, idx)
       when "ladder", "mountain"
         fix_ladder_step(section, idx)
+      when "hundred"
+        fix_hundred(section, idx)
       end
     end
 
@@ -60,11 +64,11 @@ class WorkoutValidator
 
   private
 
-  # EMOM: total reps per minute must not exceed the difficulty cap.
-  # Only rep-based exercises count — duration_s / distance_m / calories are time/distance
-  # constraints, not rep counts, so they don't contribute to the per-minute rep total.
+  # EMOM circuit: total reps per minute must not exceed the difficulty cap.
+  # Rotating EMOMs don't have a per-minute rep cap (each exercise fills its own minute).
   # Scales all rep exercises proportionally, flooring each to at least 1.
   def fix_emom_reps(section, idx)
+    return if section["emom_style"] == "rotating"
     cap = EMOM_REP_CAPS[@difficulty] || 12
     rep_exercises = Array(section["exercises"]).select { |e| e["reps"].to_i > 0 }
     total = rep_exercises.sum { |e| e["reps"].to_i }
@@ -78,6 +82,42 @@ class WorkoutValidator
     new_total = rep_exercises.sum { |e| e["reps"].to_i }
     @fixes << "EMOM '#{section["name"]}': scaled reps #{total} → #{new_total} " \
               "(#{@difficulty} cap: #{cap}/min)"
+  end
+
+  # EMOM circuit: max 3 exercises per minute.
+  # EMOM rotating: duration_mins must be a multiple of exercise count.
+  def fix_emom_structure(section, idx)
+    exercises = Array(section["exercises"])
+    style = section["emom_style"]
+
+    if style == "rotating"
+      n = exercises.size
+      return if n.zero?
+      dur = section["duration_mins"].to_i
+      return if dur.zero? || (dur % n).zero?
+      snapped = ((dur.to_f / n).ceil * n)
+      section["duration_mins"] = snapped
+      @fixes << "EMOM rotating '#{section["name"]}': duration_mins #{dur} → #{snapped} (must be multiple of #{n} exercises)"
+    else
+      # circuit — cap at 3 exercises
+      return if exercises.size <= 3
+      section["exercises"] = exercises.first(3)
+      @fixes << "EMOM circuit '#{section["name"]}': trimmed to 3 exercises (was #{exercises.size})"
+    end
+  end
+
+  # Tabata exercises must be a factor of 8: 1, 2, 4, or 8.
+  # Each exercise fills 8/n rounds. Truncates to nearest valid count (never pads).
+  TABATA_VALID_COUNTS = [1, 2, 4, 8].freeze
+
+  def fix_tabata_exercise_count(section, idx)
+    exercises = Array(section["exercises"])
+    n = exercises.size
+    return if TABATA_VALID_COUNTS.include?(n)
+
+    snapped = TABATA_VALID_COUNTS.select { |v| v <= n }.last || 1
+    section["exercises"] = exercises.first(snapped)
+    @fixes << "Tabata '#{section["name"]}': #{n} exercises → #{snapped} (must be 1, 2, 4, or 8)"
   end
 
   # Tabata is always exactly 4 minutes: 20s on + 10s off × 8 rounds = 240s.
@@ -115,7 +155,7 @@ class WorkoutValidator
   # A section with straight/rounds format, exactly 1 exercise, and no rounds set
   # is almost certainly a mistake — enforce a minimum of 3 rounds.
   # Skips warm-up, cool-down, tabata, emom, amrap, for_time, ladder, mountain.
-  SINGLE_SET_EXEMPT = %w[tabata emom amrap for_time ladder mountain].freeze
+  SINGLE_SET_EXEMPT = %w[tabata emom amrap for_time ladder mountain matrix hundred].freeze
   WARMUP_COOLDOWN_PATTERN = /warm|cool|stretch|recovery/i
 
   def fix_single_set_sections(sections)
@@ -172,6 +212,27 @@ class WorkoutValidator
         exercise.delete("notes")
         @fixes << "'#{exercise["name"]}' in '#{section["name"]}': removed tabata interval notes (shown in UI)"
       end
+    end
+  end
+
+  # The Hundred: exactly 1 exercise with exactly 100 reps, done for time.
+  # Trims to 1 exercise if multiple were given; corrects reps to 100.
+  def fix_hundred(section, idx)
+    exercises = Array(section["exercises"])
+    if exercises.size > 1
+      section["exercises"] = exercises.first(1)
+      @fixes << "Hundred '#{section["name"]}': trimmed to 1 exercise (was #{exercises.size})"
+    end
+    if section["rounds"].to_i > 1
+      section.delete("rounds")
+      @fixes << "Hundred '#{section["name"]}': removed rounds (single all-out effort)"
+    end
+    ex = Array(section["exercises"]).first
+    return unless ex
+    unless ex["reps"].to_i == 100
+      old = ex["reps"]
+      ex["reps"] = 100
+      @fixes << "Hundred '#{section["name"]}': reps #{old} → 100"
     end
   end
 

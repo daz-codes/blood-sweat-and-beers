@@ -35,6 +35,7 @@ class WorkoutLogsController < ApplicationController
       @workout_log.photo.attach(params[:workout_log][:photo]) if params[:workout_log][:photo].present?
       save_workout_log_tags(@workout_log, params[:tag_names])
       save_exercise_logs(@workout_log, @workout, params[:step_times] || {})
+      @workout.update_columns(status: "active") if @workout.status == "preview"
       redirect_to root_path
     else
       @workout = @workout_log.workout

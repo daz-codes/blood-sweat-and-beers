@@ -216,7 +216,7 @@ class WorkoutLLMGenerator
       type: "object",
       required: %w[name workout_type duration_mins difficulty structure],
       properties: {
-        name:          { type: "string",  description: "Punchy, imaginative workout name (2-4 words). Use vivid, evocative language — like a nickname you'd give a brutal session. Examples: 'Farmer's Walk Mayhem', 'Bicep Blast', 'Death by Burpees', 'Iron Lung Sunday', 'The Grind', 'Lactic Acid Special'. Avoid generic names like 'Full Body Workout'." },
+        name:          { type: "string",  description: "Punchy, imaginative workout name (2-4 words). Draw from a wide range of styles: feelings ('Tuesday's Regret', 'Happy Lungs'), imagery ('Desert Rain', 'Two Left Feet'), irony ('Light and Easy', 'Quick One'), structure ('The Long Way Round', 'Death By Threes'), mythology/slang ('The Minotaur', 'Fried Eggs'), or anything else vivid and memorable. Avoid over-relying on clichéd gym words like Iron, Gauntlet, Grinder, Thunder, Beast, Inferno, Blitz, Crusher, Destroyer, Titan — they can work occasionally but should not be your default. Avoid generic names like 'Full Body Workout'." },
         workout_type:  { type: "string",  enum: Workout::TYPES },
         duration_mins: { type: "integer", description: "Total workout duration in minutes" },
         difficulty:    { type: "string",  enum: Workout::DIFFICULTIES },
@@ -232,10 +232,11 @@ class WorkoutLLMGenerator
                 required: %w[name format],
                 properties: {
                   name:               { type: "string" },
-                  format:             { type: "string", enum: %w[straight amrap rounds emom tabata for_time ladder mountain matrix], description: "straight=sets with rest, rounds=multiple rounds of the same set, amrap=as many rounds as possible in a time cap, emom=every minute on the minute, tabata=20s work/10s rest×8, for_time=complete prescribed reps/distance as fast as possible (record finishing time), ladder/mountain=reps/distance change each round, matrix=progressive exercise combination (add then remove exercises each round: A → A+B → A+B+C → B+C → C)" },
+                  format:             { type: "string", enum: %w[straight amrap rounds emom tabata for_time ladder mountain matrix hundred], description: "straight=sets with rest, rounds=multiple rounds of the same set, amrap=as many rounds as possible in a time cap, emom=every minute on the minute, tabata=20s work/10s rest×8, for_time=complete prescribed reps/distance as fast as possible (record finishing time), ladder/mountain=reps/distance change each round, matrix=progressive exercise combination (add then remove exercises each round: A → A+B → A+B+C → B+C → C), hundred=100 reps of a single exercise for time (The Centurion)" },
                   duration_mins:      { type: "integer" },
                   rounds:             { type: "integer" },
                   rest_secs:          { type: "integer", description: "Rest in seconds after each round. Must be 30, 45, or 60 only." },
+                  emom_style:         { type: "string", enum: %w[circuit rotating], description: "EMOM sections only. circuit=all exercises done together each minute (max 3 exercises, rep cap applies). rotating=one exercise per minute cycling through the list (duration_mins must be a multiple of exercise count)." },
                   notes:              { type: "string" },
                   varies:             { type: "string", enum: %w[reps calories kg distance_m], description: "What changes each rung (ladder/mountain only). CRITICAL: every exercise in this section must share this metric — do not mix rep-based, distance-based, and calorie-based exercises in the same ladder/mountain." },
                   start:              { type: "number", description: "Starting value for ladder/mountain" },
@@ -292,12 +293,14 @@ class WorkoutLLMGenerator
       workout_data = call_llm(prompt)
       create_workout(workout_data, tag_names)
     else
-      context_workouts = fetch_context
-      program_research = research_unknown_program
-      prompt           = build_prompt(context_workouts, program_research)
+      context_workouts  = fetch_context
+      program_research  = research_unknown_program
+      recent_names      = fetch_recent_workout_names
+      prompt            = build_prompt(context_workouts, program_research, recent_names)
       workout_data     = call_llm(prompt)
       workout_data     = validate_and_fix(workout_data)
       workout_data     = collapse_duplicate_exercises(workout_data)
+      workout_data     = collapse_set_notation(workout_data)
       all_tag_names    = ([@main_tag&.name] + @minor_tags.map(&:name) + [@group_code_tag&.name]).compact
       create_workout(workout_data, all_tag_names)
     end
@@ -343,6 +346,14 @@ class WorkoutLLMGenerator
     Workout.where(id: ids.sample(3)).includes(:tags)
   end
 
+  # Returns the names of the user's 5 most recent workouts that share the current main tag.
+  # Used to avoid repeating words or themes in the new workout name.
+  def fetch_recent_workout_names
+    scope = @user.workouts.where(status: "active").order(created_at: :desc)
+    scope = scope.joins(:taggings).where(taggings: { tag_id: @main_tag.id }) if @main_tag
+    scope.limit(5).pluck(:name).compact
+  end
+
   # Detects sections where every exercise entry is identical (same name + metrics)
   # and collapses them into a rounds section with a single entry.
   # E.g. 5 × { name: "Freestyle", distance_m: 25 } → rounds: 5, exercises: [{ name: "Freestyle", distance_m: 25 }]
@@ -367,6 +378,44 @@ class WorkoutLLMGenerator
       kept = exercises.first.dup
       kept.delete("notes") if kept["notes"].to_s.match?(/\Aset\s*\d+\z/i)
       section["exercises"] = [ kept ]
+    end
+
+    workout_data
+  end
+
+  # Detects sections where the LLM repeated the same exercise multiple times
+  # (the "Set 1 / Set 2 / Set 3" anti-pattern). Deduplicates by name, strips
+  # "Set N" notes, and sets rounds on the section to the highest repeat count.
+  SET_NOTE_PATTERN = /\A\s*set\s*\d+\b/i.freeze
+
+  def collapse_set_notation(workout_data)
+    Array(workout_data.dig("structure", "sections")).each do |section|
+      exercises = Array(section["exercises"])
+      next if exercises.size < 2
+
+      names = exercises.map { |e| e["name"] }
+      next if names.uniq.size == names.size  # all unique — nothing to collapse
+
+      seen  = {}
+      deduped = []
+      exercises.each do |e|
+        name = e["name"]
+        if seen[name]
+          seen[name] += 1
+        else
+          seen[name] = 1
+          kept = e.dup
+          kept.delete("notes") if kept["notes"].to_s.match?(SET_NOTE_PATTERN)
+          deduped << kept
+        end
+      end
+
+      max_repeats = seen.values.max
+      if max_repeats > 1 && section["rounds"].to_i <= 1
+        section["rounds"] = max_repeats
+        section["format"] = "rounds" if section["format"] == "straight"
+      end
+      section["exercises"] = deduped
     end
 
     workout_data
@@ -433,7 +482,7 @@ class WorkoutLLMGenerator
     WC
   end
 
-  def build_prompt(context_workouts, program_research = nil)
+  def build_prompt(context_workouts, program_research = nil, recent_names = [])
     main_name  = @main_tag&.name || "general fitness"
     minor_str  = @minor_tags.map(&:name).join(", ")
 
@@ -523,17 +572,20 @@ class WorkoutLLMGenerator
       #{station_rule}
       - Warm-up: always 5 minutes (format: straight, duration_mins: 5). Use the Warm-Up Approach specified above — follow it exactly.
       - Cool-down: always 5 minutes (format: straight, duration_mins: 5). Use the Cool-Down Approach specified above. No reps or distances — hold times only, described in notes (e.g. "30s each side").
-      - Main sets: do NOT set duration_mins on main sets — let the reps, rounds, and format define the work. Only amrap and emom sections need a duration_mins (their time cap). A short punchy finisher (e.g. Tabata, for_time sprint) is a welcome extra at the end of the main work.
+      - Main sets: do NOT set duration_mins on main sets — let the reps, rounds, and format define the work. Only amrap and emom sections need a duration_mins (their time cap). A short punchy finisher (e.g. Tabata, The Hundred/Centurion, for_time sprint) is a welcome extra at the end of the main work.
       #{core_rule}
       - Be specific with reps, distances, and weights
-      - Give it a punchy, memorable name — something a gym community would actually call it (CrossFit-style), not a generic description
+      - Give it a punchy, memorable name — something a gym community would actually call it. Be creative and unpredictable: draw from feelings, imagery, places, days, animals, weather, mythology, slang — anything vivid. Actively vary the style each time (e.g. a cheeky two-worder one time, a dramatic three-worder the next, a dry/ironic name after that). BANNED WORDS — never use: Iron, Gauntlet, Grinder, Thunder, Beast, Inferno, Blitz, Crusher, Destroyer, Titan. #{recent_names.any? ? "The user's recent workout names are: #{recent_names.map { |n| "\"#{n}\"" }.join(", ")}. Do NOT reuse any word or theme from these." : ""}
       #{sport_rule}
       #{pace_limits}
       - FORMAT SELECTION — choose the best format for each section. Actively vary formats across sections (do not use the same format for every section):
-        * tabata — high-intensity cardio bursts or bodyweight finishers. 20s on / 10s off × 8 rounds = exactly 4 minutes. Set duration_mins: 4. Great for: assault bike, ski erg, burpees, KB swings, box jumps, jump rope. Do NOT add reps or calories to tabata exercises — the 20s interval is the constraint. You may specify distance_m or weight_kg where relevant.
-        * emom — strength, skill work, or paced conditioning. Each minute: do the prescribed reps, rest for the remainder. HARD REP LIMITS — total reps across ALL exercises in one minute: beginner ≤6, intermediate ≤9, advanced ≤12. If using multiple exercises, each equipment transition costs ~10s of that minute, so 2 exercises is usually the max (3 only if all bodyweight and no setup). Examples that WORK: "EMOM 10: 6 thrusters + 4 burpees" | "EMOM 12: 8 KB swings + 4 pull-ups". Examples that DON'T WORK: "EMOM 10: 10 thrusters + 10 pull-ups + 10 squats" (way too much — impossible in 60s). Great for: barbell work, gymnastics, moderate cardio intervals.
+        * tabata — high-intensity cardio bursts or bodyweight finishers. 20s on / 10s off × 8 rounds = exactly 4 minutes. Set duration_mins: 4. Great for: assault bike, ski erg, burpees, KB swings, box jumps, jump rope. Do NOT add reps or calories to tabata exercises — the 20s interval is the constraint. You may specify distance_m or weight_kg where relevant. EXERCISE COUNT RULES: exercises in a tabata section must be exactly 1, 2, 4, or 8 (factors of 8). Multiple exercises ROTATE through the 8 rounds — 2 exercises = ABABABAB (4 rounds each), 4 exercises = ABCDABCD (2 rounds each), 8 exercises = each done once. Use a SEPARATE tabata section if you want two independent tabatas.
+        * emom — two distinct styles, set emom_style accordingly:
+          - circuit (emom_style: "circuit"): all exercises done together each minute, rest for the remainder. Max 3 exercises. HARD REP CAP — total reps across all exercises per minute: beginner ≤6, intermediate ≤9, advanced ≤12. Equipment transitions cost ~10s each, so 2 exercises is usually the max (3 only if all bodyweight). E.g. "EMOM 10: 6 thrusters + 4 burpees". Set duration_mins for the total time cap.
+          - rotating (emom_style: "rotating"): a different exercise each minute, cycling through the list. E.g. 3 exercises over 12 min = ABCABCABCABC (4 rounds each). duration_mins MUST be a multiple of the exercise count. Rep cap does not apply — each exercise fills the full minute. Great for variety and skill work.
         * amrap — clock-driven main set. Complete as many rounds as possible. E.g. "AMRAP 12 min: 10 KB swings + 10 box jumps + 200m run". Great for: mixed modal circuits.
-        * for_time — single-effort challenge, record finishing time. E.g. "100 wall balls for time" or "5 rounds: 400m run + 20 push-ups". Great for: benchmark efforts, race-pace work.
+        * for_time — single-effort challenge, record finishing time. E.g. "5 rounds: 400m run + 20 push-ups". Great for: benchmark efforts, race-pace work.
+        * hundred — "The Centurion": exactly 100 reps of a single exercise, done for time. Set reps: 100 on the one exercise. Great as a punchy finisher. Works for any high-rep-friendly movement: wall balls, KB swings, press-ups, box jumps, thrusters, burpees, sit-ups, air squats. Not restricted to any sport type — use it freely whenever a brutal single-movement finish fits.
         * rounds — structured circuit with planned rest. Good for strength, controlled conditioning with recovery.
         * ladder / mountain — rep or distance progression each rung. ONLY when all exercises share the same metric AND the step size is realistic:
           - reps: step 1–5. E.g. start:10 end:1 step:1 = 10,9,8...1 reps.
@@ -543,6 +595,7 @@ class WorkoutLLMGenerator
           - INVALID: mixing reps, distance, and calorie exercises in the same ladder.
         * straight — fixed sets with rest. Use for simple warm-ups or isolated exercises.
         * matrix — progressive exercise combinations. List 3–5 exercises in order. The section builds up then strips back: for 3 exercises: A, A+B, A+B+C, B+C, C. For 4: A, A+B, A+B+C, A+B+C+D, B+C+D, C+D, D. For 5: A, A+B, A+B+C, A+B+C+D, A+B+C+D+E, B+C+D+E, C+D+E, D+E, E. IMPORTANT: all exercises must use the same metric — either all reps (same count each) or all duration_s (same seconds each). Prefer duration_s: 30 for each exercise most of the time — this is the most common Metafit style. Set rest_secs for the rest between each combination (typically 30–60s).
+      - NEVER repeat the same exercise as multiple entries in the exercises array. This is a critical mistake — do NOT list "Bench Press (Set 1)", "Bench Press (Set 2)", "Bench Press (Set 3)" as three separate entries. Instead, use a single entry and set rounds: 3 on the section. Notes like "Set 1:", "Set 2:" in exercise notes are forbidden.
       - SINGLE-EXERCISE SECTIONS are valid and often better than circuits, especially for strength and power work. A section with just one exercise is perfectly correct: e.g. '5 × 5 Deadlift (heavy)', 'EMOM 10: 8 Thrusters', '4 × 8 Romanian Deadlift'. Do not feel obligated to bundle every movement into a multi-exercise circuit — for strength sessions in particular, each major lift should usually get its own dedicated section. HOWEVER: a single-exercise section must always have multiple sets — use rounds: 3–5 (straight/rounds format) or a time cap (emom/amrap). A section with 1 exercise and 1 set of reps is never enough on its own.
       - NEVER list the same exercise more than once in a section's exercises array. If you need the same movement repeated (e.g. 5 × 25m Freestyle), use rounds: 5 with a single exercise entry — not 5 separate entries. Duplicate entries are always wrong.
       RULES
