@@ -78,7 +78,7 @@
   <%# Actions %>
   <% own_preview = Current.user == workout.user && workout.status == "preview" %>
   <% own_active  = Current.user == workout.user && workout.status != "preview" %>
-  <div class="bg-zinc-900 border-t border-zinc-700 px-5 py-4 flex flex-col sm:flex-row gap-3">
+  <div class="hidden sm:flex bg-zinc-900 border-t border-zinc-700 px-5 py-4 flex-col sm:flex-row gap-3">
     <button type="button"
             onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
             class="sm:flex-1 text-center bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 font-black py-3 rounded-xl text-sm transition-colors uppercase tracking-wide shadow-sm shadow-volt/20 cursor-pointer">

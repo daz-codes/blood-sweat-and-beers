@@ -90,7 +90,7 @@
 
     <%# Exercise summary %>
     <% if summary_text.present? %>
-      <p class="text-volt text-xs font-bold mt-1 leading-relaxed"><%= summary_text %></p>
+      <p class="text-sky-200 text-xs font-medium mt-1 leading-relaxed"><%= summary_text %></p>
     <% end %>
 
     <%# Tags %>
@@ -161,9 +161,9 @@
               <span id="comment_count_<%= workout_log.id %>" class="text-xs font-semibold"><%= workout_log.comments_count %></span>
             <% end %>
           </div>
-          <span class="text-gray-500 text-xs font-bold flex items-center gap-1 uppercase tracking-wide">
-            <span class="group-open:hidden">▾ Workout</span>
-            <span class="hidden group-open:inline">▴ Hide</span>
+          <span class="text-gray-600 text-xs font-bold uppercase tracking-wide group-open:text-gray-400 transition-colors">
+            <span class="group-open:hidden">Show Workout</span>
+            <span class="hidden group-open:inline">Hide Workout</span>
           </span>
         </div>
         <%# Row 2: action buttons — always full width, always visible %>
