@@ -1193,7 +1193,7 @@ class WorkoutLLMGenerator
     end
 
     # ── Assemble ─────────────────────────────────────────────────────────────
-    return nil if cardio_lines.empty? && strength_lines.empty? && other_pb_lines.empty? && bw.zero?
+    return nil if cardio_lines.empty? && !has_strength && other_pb_lines.empty? && bw.zero?
 
     out = []
 
