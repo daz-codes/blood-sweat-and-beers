@@ -6,6 +6,8 @@ class Workout < ApplicationRecord
   has_many :tags, through: :taggings
   has_many :workout_likes, dependent: :destroy
 
+  after_save :record_exercise_weights, if: -> { saved_change_to_status?(to: "active") }
+
   TYPES       = %w[hyrox deka custom].freeze
   DIFFICULTIES = %w[beginner intermediate advanced].freeze
   STATUSES    = %w[active template queued preview].freeze
@@ -29,5 +31,11 @@ class Workout < ApplicationRecord
       .group(:id)
       .order(Arel.sql("COUNT(DISTINCT workout_likes.id) DESC"))
       .limit(limit)
+  end
+
+  private
+
+  def record_exercise_weights
+    ExerciseWeightRecorder.call(user, structure)
   end
 end

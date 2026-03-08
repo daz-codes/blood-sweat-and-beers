@@ -67,6 +67,7 @@ class WorkoutValidator
       fix_fm_merge_strength_sections(sections)
       fix_fm_strength_sets(sections)
       fix_fm_warmup(sections)
+      fix_fm_strip_machine_suffix(sections)
     end
 
     @data
@@ -162,8 +163,8 @@ class WorkoutValidator
               "step #{step} invalid for #{varies} — corrected to #{corrected}"
   end
 
-  # A section with straight/rounds format, exactly 1 exercise, and no rounds set
-  # is almost certainly a mistake — enforce a minimum of 3 rounds.
+  # Any non-exempt section with fewer than 3 rounds and exactly 1 exercise is almost
+  # certainly a mistake (single set). Enforce a minimum of 3 rounds.
   # Skips warm-up, cool-down, tabata, emom, amrap, for_time, ladder, mountain.
   SINGLE_SET_EXEMPT = %w[tabata emom amrap for_time ladder mountain matrix hundred].freeze
   WARMUP_COOLDOWN_PATTERN = /warm|cool|stretch|recovery/i
@@ -172,11 +173,11 @@ class WorkoutValidator
     sections.each do |section|
       next if section["format"].to_s.in?(SINGLE_SET_EXEMPT)
       next if section["name"].to_s.match?(WARMUP_COOLDOWN_PATTERN)
-      next if section["rounds"].to_i > 1
+      next if section["rounds"].to_i >= 3
       next if Array(section["exercises"]).size != 1
-      section["rounds"]  = 3
-      section["format"]  = "rounds"
-      @fixes << "'#{section["name"]}': single exercise with no rounds — set to 3 rounds"
+      section["rounds"] = 3
+      section["format"] = "rounds"
+      @fixes << "'#{section["name"]}': single exercise with #{section["rounds"] || "no"} rounds — set to 3 rounds"
     end
   end
 
@@ -350,7 +351,7 @@ class WorkoutValidator
   FM_STRENGTH_EXEMPT_FORMATS = %w[tabata emom amrap for_time ladder mountain matrix hundred].freeze
   FM_STRENGTH_EXEMPT_NAMES   = /warm|cool|stretch|recovery|pilates|abs|hundred/i.freeze
 
-  # Only these exercise name patterns are acceptable in FM strength sections (machines only).
+  # Only these exercise name patterns are acceptable in FM strength sections.
   FM_UPPER_MACHINE_PATTERN = /low row|lat pull|bench press|shoulder press|chest fly|reverse fly|side raise|front raise/i.freeze
   FM_LOWER_MACHINE_PATTERN = /leg press|leg extension|leg curl|hamstring curl|calf raise|squat|deadlift|lunge/i.freeze
 
@@ -369,9 +370,12 @@ class WorkoutValidator
     lower_exercises = all_exercises.select { |e| e["name"].to_s.match?(LOWER_BODY_PATTERN) }
     upper_exercises = all_exercises.reject { |e| e["name"].to_s.match?(LOWER_BODY_PATTERN) }
 
-    # Prefer machine exercises; fall back to first available if none match
+    # Prefer machine exercises; fall back to first available if none match.
+    # If no lower body exercises exist at all, synthesize a fallback so both sections always appear.
     upper_pick = upper_exercises.find { |e| e["name"].to_s.match?(FM_UPPER_MACHINE_PATTERN) } || upper_exercises.first
-    lower_pick = lower_exercises.find { |e| e["name"].to_s.match?(FM_LOWER_MACHINE_PATTERN) } || lower_exercises.first
+    lower_pick = lower_exercises.find { |e| e["name"].to_s.match?(FM_LOWER_MACHINE_PATTERN) } ||
+                 lower_exercises.first ||
+                 { "name" => %w[Leg\ Press Leg\ Extension Leg\ Curl Squats Lunges].sample, "reps" => 10 }
 
     # Ensure reps: 10
     [upper_pick, lower_pick].compact.each { |ex| ex["reps"] = 10 }
@@ -404,6 +408,20 @@ class WorkoutValidator
 
     sections.insert(insert_at, *new_sections)
     @fixes << "FM: strength → #{new_sections.map { |s| "'#{s["name"]}': #{Array(s["exercises"]).first["name"]} 5×10" }.join(", ")}"
+  end
+
+  # Strip " Machine" suffix from exercise names in FM strength sections.
+  def fix_fm_strip_machine_suffix(sections)
+    sections.each do |section|
+      next unless section["name"].to_s.match?(/strength/i)
+      Array(section["exercises"]).each do |exercise|
+        original = exercise["name"].to_s
+        cleaned  = original.gsub(/\s+machine\b/i, "").strip
+        next if cleaned == original
+        exercise["name"] = cleaned
+        @fixes << "'#{original}' → '#{cleaned}' (stripped Machine suffix)"
+      end
+    end
   end
 
   # Warn if the last section doesn't look like a cool-down.

@@ -614,6 +614,7 @@ class WorkoutLLMGenerator
     training_rule       = training_rep_rule
     race_sim_rule       = race_simulation_rule
     func_muscle_rule    = functional_muscle_rule
+    fm_archetype        = fm_session_archetype
     station_rule    = if selected_stations
       "- ANCHOR MOVEMENTS: #{selected_stations.join(", ")} must be central to the main set. Complement them with toolkit exercises from the sport context — create a complete, varied workout, not a drill of the anchor movements repeated in every section."
     end
@@ -621,17 +622,18 @@ class WorkoutLLMGenerator
     sections << <<~RULES
       Use the create_workout tool. Requirements:
       #{race_sim_rule}
+      #{fm_archetype}
       #{func_muscle_rule}
       #{structure_rule}
       #{station_rule}
-      - Warm-up: #{@duration_mins < 30 ? "3 minutes (format: straight, duration_mins: 3)" : "5 minutes (format: straight, duration_mins: 5)"}. Use the Warm-Up Approach specified above — follow it exactly.
-      - Cool-down: #{@duration_mins < 30 ? "2 minutes (format: straight, duration_mins: 2)" : "5 minutes (format: straight, duration_mins: 5)"}. Use the Cool-Down Approach specified above. No reps or distances — hold times only, described in notes (e.g. "30s each side").
+      - Warm-up: #{@duration_mins <= 30 ? "3 minutes (format: straight, duration_mins: 3). Keep it simple — 1 exercise, steady cardio only." : "5 minutes (format: straight, duration_mins: 5). Use the Warm-Up Approach specified above — follow it exactly."}
+      - Cool-down: #{@duration_mins <= 30 ? "2 minutes (format: straight, duration_mins: 2). Keep it minimal — just a note to loosen off and stretch, no detailed holds." : "5 minutes (format: straight, duration_mins: 5). Use the Cool-Down Approach specified above. No reps or distances — hold times only, described in notes (e.g. \"30s each side\")."}.
       - Main sets: do NOT set duration_mins on main sets — let the reps, rounds, and format define the work. Only amrap and emom sections need a duration_mins (their time cap). A short punchy finisher (e.g. Tabata, The Hundred/Centurion, for_time sprint) is a welcome extra at the end of the main work.
       #{core_rule}
       #{training_rule}
       - Be specific with reps, distances, and weights
       - Give it a punchy, memorable name — something a gym community would actually call it. Be creative and unpredictable: draw from feelings, imagery, places, days, animals, weather, mythology, slang — anything vivid. Actively vary the style each time (e.g. a cheeky two-worder one time, a dramatic three-worder the next, a dry/ironic name after that). BANNED WORDS — never use: Iron, Gauntlet, Grinder, Thunder, Beast, Inferno, Blitz, Crusher, Destroyer, Titan. #{recent_names.any? ? "The user's recent workout names are: #{recent_names.map { |n| "\"#{n}\"" }.join(", ")}. Do NOT reuse any word or theme from these." : ""}
-      #{recent_fm_formats.present? ? "- CONTEXT — the user's recent Functional Muscle sessions were:\n#{recent_fm_formats.lines.map { |l| "        #{l}" }.join}\n      Use this to understand what they've been doing. Aim for natural variety across sessions — draw from the full range of available blocks and options each time." : ""}
+      #{recent_fm_formats.present? ? "- RECENT SESSIONS — the user's recent Functional Muscle sessions were:\n#{recent_fm_formats.lines.map { |l| "        #{l}" }.join}\n      Use this to avoid repetition: pick different strength machines from the ones listed, pick a different Pilates 100 exercise, and vary the tabata compounds. Block types (12-min, ladder etc) can repeat if they fit — but machines and finisher should rotate." : ""}
       #{sport_rule}
       #{pace_limits}
       - FORMAT SELECTION — choose the best format for each section. Actively vary formats across sections (do not use the same format for every section):
@@ -652,7 +654,7 @@ class WorkoutLLMGenerator
         * straight — fixed sets with rest. Use for simple warm-ups or isolated exercises.
         * matrix — progressive exercise combinations. List 3–5 exercises in order. The section builds up then strips back: for 3 exercises: A, A+B, A+B+C, B+C, C. For 4: A, A+B, A+B+C, A+B+C+D, B+C+D, C+D, D. For 5: A, A+B, A+B+C, A+B+C+D, A+B+C+D+E, B+C+D+E, C+D+E, D+E, E. IMPORTANT: all exercises must use the same metric — either all reps (same count each) or all duration_s (same seconds each). Prefer duration_s: 30 for each exercise most of the time — this is the most common Metafit style. Set rest_secs for the rest between each combination (typically 30–60s).
       - NEVER repeat the same exercise as multiple entries in the exercises array. This is a critical mistake — do NOT list "Bench Press (Set 1)", "Bench Press (Set 2)", "Bench Press (Set 3)" as three separate entries. Instead, use a single entry and set rounds: 3 on the section. Notes like "Set 1:", "Set 2:" in exercise notes are forbidden.
-      - SINGLE-EXERCISE SECTIONS are valid and often better than circuits, especially for strength and power work. A section with just one exercise is perfectly correct: e.g. '5 × 5 Deadlift (heavy)', 'EMOM 10: 8 Thrusters', '4 × 8 Romanian Deadlift'. Do not feel obligated to bundle every movement into a multi-exercise circuit — for strength sessions in particular, each major lift should usually get its own dedicated section. HOWEVER: a single-exercise section must always have multiple sets — use rounds: 3–5 (straight/rounds format) or a time cap (emom/amrap). A section with 1 exercise and 1 set of reps is never enough on its own.
+      - SINGLE-EXERCISE SECTIONS are valid and often better than circuits, especially for strength and power work. A section with just one exercise is perfectly correct: e.g. '5 × 5 Deadlift (heavy)', 'EMOM 10: 8 Thrusters', '4 × 8 Romanian Deadlift'. Do not feel obligated to bundle every movement into a multi-exercise circuit. HOWEVER: a single-exercise section MUST always use multiple sets (rounds: 3 minimum) or a timed modality (emom/amrap/for_time). BANNED: a section with 1 exercise and rounds ≤ 2 (or no rounds). This is always wrong. Every section must represent real training volume, not a single isolated set.
       - NEVER list the same exercise more than once in a section's exercises array. If you need the same movement repeated (e.g. 5 × 25m Freestyle), use rounds: 5 with a single exercise entry — not 5 separate entries. Duplicate entries are always wrong.
       RULES
 
@@ -744,6 +746,23 @@ class WorkoutLLMGenerator
     @minor_tags.any? { |t| t.slug.in?(RACE_SIM_SLUGS) }
   end
 
+  # Randomly selects a session archetype for Functional Muscle so the LLM gets
+  # a concrete structural directive rather than being asked to "vary" on its own.
+  def fm_session_archetype
+    return nil unless @main_tag&.slug == "functional-muscle"
+
+    archetypes = [
+      "TABATA HEAVY — Build this session around 3–4 tabatas as the primary conditioning. Skip the 12-min block. Add one other block (interval circuit, every-2-min EMOM, or death race) to fill the session.",
+      "LADDER SESSION — Include a 10-1 ladder and Bear Mountain as the two main structural blocks. Add 2 tabatas around them. No 12-min block.",
+      "CARDIO CORE — Lead with a 12-min continuous block. Follow with 2 tabatas and one interval circuit. No ladder, no Bear Mountain.",
+      "BEAR FOCUS — Make Bear Mountain the centrepiece. Add 2–3 tabatas. Include a death race or 20-20 block. No 12-min block, no ladder.",
+      "INTERVAL HEAVY — Lead with a 20-20 block or death race. Follow with 2–3 tabatas. No ladder, no 12-min block.",
+      "MIXED LADDER — Open with a 10-1 ladder. Add 2 tabatas and a cardio intervals block. No 12-min block, no Bear Mountain.",
+    ]
+
+    "- SESSION SHAPE FOR THIS WORKOUT: #{archetypes.sample} Follow this shape while still obeying the full Functional Muscle rules below."
+  end
+
   # Hard rules specific to Functional Muscle sessions.
   def functional_muscle_rule
     return nil unless @main_tag&.slug == "functional-muscle"
@@ -751,9 +770,15 @@ class WorkoutLLMGenerator
     <<~RULE.strip
       - FUNCTIONAL MUSCLE — IGNORE ALL GENERAL WORKOUT DESIGN INSTINCTS. This is a specific class format. Follow this SESSION ORDER exactly — do not rearrange it:
 
+      WEIGHTS: These are high-intensity metabolic sessions. Keep weights light and sustainable. Tabata/metabolic compound exercises: 8–12kg dumbbells, 12–16kg kettlebells. Bear Mountain barbell: 20–30kg only. Strength sets (5×10): sensible working weight — e.g. 40–60kg leg press, 20–30kg shoulder press, 15–25kg side raises. Do NOT prescribe heavy barbell weights (40kg+) for tabata or metabolic blocks. Do NOT prescribe 60kg+ for any strength section.
+
+      SECTION NAMES: Give each tabata a short, punchy, fun name — NOT a number, NOT the exercise name. Examples: "Tabata Terror", "The Burner", "Sweat & Twist", "Ignition", "The Grind", "Pulse Raiser", "Chaos Round". Never write "Tabata 1", "Tabata 2", or include the exercise name in the section title. Other sections: use descriptive but concise names (e.g. "Bear Mountain", "The Ladder", "Upper Body Strength", "Lower Body Strength").
+
       1. WARM-UP (always first): format: straight, duration_mins: 5. ONE exercise only — a single cardio machine (assault bike, rower, or ski erg) at easy pace. No mobility, no activation, no circuits. One machine, 5 mins.
 
-      2. METABOLIC BLOCKS (always before strength): Pick 2–4 from below. IMPORTANT: vary which blocks you use — do NOT default to the 12-min continuous block every time. Use it in roughly half of sessions at most. Other blocks are equally valid as the main conditioning block.
+      2. METABOLIC BLOCKS (always before strength): The metabolic section is built around TABATAS as the primary feature, supplemented by 1–2 other block types. Structure it like this:
+        - TABATAS FIRST: Always include 2–4 separate tabata sections. On sessions with 3–4 tabatas, skip the 12-min block or ladder entirely — the tabatas ARE the session. On sessions with 2 tabatas, add 1–2 other blocks.
+        - OTHER BLOCKS: Choose from [A]–[I] below to complement the tabatas. Do NOT always use the 12-min continuous block — it should appear in roughly half of sessions at most.
 
         [A] 12-MIN CONTINUOUS — format: emom, emom_style: rotating, duration_mins: 12, exactly 3 exercises. One cardio machine (ski/row/bike) + one KB or barbell movement + one abs or bodyweight movement. NO reps on any exercise — each fills the full minute. Weight only where relevant. Calorie target in notes on cardio exercise only.
 
@@ -763,21 +788,21 @@ class WorkoutLLMGenerator
 
         [D] CARDIO INTERVALS — format: rounds, rounds: 5. 1 min hard / 1 min rest on a single machine. Ski (target 10 cal/min), Row (target 200m/min), Bike (10–15 cal).
 
-        [E] EVERY-2-MIN EMOM — format: emom, emom_style: circuit, duration_mins: 10. 3 exercises done together at the start of every 2-minute window, rest for remainder. E.g. 5 clean and press + 10 swings + 10 box jumps every 2 mins.
+        [E] EVERY-2-MIN EMOM — format: emom, emom_style: circuit, duration_mins: 10. ALWAYS exactly 3 exercises done together at the start of every 2-minute window, rest for remainder. Each exercise: 5–10 reps. Total work per round should take 45–60 seconds leaving 60–75 seconds rest. E.g. 5 clean and press + 10 KB swings + 10 box jumps every 2 mins. Or: 8 thrusters + 10 burpees + 10 sit-ups every 2 mins.
 
         [F] 20-20 BLOCK — format: rounds, rounds: 10. Every 2 mins: 20 cal cardio + 20 reps of a punchy movement (KB swings, slams, jump squats). 20-minute total block.
 
         [G] DEATH RACE — format: rounds, rounds: 5. 10–15 cal bike + 10 burpees. All out.
 
-        [H] TABATA — Include 2–3 SEPARATE tabata sections spread through the metabolic blocks — this is a signature feature. Each tabata section typically has 2 compound exercises alternating (ABABABAB = 4 rounds each) — aim for this most of the time. EVERY exercise MUST be a compound (two movements fused into one rep, name must contain "and", "with", "to", or "+"). Choose DIFFERENT compound exercises for each tabata — never repeat the same compound in one session. Draw from the full list in the sport context and invent new combinations: "Squat Curl and Press", "KB Swing with Side Lunge", "Wood Chop with Reverse Lunge", "Bent Over Row to Deadlift", "Side Lunge and Lateral Raise", "Lunge and Overhead Tricep Extension", "Hop onto Box and Bicep Curl", "Clean and Lateral Lunge", "Squat Jump and Shoulder Press", "Plate Halo and Twist", "Push Up to T-Rotation", "Renegade Row and Jump to Deadlift". Be inventive. Single movements (burpees, KB swings alone, mountain climbers) are NEVER acceptable here.
+        [H] TABATA — Tabatas are the signature of this session type. Use 2 exercises per tabata (ABABABAB = 4 rounds each) — this is the standard format. EVERY exercise MUST be a compound (two movements fused into one flowing rep, name must contain "and", "with", "to", or "+"). Each tabata gets DIFFERENT compound pairs — never repeat the same compound in one session. You are encouraged to INVENT new combinations — the goal is creative, flowing pairings that contrast muscle groups. Some examples to spark ideas (don't just copy these): "Squat Curl and Press", "KB Swing with Side Lunge", "Wood Chop with Reverse Lunge", "Bent Over Row to Deadlift", "Side Lunge and Lateral Raise", "Lunge and Overhead Tricep Extension", "Hop onto Box and Bicep Curl", "Clean and Lateral Lunge", "Squat Jump and Shoulder Press", "Plate Halo and Twist", "Push Up to T-Rotation", "Renegade Row to Deadlift", "Reverse Lunge and High Pull", "Squat and Rainbow Press", "Gorilla Row and Jump Squat", "Devil Press and Box Step", "KB Clean and Pivot Press", "Bent Over Row and Clean and Press". Single movements alone (burpees, KB swings, mountain climbers) are NEVER acceptable — they must always be fused with a second movement.
 
-        [I] BEAR MOUNTAIN — format: mountain, start: 1, peak: 5, end: 1, step: 1 (1-2-3-4-5-4-3-2-1 reps). One exercise only: "Bear" (clean → press → front squat → press → back squat = 1 rep). Use a moderate barbell weight. Rest as needed between rungs. A signature strength-skill block — use it occasionally, especially when no 10-1 ladder is in the session.
+        [I] BEAR MOUNTAIN — format: mountain, start: 1, peak: 5, end: 1, step: 1 (1-2-3-4-5-4-3-2-1 reps). One exercise only: "Bear" (clean → press → front squat → press → back squat = 1 rep). Use a moderate barbell weight. Rest as needed between rungs. This is a STAPLE of Functional Muscle — use it regularly, especially when the session has fewer tabatas or no 10-1 ladder.
 
-      3. UPPER BODY STRENGTH (after all metabolic blocks): ONE section only, named "Upper Body Strength". format: rounds, rounds: 5, rest_secs: 60, reps: 10. Exactly ONE exercise — pick randomly from this list, varying each session: Low Row, Lat Pulldown, Bench Press, Shoulder Press, Chest Fly, Reverse Fly, Side Raises, Front Raises. One exercise, 5 rounds, 10 reps. Nothing else.
+      3. UPPER BODY STRENGTH (after all metabolic blocks): MANDATORY — must be present in every session. ONE section only, named "Upper Body Strength". format: rounds, rounds: 5, rest_secs: 60, reps: 10. Exactly ONE exercise — pick one at random from this list each time: Low Row, Lat Pulldown, Bench Press, Shoulder Press, Chest Fly, Reverse Fly, Side Raises, Front Raises. Do NOT default to Lat Pulldown or Shoulder Press — every option is equally valid. One exercise, 5 rounds, 10 reps. Nothing else.
 
-      4. LOWER BODY STRENGTH (after upper body): ONE section only, named "Lower Body Strength". format: rounds, rounds: 5, rest_secs: 60, reps: 10. Exactly ONE exercise — pick randomly from this list, varying each session: Leg Press, Leg Extension, Leg Curl, Seated Calf Raise, Squats, Deadlifts, Lunges. One exercise, 5 rounds, 10 reps. Nothing else.
+      4. LOWER BODY STRENGTH (after upper body): MANDATORY — must be present in every session. ONE section only, named "Lower Body Strength". format: rounds, rounds: 5, rest_secs: 60, reps: 10. Exactly ONE exercise — pick one at random from this list each time: Leg Press, Leg Extension, Leg Curl, Calf Raise, Squats, Deadlifts, Lunges. Do NOT default to Leg Press — every option is equally valid. One exercise, 5 rounds, 10 reps. Nothing else.
 
-      5. PILATES 100 / ABS (after strength): format: hundred. Always 100 reps of ONE exercise for time. Vary this every session — do NOT always use wall ball slams. Options: wall ball slams, bicep curls (light), lateral raises (light), plate serves (front raise to overhead), sit-ups, overhead crunches. Choose based on what hasn't been hammered in the metabolic blocks.
+      5. PILATES 100 / ABS (after strength): format: hundred. A staple — include it in roughly half of sessions. When included: always 100 reps of ONE exercise for time. Vary the exercise — do NOT always use wall ball slams. Options: wall ball slams, bicep curls (light), lateral raises (light), plate serves (front raise to overhead), sit-ups, overhead crunches. Choose based on what hasn't been hammered in the metabolic blocks. When omitted: end with a short abs block (sit-ups, leg raises, overhead crunches) as a straight section before the cool-down.
 
       6. COOL-DOWN (always last): format: straight, duration_mins: 5. Simple stretch, 2–3 holds only.
 
@@ -959,9 +984,25 @@ class WorkoutLLMGenerator
     benchmarks = format_benchmarks
     sections << benchmarks if benchmarks.present?
 
+    known_weights = format_known_weights
+    sections << known_weights if known_weights.present?
+
     return nil if sections.empty?
 
     "## Athlete Context\n#{sections.join("\n")}\n"
+  end
+
+  # Formats the user's saved exercise weights as a coaching hint.
+  def format_known_weights
+    weights = @user.exercise_weights.presence
+    return nil unless weights.is_a?(Hash) && weights.any?
+
+    lines = weights.map do |key, kg|
+      name = key.to_s.gsub("_", " ").split.map(&:capitalize).join(" ")
+      "  - #{name}: #{kg}kg"
+    end.sort
+
+    "Known working weights (use these as the starting point — adjust slightly for intensity or format):\n#{lines.join("\n")}"
   end
 
   # Produces a natural opening sentence describing the athlete.
