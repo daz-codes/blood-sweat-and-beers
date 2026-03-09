@@ -87,7 +87,7 @@ class WorkoutValidator
 
     scale = cap.to_f / total
     rep_exercises.each do |ex|
-      ex["reps"] = [(ex["reps"].to_i * scale).floor, 1].max
+      ex["reps"] = [ (ex["reps"].to_i * scale).floor, 1 ].max
     end
 
     new_total = rep_exercises.sum { |e| e["reps"].to_i }
@@ -119,7 +119,7 @@ class WorkoutValidator
 
   # Tabata exercises must be a factor of 8: 1, 2, 4, or 8.
   # Each exercise fills 8/n rounds. Truncates to nearest valid count (never pads).
-  TABATA_VALID_COUNTS = [1, 2, 4, 8].freeze
+  TABATA_VALID_COUNTS = [ 1, 2, 4, 8 ].freeze
 
   def fix_tabata_exercise_count(section, idx)
     exercises = Array(section["exercises"])
@@ -183,7 +183,7 @@ class WorkoutValidator
 
   # Snaps rest_secs to the nearest allowed value: 30, 45, or 60.
   # Any rest longer than 60s is capped at 60; anything below 30 stays as-is (short transitions are fine).
-  ALLOWED_REST = [30, 45, 60].freeze
+  ALLOWED_REST = [ 30, 45, 60 ].freeze
 
   def fix_rest_secs(sections)
     sections.each do |section|
@@ -281,7 +281,7 @@ class WorkoutValidator
   # FM: strength sections (straight/rounds format, not warm-up/cool-down) must be
   # exactly 5 rounds with either 5 or 10 reps. Fix rounds to 5; snap reps to nearest.
   FM_STRENGTH_EXEMPT = %w[tabata emom amrap for_time ladder mountain matrix hundred].freeze
-  FM_VALID_REPS      = [5, 10].freeze
+  FM_VALID_REPS      = [ 5, 10 ].freeze
 
   def fix_fm_strength_sets(sections)
     sections.each do |section|
@@ -378,7 +378,7 @@ class WorkoutValidator
                  { "name" => %w[Leg\ Press Leg\ Extension Leg\ Curl Squats Lunges].sample, "reps" => 10 }
 
     # Ensure reps: 10
-    [upper_pick, lower_pick].compact.each { |ex| ex["reps"] = 10 }
+    [ upper_pick, lower_pick ].compact.each { |ex| ex["reps"] = 10 }
 
     # Remove all existing strength sections
     strength_sections.each { |s| sections.delete(s) }

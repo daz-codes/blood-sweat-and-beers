@@ -3,5 +3,6 @@ require "rubygems"
 require "bundler/setup"
 
 ARGV.unshift("--ensure-latest")
+ARGV.push("--config-file", "config/brakeman.yml") unless ARGV.include?("--config-file") || ARGV.include?("-c")
 
 load Gem.bin_path("brakeman", "brakeman")

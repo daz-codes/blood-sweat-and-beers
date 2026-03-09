@@ -2,7 +2,7 @@ namespace :seed_workouts do
   desc "Export workouts to db/seeds/workouts.json for use as seed data.\n\n" \
        "  rails seed_workouts:export                       # exports system user's workouts\n" \
        "  rails 'seed_workouts:export[you@example.com]'   # exports a specific user's workouts"
-  task :export, [:email] => :environment do |_, args|
+  task :export, [ :email ] => :environment do |_, args|
     email = args[:email].presence || "system@bloodsweatbeers.app"
     user  = User.find_by!(email_address: email)
 

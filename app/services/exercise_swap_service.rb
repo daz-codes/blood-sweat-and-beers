@@ -20,7 +20,7 @@ class ExerciseSwapService
     description: "Return a single replacement exercise.",
     input_schema: {
       type: "object",
-      required: ["name"],
+      required: [ "name" ],
       properties: {
         name:       { type: "string",  description: "Exercise name" },
         reps:       { type: "integer", description: "Rep count" },

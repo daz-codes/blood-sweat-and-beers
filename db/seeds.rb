@@ -15,19 +15,19 @@ end
 
 # Ensure all core session-type tags exist as main tags (these always show in the generate modal)
 [
-  ["Hyrox",              "main"],
-  ["Deka",               "main"],
-  ["Dirty Dozen",        "main"],
-  ["CrossFit",           "main"],
-  ["Functional Fitness", "main"],
-  ["Functional Muscle",  "main"],
-  ["HIIT",               "main"],
-  ["Bodyweight",         "main"],
-  ["Kettlebell",         "main"],
-  ["Metafit",            "main"],
-  ["F45",                "main"],
-  ["Barry's Bootcamp",   "main"],
-  ["Strength",           "main"],
+  [ "Hyrox",              "main" ],
+  [ "Deka",               "main" ],
+  [ "Dirty Dozen",        "main" ],
+  [ "CrossFit",           "main" ],
+  [ "Functional Fitness", "main" ],
+  [ "Functional Muscle",  "main" ],
+  [ "HIIT",               "main" ],
+  [ "Bodyweight",         "main" ],
+  [ "Kettlebell",         "main" ],
+  [ "Metafit",            "main" ],
+  [ "F45",                "main" ],
+  [ "Barry's Bootcamp",   "main" ],
+  [ "Strength",           "main" ]
 ].each do |name, type|
   Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name; t.tag_type = type }
 end
@@ -53,7 +53,7 @@ end
   "rowing"             => "Rowing",
   "cycling"            => "Cycling",
   "bike"               => "Bike",
-  "cycle"              => "Cycle",
+  "cycle"              => "Cycle"
 }.each do |slug, name|
   Tag.find_by(slug: slug)&.update!(tag_type: "main", name: name)
 end

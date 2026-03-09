@@ -1,9 +1,9 @@
 Rails.application.routes.draw do
   delete "sign_out", to: "sessions#destroy", as: :sign_out
   get "sign_in", to: "sessions#new", as: :sign_in
-  resource :registration, only: [:new, :create]
-  resource :session, only: [:new, :create, :destroy]
-  resources :passwords, param: :token, only: [:new, :create, :edit, :update]
+  resource :registration, only: [ :new, :create ]
+  resource :session, only: [ :new, :create, :destroy ]
+  resources :passwords, param: :token, only: [ :new, :create, :edit, :update ]
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

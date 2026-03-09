@@ -12,7 +12,7 @@ module Authentication
     end
   end
 
-  
+
 def link_to_sign_in_or_out
   if authenticated?
     # Return the form as a string
@@ -24,7 +24,7 @@ def link_to_sign_in_or_out
   else
     "<a href=\"#{sign_in_path}\">Sign In</a>".html_safe
   end
-end 
+end
 
 def show_user_if_signed_in
   if authenticated?

@@ -123,7 +123,7 @@ TUESDAY_ABS = {
   "exercises" => [
     { "name" => "KB Russian Twist",  "reps" => 20 },
     { "name" => "V Up",              "reps" => 10 },
-    { "name" => "Straight Leg Raise","reps" => 10 }
+    { "name" => "Straight Leg Raise", "reps" => 10 }
   ]
 }.freeze
 
@@ -180,12 +180,12 @@ WED_ABS_45_15 = {
   "notes"        => "45s work / 15s rest each exercise",
   "exercises" => [
     { "name" => "Shoulder Taps",   "notes" => "45s" },
-    { "name" => "Mountain Climbers","notes" => "45s" },
+    { "name" => "Mountain Climbers", "notes" => "45s" },
     { "name" => "Knee to Elbow",   "notes" => "45s" },
     { "name" => "KB Thrusters",    "notes" => "45s — light weight, constant movement" },
     { "name" => "Plank",           "notes" => "45s" },
     { "name" => "Side Plank Left", "notes" => "45s" },
-    { "name" => "Side Plank Right","notes" => "45s" }
+    { "name" => "Side Plank Right", "notes" => "45s" }
   ]
 }.freeze
 
@@ -249,12 +249,12 @@ THU_ABS7 = {
   "notes"        => "45s work / 15s rest each exercise",
   "exercises" => [
     { "name" => "Shoulder Taps",   "notes" => "45s" },
-    { "name" => "Mountain Climbers","notes" => "45s" },
+    { "name" => "Mountain Climbers", "notes" => "45s" },
     { "name" => "Knee to Elbow",   "notes" => "45s" },
     { "name" => "KB Thrusters",    "notes" => "45s — light KB" },
     { "name" => "Plank",           "notes" => "45s" },
     { "name" => "Side Plank Left", "notes" => "45s" },
-    { "name" => "Side Plank Right","notes" => "45s" }
+    { "name" => "Side Plank Right", "notes" => "45s" }
   ]
 }.freeze
 
@@ -413,7 +413,7 @@ SUN_AMRAP10 = {
   "duration_mins" => 10,
   "exercises" => [
     { "name" => "KB Clean",   "reps" => 10 },
-    { "name" => "KB Thruster","reps" => 10 },
+    { "name" => "KB Thruster", "reps" => 10 },
     { "name" => "Burpee",     "reps" => 10 }
   ]
 }.freeze

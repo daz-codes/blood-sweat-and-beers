@@ -34,7 +34,7 @@ class WorkoutLLMGenerator
     "barry-s-bootcamp"   => "barrys.md",
     "barrys-bootcamp"    => "barrys.md",
     "barrys"             => "barrys.md",
-    "f45"                => "f45.md",
+    "f45"                => "f45.md"
   }.freeze
 
   CONTEXT_DIR = Rails.root.join("app", "llm_context").freeze
@@ -49,8 +49,8 @@ class WorkoutLLMGenerator
   ].freeze
 
   EVENT_STATIONS = {
-    "hyrox"      => %w[SkiErg] + ["Sled Push", "Sled Pull", "Burpee Broad Jumps",
-                                   "Rowing", "Farmers Carry", "Sandbag Lunges", "Wall Balls"],
+    "hyrox"      => %w[SkiErg] + [ "Sled Push", "Sled Pull", "Burpee Broad Jumps",
+                                   "Rowing", "Farmers Carry", "Sandbag Lunges", "Wall Balls" ],
     "deka"       => DEKA_ZONES,
     "deka-fit"   => DEKA_ZONES,
     "deka-strong" => DEKA_ZONES,
@@ -60,11 +60,11 @@ class WorkoutLLMGenerator
       "Single Arm DB Ground to Overhead (alternating)", "Dumbbell Bear Crawl",
       "Weighted Sit-ups", "Farmer's Carry", "DB Shoulder to Overhead Press",
       "Jump Rope Single Unders", "Atlas Shoulder to Carry"
-    ],
+    ]
   }.freeze
 
   # Weighted count distribution: heavily favour 2-4, allow 1 and 5-6 occasionally.
-  STATION_COUNT_WEIGHTS = [1, 2, 2, 3, 3, 3, 4, 4, 5, 6].freeze
+  STATION_COUNT_WEIGHTS = [ 1, 2, 2, 3, 3, 3, 4, 4, 5, 6 ].freeze
 
   # Race-accurate reference data for each station/zone — weights and distances.
   # Injected for the selected stations only so the LLM calibrates correctly
@@ -77,7 +77,7 @@ class WorkoutLLMGenerator
     "Rowing"             => "1000m",
     "Farmers Carry"      => "200m | Open: 2×24kg (M) / 2×16kg (F) | Pro: 2×32kg (M) / 2×24kg (F)",
     "Sandbag Lunges"     => "100m | Open: 20kg (M) / 10kg (F) | Pro: 30kg (M) / 20kg (F)",
-    "Wall Balls"         => "100 reps | Open: 6kg to 10ft (M) / 4kg to 9ft (F) | Pro: 9kg to 10ft (M) / 6kg to 9ft (F)",
+    "Wall Balls"         => "100 reps | Open: 6kg to 10ft (M) / 4kg to 9ft (F) | Pro: 9kg to 10ft (M) / 6kg to 9ft (F)"
   }.freeze
 
   DEKA_REFERENCE = {
@@ -90,7 +90,7 @@ class WorkoutLLMGenerator
     "Air Bike"             => "25 calories",
     "Dead Ball Yoke Over"  => "20 reps (10/side) | 27kg (M) / 18kg (F)",
     "Sled Push / Pull"     => "100m (push 10m + pull 10m × 5)",
-    "RAM Weighted Burpees" => "20 reps | 20kg (M) / 10kg (F)",
+    "RAM Weighted Burpees" => "20 reps | 20kg (M) / 10kg (F)"
   }.freeze
 
   DEKA_ATLAS_REFERENCE = {
@@ -103,7 +103,7 @@ class WorkoutLLMGenerator
     "Farmer's Carry"                                 => "60m | 45kg each hand (M) / 32kg each hand (F)",
     "DB Shoulder to Overhead Press"                  => "20 reps | 22.5kg (M) / 15kg (F)",
     "Jump Rope Single Unders"                        => "100 reps",
-    "Atlas Shoulder to Carry"                        => "100m | 45kg (M) / 32kg (F)",
+    "Atlas Shoulder to Carry"                        => "100m | 45kg (M) / 32kg (F)"
   }.freeze
 
   EVENT_REFERENCE = {
@@ -112,7 +112,7 @@ class WorkoutLLMGenerator
     "deka-fit"    => DEKA_REFERENCE,
     "deka-strong" => DEKA_REFERENCE,
     "deka-mile"   => DEKA_REFERENCE,
-    "deka-atlas"  => DEKA_ATLAS_REFERENCE,
+    "deka-atlas"  => DEKA_ATLAS_REFERENCE
   }.freeze
 
   # Weighted training emphasis options — sampled randomly each generation.
@@ -144,7 +144,7 @@ class WorkoutLLMGenerator
       instruction: "Use format: rounds with rounds: 2. 5 exercises, 10 reps each (reps: 10). Pick 5 movements relevant to the session's main muscle groups — vary them each time. Keep it easy and controlled. Examples: reverse lunges, push-up to downward dog, hip hinges, lateral lunges, shoulder circles with reach." },
     # Structure 5: resistance band activation — 1 entry
     { label: "Resistance Band Activation",
-      instruction: "5–6 resistance band exercises, each 12–15 reps (use reps: 12 or reps: 15) or 30–45 seconds (use duration_s: 30 or duration_s: 45). Choose band movements that directly prime the muscles used in today's main session: lower body day → banded clamshells, banded glute bridges, banded squat walks, banded pull-throughs; upper body day → band pull-aparts, banded face pulls, banded external rotations, banded chest press; full body → mix of above. Use format: straight. Light resistance only — this is activation, not training." },
+      instruction: "5–6 resistance band exercises, each 12–15 reps (use reps: 12 or reps: 15) or 30–45 seconds (use duration_s: 30 or duration_s: 45). Choose band movements that directly prime the muscles used in today's main session: lower body day → banded clamshells, banded glute bridges, banded squat walks, banded pull-throughs; upper body day → band pull-aparts, banded face pulls, banded external rotations, banded chest press; full body → mix of above. Use format: straight. Light resistance only — this is activation, not training." }
   ].freeze
 
   COOLDOWN_OPTIONS = [
@@ -162,7 +162,7 @@ class WorkoutLLMGenerator
       instruction: "Movement-based cool-down rather than static holds. 5 exercises, each duration_s: 30. Use slow controlled reps described in notes: world's greatest stretch, deep squat to stand, cat-cow, thread the needle, downward dog with heel pedals." },
     { label: "Recovery Stretch",
       duration_s: 60,
-      instruction: "Longer holds, very relaxed. 4 stretches only, each duration_s: 60. Choose from: child's pose, butterfly stretch, supine hamstring pull, lying spinal twist, pigeon pose. Fewer stretches held longer — designed to fully lower heart rate." },
+      instruction: "Longer holds, very relaxed. 4 stretches only, each duration_s: 60. Choose from: child's pose, butterfly stretch, supine hamstring pull, lying spinal twist, pigeon pose. Fewer stretches held longer — designed to fully lower heart rate." }
   ].freeze
 
   # Mixed appears 4× (40%), each pure style appears 2× (20%).
@@ -187,7 +187,7 @@ class WorkoutLLMGenerator
     { label: "Conditioning",
       instruction: "Conditioning focus — higher rep ranges (15–25+), shorter rest, lighter loads. Circuit-style or interval-based. The metabolic challenge is the goal — heart rate should stay elevated throughout. Unbroken sets where possible." },
     { label: "Conditioning",
-      instruction: "Metabolic session — keep rest short and reps high. Lighter weights, fast transitions, sustained effort. Think: sweat, breathing hard, and muscular fatigue from volume rather than load." },
+      instruction: "Metabolic session — keep rest short and reps high. Lighter weights, fast transitions, sustained effort. Think: sweat, breathing hard, and muscular fatigue from volume rather than load." }
   ].freeze
 
   API_URI = URI("https://api.anthropic.com/v1/messages").freeze
@@ -226,7 +226,7 @@ class WorkoutLLMGenerator
         difficulty:    { type: "string",  enum: Workout::DIFFICULTIES },
         structure: {
           type: "object",
-          required: ["sections"],
+          required: [ "sections" ],
           properties: {
             goal: { type: "string", description: "One-sentence coaching cue for the session" },
             sections: {
@@ -252,7 +252,7 @@ class WorkoutLLMGenerator
                     type: "array",
                     items: {
                       type: "object",
-                      required: ["name"],
+                      required: [ "name" ],
                       properties: {
                         name:        { type: "string" },
                         reps:        { type: "integer" },
@@ -283,7 +283,7 @@ class WorkoutLLMGenerator
     @minor_tags     = Tag.where(id: Array(minor_tag_ids).map(&:to_i).reject(&:zero?))
     @group_code_tag = group_code_id.present? ? Tag.find_by(id: group_code_id) : nil
     # tag_ids kept for backwards compat (remix path uses source workout tags directly)
-    @tag_ids        = tag_ids.any? ? Array(tag_ids).map(&:to_i).reject(&:zero?) : ([@main_tag&.id] + @minor_tags.map(&:id)).compact
+    @tag_ids        = tag_ids.any? ? Array(tag_ids).map(&:to_i).reject(&:zero?) : ([ @main_tag&.id ] + @minor_tags.map(&:id)).compact
     @duration_mins  = duration_mins.to_i
     @difficulty     = difficulty
     @source_workout = source_workout
@@ -306,7 +306,7 @@ class WorkoutLLMGenerator
       workout_data     = validate_and_fix(workout_data)
       workout_data     = collapse_duplicate_exercises(workout_data)
       workout_data     = collapse_set_notation(workout_data)
-      all_tag_names    = ([@main_tag&.name] + @minor_tags.map(&:name) + [@group_code_tag&.name]).compact
+      all_tag_names    = ([ @main_tag&.name ] + @minor_tags.map(&:name) + [ @group_code_tag&.name ]).compact
       create_workout(workout_data, all_tag_names)
     end
   end
@@ -320,14 +320,14 @@ class WorkoutLLMGenerator
 
     # Group code takes full priority — draw from a pool and sample randomly for variety.
     if @group_code_tag
-      ids = Workout.most_liked_with_tags([@group_code_tag.id], limit: 20).pluck(:id)
+      ids = Workout.most_liked_with_tags([ @group_code_tag.id ], limit: 20).pluck(:id)
       return [] if ids.empty?
       return Workout.where(id: ids.sample(3)).includes(:tags)
     end
 
     # Fetch a broader pool of popular workouts by tag, then sample randomly so
     # the LLM gets different inspiration each generation (prevents template lock-in).
-    ids = @main_tag ? Workout.most_liked_with_tags([@main_tag.id], limit: 20).pluck(:id) : []
+    ids = @main_tag ? Workout.most_liked_with_tags([ @main_tag.id ], limit: 20).pluck(:id) : []
 
     # Supplement with minor-focus matches (meta-only minor tags like no-run don't help here)
     focus_minor_ids = @minor_tags.reject { |t| t.slug.in?(META_MINOR_SLUGS) }.map(&:id)
@@ -562,7 +562,7 @@ class WorkoutLLMGenerator
       # For event sessions with a station selection: inject the training philosophy
       # from the context file but NOT the station table (which causes the LLM to
       # treat it as a checklist). Station reference is injected separately below.
-      sport_context = load_sport_context([@main_tag&.name].compact)
+      sport_context = load_sport_context([ @main_tag&.name ].compact)
       if sport_context.present?
         # Strip the station table (the block between "## The N Stations" and "## Training")
         philosophy_only = sport_context.gsub(/##\s+The \d+ (?:Stations|Zones).*?(?=##\s+Training)/m, "")
@@ -571,7 +571,7 @@ class WorkoutLLMGenerator
       station_ref = build_station_reference(selected_stations)
       sections << station_ref if station_ref
     else
-      sport_context = load_sport_context([@main_tag&.name].compact)
+      sport_context = load_sport_context([ @main_tag&.name ].compact)
       sections << sport_context if sport_context.present?
     end
 
@@ -757,7 +757,7 @@ class WorkoutLLMGenerator
       "CARDIO CORE — Lead with a 12-min continuous block. Follow with 2 tabatas and one interval circuit. No ladder, no Bear Mountain.",
       "BEAR FOCUS — Make Bear Mountain the centrepiece. Add 2–3 tabatas. Include a death race or 20-20 block. No 12-min block, no ladder.",
       "INTERVAL HEAVY — Lead with a 20-20 block or death race. Follow with 2–3 tabatas. No ladder, no 12-min block.",
-      "MIXED LADDER — Open with a 10-1 ladder. Add 2 tabatas and a cardio intervals block. No 12-min block, no Bear Mountain.",
+      "MIXED LADDER — Open with a 10-1 ladder. Add 2 tabatas and a cardio intervals block. No 12-min block, no Bear Mountain."
     ]
 
     "- SESSION SHAPE FOR THIS WORKOUT: #{archetypes.sample} Follow this shape while still obeying the full Functional Muscle rules below."
@@ -914,7 +914,7 @@ class WorkoutLLMGenerator
 
     # Base of 1 main set for 30 min, +1 set per additional 15 min
     # e.g. 30→1, 45→2, 60→3, 75→4
-    main_sets = [1 + ((@duration_mins - 30) / 15.0).floor, 1].max
+    main_sets = [ 1 + ((@duration_mins - 30) / 15.0).floor, 1 ].max
 
     set_word = main_sets == 1 ? "1 main set" : "#{main_sets} main sets"
 
@@ -1040,7 +1040,7 @@ class WorkoutLLMGenerator
       "squat_1rm"      => "Back Squat / Front Squat / Bulgarian Split Squat",
       "bench_1rm"      => "Bench Press / Incline Press / DB Press / Push Press",
       "clean_jerk_1rm" => "Clean & Jerk / Power Clean / Hang Clean / Hang Power Clean",
-      "snatch_1rm"     => "Snatch / Hang Snatch / Power Snatch",
+      "snatch_1rm"     => "Snatch / Hang Snatch / Power Snatch"
     }
 
     lift_map.each do |key, label|

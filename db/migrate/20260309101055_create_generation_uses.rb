@@ -5,6 +5,6 @@ class CreateGenerationUses < ActiveRecord::Migration[8.2]
       t.timestamps
     end
 
-    add_index :generation_uses, [:user_id, :created_at]
+    add_index :generation_uses, [ :user_id, :created_at ]
   end
 end

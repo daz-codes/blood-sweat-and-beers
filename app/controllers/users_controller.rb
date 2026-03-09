@@ -20,7 +20,7 @@ class UsersController < ApplicationController
     emails = Array(params[:emails]).map { |e| e.strip.downcase }.uniq.first(200)
     @matched   = User.where(email_address: emails).where.not(id: Current.user.id).limit(50)
     matched_emails = @matched.pluck(:email_address)
-    @unmatched_count = (emails - matched_emails - [Current.user.email_address]).size
+    @unmatched_count = (emails - matched_emails - [ Current.user.email_address ]).size
   end
 
   # GET /users/:id
@@ -40,7 +40,7 @@ class UsersController < ApplicationController
 
     if @follow_state == :accepted
       @recent_logs = @profile_user.workout_logs
-                                  .includes(workout: [:tags])
+                                  .includes(workout: [ :tags ])
                                   .recent
                                   .limit(10)
     end

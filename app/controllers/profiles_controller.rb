@@ -42,5 +42,4 @@ class ProfilesController < ApplicationController
       :pool_length
     )
   end
-
 end

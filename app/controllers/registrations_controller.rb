@@ -21,4 +21,4 @@ class RegistrationsController < ApplicationController
    def user_params
      params.expect(user: [ :email_address, :password ])
    end
- end
+end

@@ -34,7 +34,12 @@
       "WebFetch(domain:fitnessexperiment.co)",
       "WebFetch(domain:www.fitkituk.com)",
       "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" grep:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rubocop:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/brakeman:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails db:test:prepare:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle exec:*)",
+      "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle update:*)"
     ]
   }
 }

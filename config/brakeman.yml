@@ -1,0 +1,7 @@
+# Brakeman configuration
+# https://brakemanscanner.org/docs/configuration/
+
+# Don't fail the build when a template parse error occurs.
+# Brakeman's Ruby parser can't handle SVG xmlns attributes inside ERB blocks.
+:allow_check_path_traversal: true
+:exit_on_error: false
