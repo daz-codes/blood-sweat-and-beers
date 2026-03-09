@@ -39,7 +39,7 @@
       <div class="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
         <% main_tag = workout.tags.find(&:main?) %>
         <% if main_tag %>
-          <p class="text-lime-400 font-black text-sm uppercase tracking-wide leading-none"><%= main_tag.name %></p>
+          <p class="text-volt font-black text-sm uppercase tracking-wide leading-none"><%= main_tag.name %></p>
         <% end %>
         <div class="flex items-center gap-1.5">
         <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300"><%= workout.difficulty.capitalize %></span>
@@ -148,8 +148,14 @@
   <% if sections.any? %>
     <details class="group">
       <summary class="bg-zinc-900 border-t border-zinc-700 px-4 py-3 list-none cursor-pointer select-none">
-        <%# Row 1: social + workout toggle %>
-        <div class="flex items-center justify-between gap-2 mb-2.5">
+        <%# Row 1: action buttons %>
+        <div class="flex items-center gap-2 mb-2.5">
+          <%= remix_btn %>
+          <%= save_btn %>
+          <%= do_this_btn %>
+        </div>
+        <%# Row 2: social + workout toggle %>
+        <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-3">
             <%= render "workouts/like_button", workout: workout, liked: liked, like_count: like_count %>
             <%= link_to workout_log_comments_path(workout_log),
@@ -165,12 +171,6 @@
             <span class="group-open:hidden">Show Workout</span>
             <span class="hidden group-open:inline">Hide Workout</span>
           </span>
-        </div>
-        <%# Row 2: action buttons — always full width, always visible %>
-        <div class="flex items-center gap-2">
-          <%= remix_btn %>
-          <%= save_btn %>
-          <%= do_this_btn %>
         </div>
       </summary>
 

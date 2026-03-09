@@ -28,13 +28,24 @@ Rails.application.routes.draw do
   end
   get "library", to: "workouts#index", as: :library
   get "workout_log", to: "workout_logs#index", as: :workout_log_index
+  get "calendar",     to: "workout_logs#calendar",     as: :calendar
+  get "calendar/day", to: "workout_logs#calendar_day", as: :calendar_day
 
   resources :workout_logs, only: [ :create, :show ] do
     resources :comments, only: [ :index, :create, :destroy ]
   end
 
   get "feed", to: "feed#index", as: :feed
+  resources :notifications, only: [ :index ]
+  resources :challenge_entries, only: [ :create ]
   resource :profile, only: [ :show, :edit, :update ]
+  resource :subscription, only: [] do
+    patch :upgrade
+    patch :downgrade
+  end
+  get  "progress",                    to: "progress#index",        as: :progress
+  get  "progress/:test_key",          to: "progress#show",          as: :progress_test
+  post "progress/:test_key/entries",  to: "progress#create_entry",  as: :progress_test_entries
 
   resources :users, only: [ :index, :show ] do
     collection { post :contacts_search }

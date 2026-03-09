@@ -4,12 +4,21 @@
 <% is_tabata    = local_assigns.fetch(:is_tabata, section["format"] == "tabata") %>
 <% swappable    = local_assigns.fetch(:swappable, false) %>
 <% dom_id       = workout && swappable ? "exercise_#{workout.id}_#{section_index}_#{exercise_index}" : nil %>
+<% matched_benchmark = benchmark_for_exercise(exercise["name"]) %>
 
-<div <% if dom_id %>id="<%= dom_id %>"<% end %> class="px-3 py-2.5 border-t border-zinc-700/50"
+<div <% if dom_id %>id="<%= dom_id %>"<% end %> class="px-3 py-2.5 border-t border-zinc-700/50 <%= matched_benchmark ? 'bg-amber-400/10 border-l-2 border-l-amber-400' : '' %>"
      <% if swappable && workout %>data-controller="swap-exercise"<% end %>>
+  <% if matched_benchmark %>
+    <div class="flex items-center gap-1.5 mb-1">
+      <span class="bg-amber-400 text-zinc-900 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded">Benchmark</span>
+      <% if matched_benchmark[:benchmark] %>
+        <span class="text-amber-400/70 text-[9px] font-semibold uppercase tracking-wide">Key Test</span>
+      <% end %>
+    </div>
+  <% end %>
   <div class="flex items-start justify-between gap-2">
     <div>
-      <p class="text-white text-sm font-semibold" <% if swappable && workout %>data-swap-exercise-target="name"<% end %>><%= exercise["name"] %></p>
+      <p class="<%= matched_benchmark ? 'text-amber-300 font-bold' : 'text-white font-semibold' %> text-sm" <% if swappable && workout %>data-swap-exercise-target="name"<% end %>><%= exercise["name"] %></p>
       <% if is_tabata %>
         <p class="text-gray-400 text-xs italic mt-0.5">20s hard effort / 10s easy</p>
       <% end %>

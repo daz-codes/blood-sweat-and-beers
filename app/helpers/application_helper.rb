@@ -1,4 +1,14 @@
 module ApplicationHelper
+  # Returns the matching benchmark test definition if the exercise name matches
+  # one of the curated benchmarks, otherwise nil.
+  def benchmark_for_exercise(name)
+    return nil if name.blank?
+    downcased = name.to_s.downcase
+    FitnessTests::ALL.find do |test|
+      next unless test[:match_terms].present?
+      test[:match_terms].all? { |term| downcased.include?(term.downcase) }
+    end
+  end
   # Total distance in metres for a single workout section.
   # Handles straight/rounds sections (sum of exercise distance_m × rounds)
   # and ladder/mountain sections (distances derived from start/end/step × num exercises).

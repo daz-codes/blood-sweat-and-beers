@@ -4,9 +4,7 @@ class WorkoutsController < ApplicationController
 
   # GET /library
   def index
-    @previews  = Current.user.workouts.where(status: "preview").includes(:tags).order(created_at: :desc)
     @workouts  = Current.user.workouts
-                       .where.not(status: "preview")
                        .includes(:tags)
                        .order(created_at: :desc)
     if params[:tag_id].present?
@@ -81,13 +79,6 @@ class WorkoutsController < ApplicationController
   # POST /workouts/:id/save
   def save
     source = Workout.find(params[:id])
-
-    if source.user == Current.user
-      # User's own generated preview — activate it in place
-      source.update!(status: "active") if source.status == "preview"
-      redirect_to library_path, notice: "\"#{source.name}\" saved to your library."
-      return
-    end
 
     # Another user's workout — copy it if not already saved
     if Current.user.workouts.exists?(source_workout: source)
@@ -222,6 +213,11 @@ class WorkoutsController < ApplicationController
   end
 
   def create_with_llm
+    if Current.user.generation_limit_reached?
+      redirect_to root_path, alert: "You've used all #{User::FREE_GENERATION_LIMIT} free generations this week. Upgrade to Pro for unlimited workouts."
+      return
+    end
+
     if params[:new_main_tag_name].present?
       custom_main = Tag.find_or_create_by!(slug: params[:new_main_tag_name].strip.parameterize) { |t| t.name = params[:new_main_tag_name].strip; t.tag_type = "main" }
       main_tag_id = custom_main.id.to_s
@@ -251,6 +247,7 @@ class WorkoutsController < ApplicationController
       session_notes: params[:new_tag_name].presence
     )
 
+    Current.user.generation_uses.create!
     redirect_to workout_path(@workout)
   rescue WorkoutLLMGenerator::WorkoutGenerationError => e
     Rails.logger.warn "LLM generation failed (#{e.message}) — attempting fallback workout"

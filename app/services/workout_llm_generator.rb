@@ -788,7 +788,7 @@ class WorkoutLLMGenerator
 
         [D] CARDIO INTERVALS — format: rounds, rounds: 5. 1 min hard / 1 min rest on a single machine. Ski (target 10 cal/min), Row (target 200m/min), Bike (10–15 cal).
 
-        [E] EVERY-2-MIN EMOM — format: emom, emom_style: circuit, duration_mins: 10. ALWAYS exactly 3 exercises done together at the start of every 2-minute window, rest for remainder. Each exercise: 5–10 reps. Total work per round should take 45–60 seconds leaving 60–75 seconds rest. E.g. 5 clean and press + 10 KB swings + 10 box jumps every 2 mins. Or: 8 thrusters + 10 burpees + 10 sit-ups every 2 mins.
+        [E] EVERY-2-MIN EMOM — format: emom, emom_style: circuit, duration_mins: 10. ALWAYS exactly 3 exercises done together at the start of every 2-minute window, rest for remainder. Reps are always multiples of 5. Use varied rep schemes to reflect exercise difficulty and load — examples: 15/10/5 (descending), 5/10/20 (ascending), 10/10/10 (even), 5/5/5 (heavy or technical movements). Total work per round should take 45–60 seconds leaving 60–75 seconds rest. E.g. 5 clean and press + 10 KB swings + 15 box jumps every 2 mins. Or: 10 thrusters + 10 burpees + 20 sit-ups every 2 mins.
 
         [F] 20-20 BLOCK — format: rounds, rounds: 10. Every 2 mins: 20 cal cardio + 20 reps of a punchy movement (KB swings, slams, jump squats). 20-minute total block.
 
@@ -969,12 +969,9 @@ class WorkoutLLMGenerator
     sections << descriptor if descriptor.present?
 
     # Training environment
-    env_parts = []
-    if @user.run_preference.present?
-      env_parts << "#{@user.run_preference} running#{" (always programme 1% incline)" if @user.run_preference == "treadmill"}."
+    if @user.pool_length.present?
+      sections << "Training environment: #{@user.pool_length} pool."
     end
-    env_parts << "#{@user.pool_length} pool" if @user.pool_length.present?
-    sections << "Training environment: #{env_parts.join(", ")}." if env_parts.any?
 
     if @user.equipment.present?
       readable = @user.equipment.map(&:humanize).join(", ")
@@ -1448,7 +1445,7 @@ class WorkoutLLMGenerator
       workout_type:  Workout::TYPES.include?(data["workout_type"]) ? data["workout_type"] : "custom",
       duration_mins: data["duration_mins"].to_i.positive? ? data["duration_mins"] : @duration_mins,
       difficulty:    Workout::DIFFICULTIES.include?(data["difficulty"]) ? data["difficulty"] : @difficulty,
-      status:        "preview",
+      status:        "active",
       structure:     data["structure"]
     )
 

@@ -1,0 +1,40 @@
+<% content_for :title, "Notifications" %>
+
+<div class="max-w-2xl mx-auto">
+
+  <div class="flex items-center gap-3 mb-6">
+    <%= render "shared/avatar", user: Current.user, classes: "w-10 h-10 text-sm" %>
+    <div>
+      <p class="text-white font-black text-lg leading-tight tracking-tight" style="font-family: 'Jost', sans-serif"><%= Current.user.display %></p>
+      <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest">Notifications</p>
+    </div>
+  </div>
+
+  <% if @notifications.any? %>
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden">
+      <div class="divide-y divide-zinc-700/50">
+        <% @notifications.each do |n| %>
+          <% link_target = notification_path_for(n) %>
+          <%= link_to link_target, class: "flex items-center gap-4 px-5 py-4 hover:bg-zinc-700/30 transition-colors #{n.read? ? '' : 'bg-zinc-700/20'}" do %>
+            <div class="relative flex-shrink-0">
+              <%= render "shared/avatar", user: n.actor, classes: "w-10 h-10 text-sm" %>
+              <span class="absolute -bottom-0.5 -right-0.5 text-base leading-none"><%= notification_icon(n.action) %></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-white leading-snug"><%= n.message %></p>
+              <p class="text-gray-500 text-xs mt-0.5"><%= time_ago_in_words(n.created_at) %> ago</p>
+            </div>
+            <% unless n.read? %>
+              <span class="w-2 h-2 rounded-full bg-volt flex-shrink-0"></span>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl p-12 text-center">
+      <p class="text-gray-600 text-sm">No notifications yet.</p>
+    </div>
+  <% end %>
+
+</div>

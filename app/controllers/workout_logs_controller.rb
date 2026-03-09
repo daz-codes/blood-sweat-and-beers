@@ -35,8 +35,7 @@ class WorkoutLogsController < ApplicationController
       @workout_log.photo.attach(params[:workout_log][:photo]) if params[:workout_log][:photo].present?
       save_workout_log_tags(@workout_log, params[:tag_names])
       save_exercise_logs(@workout_log, @workout, params[:step_times] || {})
-      @workout.update_columns(status: "active") if @workout.status == "preview"
-      redirect_to root_path
+      redirect_to workout_log_path(@workout_log)
     else
       @workout = @workout_log.workout
       render "workouts/log", status: :unprocessable_entity
@@ -47,6 +46,27 @@ class WorkoutLogsController < ApplicationController
     @workout_log = Current.user.workout_logs.find(params[:id])
     @workout     = @workout_log.workout
     @exercise_logs = @workout_log.exercise_logs.order(:step_order).index_by(&:step_order)
+  end
+
+  def calendar
+    @year  = params[:year].to_i.positive?  ? params[:year].to_i  : Date.current.year
+    @month = params[:month].to_i.positive? ? params[:month].to_i : Date.current.month
+    @first = Date.new(@year, @month, 1)
+    @counts = Current.user.workout_logs
+                          .where(completed_at: @first.beginning_of_month..@first.end_of_month)
+                          .group("DATE(completed_at)")
+                          .count
+  end
+
+  def calendar_day
+    @date = Date.parse(params[:date])
+    @day_logs = Current.user.workout_logs
+                            .where(completed_at: @date.all_day)
+                            .includes(workout: :tags)
+                            .order(:completed_at)
+    render layout: false
+  rescue ArgumentError
+    head :bad_request
   end
 
   private
@@ -60,11 +80,39 @@ class WorkoutLogsController < ApplicationController
   end
 
   def save_exercise_logs(workout_log, workout, step_times)
-    # New sections-based structure — no per-exercise logging yet
-    return if workout.structure.is_a?(Hash)
+    if workout.structure.is_a?(Hash)
+      save_exercise_logs_from_sections(workout_log, workout.structure)
+    else
+      save_exercise_logs_legacy(workout_log, workout.structure, step_times)
+    end
+  end
 
-    # Legacy flat structure
-    workout.structure.each do |step|
+  def save_exercise_logs_from_sections(workout_log, structure)
+    Array(structure["sections"]).each_with_index do |section, si|
+      Array(section["exercises"]).each_with_index do |ex, ei|
+        name = ex["name"].to_s.strip
+        next if name.blank?
+
+        set = { "name" => name, "completed" => true }
+        set["reps"]       = ex["reps"].to_i      if ex["reps"].to_i > 0
+        set["weight_kg"]  = ex["weight_kg"].to_f if ex["weight_kg"].to_f > 0
+        set["distance_m"] = ex["distance_m"].to_i if ex["distance_m"].to_i > 0
+        set["duration_s"] = ex["duration_s"].to_i if ex["duration_s"].to_i > 0
+
+        rounds = section["rounds"].to_i
+        sets   = rounds > 1 ? Array.new(rounds) { set.dup } : [ set ]
+
+        workout_log.exercise_logs.create!(
+          exercise_id: nil,
+          step_order:  si * 100 + ei,
+          sets_data:   sets
+        )
+      end
+    end
+  end
+
+  def save_exercise_logs_legacy(workout_log, structure, step_times)
+    structure.each do |step|
       order    = step["order"].to_i
       raw_time = step_times[order.to_s].presence
 

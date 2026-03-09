@@ -76,30 +76,23 @@
   </div>
 
   <%# Actions %>
-  <% own_preview = Current.user == workout.user && workout.status == "preview" %>
-  <% own_active  = Current.user == workout.user && workout.status != "preview" %>
+  <% own_workout = Current.user == workout.user %>
   <div class="hidden sm:flex bg-zinc-900 border-t border-zinc-700 px-5 py-4 flex-col sm:flex-row gap-3">
     <button type="button"
             onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
             class="sm:flex-1 text-center bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 font-black py-3 rounded-xl text-sm transition-colors uppercase tracking-wide shadow-sm shadow-volt/20 cursor-pointer">
       Do this
     </button>
-    <% if own_active || own_preview %>
+    <% if own_workout %>
       <%= link_to "Edit", edit_workout_path(workout),
           data: { turbo_frame: "workout_preview" },
           class: "text-center py-3 px-4 border border-zinc-600 hover:border-lime-400 hover:text-lime-400 text-gray-300 font-bold rounded-xl text-sm transition-colors" %>
     <% end %>
-    <% unless own_active %>
+    <% unless own_workout %>
       <%= button_to "Save to Library", save_workout_path(workout), method: :post,
           data: { turbo_frame: "_top" },
           form: { class: "contents" },
           class: "text-center py-3 px-4 border border-zinc-600 hover:border-gray-500 text-gray-300 hover:text-white font-bold rounded-xl text-sm transition-colors cursor-pointer" %>
-    <% end %>
-    <% if own_preview %>
-      <%= button_to "Regenerate", regenerate_workout_path(workout), method: :post,
-          data: { turbo_submits_with: "Regenerating…" },
-          form: { data: { turbo_frame: "_top" }, class: "contents" },
-          class: "text-center py-3 text-gray-500 hover:text-gray-300 font-semibold text-sm transition-colors cursor-pointer" %>
     <% end %>
   </div>
 

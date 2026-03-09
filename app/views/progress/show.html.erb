@@ -1,0 +1,112 @@
+<% content_for :title, @test[:name] %>
+
+<div class="max-w-2xl mx-auto">
+
+  <%# Back %>
+  <div class="flex items-center gap-4 mb-6">
+    <%= link_to progress_path, class: "inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-300 text-sm transition-colors" do %>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      All Tests
+    <% end %>
+    <%= link_to profile_path, class: "inline-flex items-center gap-1.5 text-gray-500 hover:text-gray-300 text-sm transition-colors" do %>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Profile
+    <% end %>
+  </div>
+
+  <%# Header %>
+  <div class="mb-6">
+    <p class="text-xs font-black text-gray-500 uppercase tracking-widest mb-1"><%= FitnessTests.category_for(@test[:key])&.dig(:name) %></p>
+    <h1 class="text-2xl font-black tracking-tight text-white" style="font-family: 'Jost', sans-serif"><%= @test[:name] %></h1>
+    <% if @test[:hint] %>
+      <p class="text-gray-500 text-sm mt-1"><%= @test[:hint] %></p>
+    <% end %>
+    <% if @best %>
+      <div class="flex items-baseline gap-2 mt-3">
+        <span class="text-volt font-black text-3xl"><%= format_test_value(@best.value, @test[:unit]) %></span>
+        <span class="text-gray-500 text-sm">best · <%= @best.recorded_on.strftime("%-d %b %Y") %></span>
+      </div>
+    <% end %>
+  </div>
+
+  <%# Add result form %>
+  <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden mb-4">
+    <div class="px-5 py-3 border-b border-zinc-700">
+      <p class="text-xs font-black text-gray-500 uppercase tracking-widest">Add Result</p>
+    </div>
+    <div class="px-5 py-4">
+      <%= form_with url: progress_test_entries_path(@test[:key]), method: :post do |f| %>
+        <div class="flex gap-3">
+          <div class="flex-1">
+            <label class="text-gray-400 text-xs font-semibold uppercase tracking-wide block mb-1.5">
+              Result (<%= unit_label(@test[:unit]) %>)
+            </label>
+            <%= text_field_tag :value, nil,
+                  placeholder: input_placeholder(@test[:unit]),
+                  required: true,
+                  autocomplete: "off",
+                  class: "w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-volt transition-colors" %>
+          </div>
+          <div class="w-40">
+            <label class="text-gray-400 text-xs font-semibold uppercase tracking-wide block mb-1.5">Date</label>
+            <%= date_field_tag :recorded_on, Date.current,
+                  class: "w-full bg-zinc-700 border border-zinc-600 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-volt transition-colors" %>
+          </div>
+          <div class="flex items-end">
+            <%= submit_tag "Save",
+                  class: "bg-volt hover:bg-volt/80 text-zinc-950 font-black px-5 py-2.5 rounded-xl text-sm transition-colors cursor-pointer whitespace-nowrap" %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Chart %>
+  <% if @chart_data.any? %>
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl p-5 mb-4">
+      <p class="text-xs text-gray-500 uppercase tracking-widest mb-4">
+        <%= chart_ytitle(@test[:unit]) %> over time
+        <span class="text-gray-700 ml-1">· <%= @test[:scoring] == :lower ? "lower is better" : "higher is better" %></span>
+      </p>
+      <%= line_chart @chart_data,
+            colors: ["#eafc23"],
+            curve: false,
+            points: true,
+            min: 0,
+            ytitle: chart_ytitle(@test[:unit]),
+            library: {
+              scales: {
+                y: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { color: "#9ca3af" } },
+                x: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { color: "#9ca3af" } }
+              },
+              plugins: { legend: { display: false } }
+            } %>
+    </div>
+  <% end %>
+
+  <%# History %>
+  <% if @entries.any? %>
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-zinc-700">
+        <p class="text-xs font-black text-gray-500 uppercase tracking-widest">History</p>
+      </div>
+      <% @entries.sort_by(&:recorded_on).reverse.each do |entry| %>
+        <% is_best = @best&.id == entry.id %>
+        <div class="flex items-center justify-between px-5 py-3 border-b border-zinc-700/50 last:border-0">
+          <div class="flex items-center gap-2">
+            <span class="text-white font-bold text-sm"><%= format_test_value(entry.value, @test[:unit]) %></span>
+            <% if is_best %>
+              <span class="text-volt text-[10px] font-black uppercase tracking-wide">Best</span>
+            <% end %>
+          </div>
+          <span class="text-gray-500 text-xs"><%= entry.recorded_on.strftime("%-d %b %Y") %></span>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+</div>

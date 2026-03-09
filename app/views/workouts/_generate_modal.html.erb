@@ -1,9 +1,18 @@
 <div class="px-6 py-6">
 
+  <% user_at_limit = Current.user.generation_limit_reached? %>
+  <% generations_used = Current.user.free? ? Current.user.generations_this_week : nil %>
+
   <div class="flex items-start justify-between mb-6">
     <div>
       <h1 class="text-2xl font-bold tracking-tight">Generate Workout</h1>
-      <p class="text-gray-400 mt-0.5 text-sm">Pick your session type and focus, and we'll build it.</p>
+      <% if Current.user.pro? %>
+        <p class="text-gray-400 mt-0.5 text-sm">Pick your session type and focus, and we'll build it.</p>
+      <% elsif user_at_limit %>
+        <p class="text-red-400 mt-0.5 text-sm font-medium">You've used all <%= User::FREE_GENERATION_LIMIT %> free generations this week.</p>
+      <% else %>
+        <p class="text-gray-400 mt-0.5 text-sm">Pick your session type and focus, and we'll build it.</p>
+      <% end %>
     </div>
     <button type="button"
             data-action="click->dialog#close"
@@ -119,9 +128,32 @@
           class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-400 transition-colors" %>
     </div>
 
-    <%= f.submit "Generate Workout",
-        class: "w-full bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 font-bold py-3.5 rounded-xl text-lg transition-colors cursor-pointer",
-        data: { turbo_submits_with: "Generating…" } %>
+    <% if user_at_limit %>
+      <%# Locked — show upgrade CTA instead of generate button %>
+      <div class="bg-zinc-800 border border-zinc-600 rounded-xl p-4 mb-4 text-center">
+        <p class="text-white font-bold text-sm mb-1">Weekly limit reached</p>
+        <p class="text-gray-400 text-xs mb-3">Upgrade to Pro for unlimited AI-generated workouts, Sonnet 4.6 model, and more.</p>
+        <%= link_to "Upgrade to Pro",
+            upgrade_subscription_path,
+            data: { turbo_method: :patch },
+            class: "inline-block w-full bg-volt hover:bg-volt/80 text-zinc-950 font-bold py-3 rounded-xl text-base transition-colors text-center" %>
+      </div>
+    <% else %>
+      <% if Current.user.free? %>
+        <p class="text-gray-600 text-xs text-center mb-3">
+          <%= generations_used %> of <%= User::FREE_GENERATION_LIMIT %> free generations used this week
+          · <%= link_to "Upgrade to Pro", upgrade_subscription_path, data: { turbo_method: :patch }, class: "text-volt hover:text-volt/80" %>
+        </p>
+      <% else %>
+        <div class="flex items-center justify-center gap-1.5 mb-3">
+          <span class="bg-volt text-zinc-950 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Pro</span>
+          <span class="text-gray-500 text-xs">Unlimited generations</span>
+        </div>
+      <% end %>
+      <%= f.submit "Generate Workout",
+          class: "w-full bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 font-bold py-3.5 rounded-xl text-lg transition-colors cursor-pointer",
+          data: { turbo_submits_with: "Generating…" } %>
+    <% end %>
 
   <% end %>
 

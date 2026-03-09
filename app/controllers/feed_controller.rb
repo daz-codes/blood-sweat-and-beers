@@ -18,6 +18,10 @@ class FeedController < ApplicationController
       logs = logs.joins(workout: :tags).where(tags: { id: params[:tag_id] }) if @tag
     end
 
+    if @page == 1
+      @today_challenge = DailyChallenge.find_by(date: Date.current)
+    end
+
     results = logs.offset(offset).limit(PAGE_SIZE + 1).to_a
 
     @has_more      = results.size > PAGE_SIZE

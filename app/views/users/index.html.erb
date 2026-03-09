@@ -1,9 +1,16 @@
 <% content_for :title, "Find People" %>
 
 <div class="max-w-2xl mx-auto">
-  <h1 class="text-2xl font-bold mb-6">Find People</h1>
 
-  <%# Search by name/username %>
+  <div class="flex items-center gap-3 mb-6">
+    <%= render "shared/avatar", user: Current.user, classes: "w-10 h-10 text-sm" %>
+    <div>
+      <p class="text-white font-black text-lg leading-tight tracking-tight" style="font-family: 'Jost', sans-serif"><%= Current.user.display %></p>
+      <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest">Find People</p>
+    </div>
+  </div>
+
+  <%# Search %>
   <%= form_with url: users_path, method: :get do |f| %>
     <div class="relative mb-4">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -13,18 +20,18 @@
       <%= f.text_field :q, value: params[:q],
             placeholder: "Search by name, username or email…",
             autofocus: params[:q].blank?,
-            class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
+            class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-volt transition-colors" %>
     </div>
   <% end %>
 
-  <%# Contact Picker — shown only on supporting browsers via JS %>
+  <%# Contact Picker %>
   <div data-controller="contacts"
        data-search-url="<%= contacts_search_users_path %>"
        class="mb-6">
     <button type="button"
             data-contacts-target="button"
             data-action="click->contacts#pick"
-            class="flex items-center gap-2 w-full justify-center border border-zinc-600 hover:border-lime-400 hover:text-lime-400 text-gray-400 font-bold px-4 py-3 rounded-xl text-sm transition-colors cursor-pointer">
+            class="flex items-center gap-2 w-full justify-center border border-zinc-600 hover:border-volt hover:text-volt text-gray-400 font-bold px-4 py-3 rounded-xl text-sm transition-colors cursor-pointer">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
@@ -34,31 +41,42 @@
     <p data-contacts-target="status" class="text-xs text-gray-500 text-center mt-2"></p>
   </div>
 
-  <%# Contact search results land here via Turbo Stream %>
   <div id="contacts_results" class="mb-4"></div>
 
-  <%# Name/username search results %>
   <% if params[:q].present? && @users.empty? %>
-    <p class="text-gray-500 text-sm text-center py-8">No users found for "<%= params[:q] %>".</p>
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl p-8 text-center">
+      <p class="text-gray-500 text-sm">No users found for "<%= params[:q] %>".</p>
+    </div>
   <% elsif @users.any? %>
-    <div class="space-y-2">
-      <% @users.each do |user| %>
-        <div class="flex items-center justify-between border border-zinc-600 rounded-xl px-4 py-3 hover:border-gray-600 transition-colors">
-          <div>
-            <%= link_to user_path(user), class: "font-semibold text-white hover:text-lime-400 transition-colors" do %>
-              <%= user.display %>
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden">
+      <div class="divide-y divide-zinc-700/50">
+        <% @users.each do |user| %>
+          <div class="flex items-center justify-between px-5 py-4">
+            <%= link_to user_path(user), class: "flex items-center gap-3 flex-1 min-w-0" do %>
+              <%= render "shared/avatar", user: user, classes: "w-10 h-10 text-sm flex-shrink-0" %>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <p class="font-bold text-white text-sm truncate"><%= user.display %></p>
+                  <% if user.pro? %>
+                    <span class="bg-volt text-zinc-950 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-full flex-shrink-0">Pro</span>
+                  <% end %>
+                </div>
+                <% if user.username.present? %>
+                  <p class="text-gray-500 text-xs">@<%= user.username %></p>
+                <% end %>
+              </div>
             <% end %>
-            <% if user.username.present? %>
-              <p class="text-gray-600 text-xs">@<%= user.username %></p>
-            <% end %>
+            <% follow_state = Current.user.follow_state_for(user) %>
+            <% follow = Current.user.follows_as_follower.find_by(following: user) %>
+            <%= render "shared/follow_button", user: user, follow_state: follow_state, follow: follow %>
           </div>
-          <% follow_state = Current.user.follow_state_for(user) %>
-          <% follow = Current.user.follows_as_follower.find_by(following: user) %>
-          <%= render "shared/follow_button", user: user, follow_state: follow_state, follow: follow %>
-        </div>
-      <% end %>
+        <% end %>
+      </div>
     </div>
   <% elsif params[:q].blank? %>
-    <p class="text-gray-600 text-sm text-center py-8">Type a name or username to search.</p>
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl p-8 text-center">
+      <p class="text-gray-500 text-sm">Type a name or username to search.</p>
+    </div>
   <% end %>
+
 </div>

@@ -1,0 +1,107 @@
+<% content_for :title, "Progress" %>
+
+<% completed_keys = @entries_by_key.keys.to_set %>
+
+<div class="max-w-2xl mx-auto">
+
+  <div class="flex items-center gap-3 mb-6">
+    <%= render "shared/avatar", user: Current.user, classes: "w-10 h-10 text-sm" %>
+    <div>
+      <p class="text-white font-black text-lg leading-tight tracking-tight" style="font-family: 'Jost', sans-serif"><%= Current.user.display %></p>
+      <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest">Progress</p>
+    </div>
+  </div>
+
+  <%# Key Benchmarks %>
+  <% benchmark_done = FitnessTests::BENCHMARK_KEYS.count { |k| completed_keys.include?(k) } %>
+  <% benchmark_total = FitnessTests::BENCHMARK_KEYS.size %>
+
+  <div class="mb-8">
+    <div class="flex items-center justify-between mb-2 px-1">
+      <h2 class="text-xs font-black uppercase tracking-widest text-gray-500">Key Benchmarks</h2>
+      <span class="text-xs text-gray-600"><%= benchmark_done %> / <%= benchmark_total %> done</span>
+    </div>
+
+    <%# Progress bar %>
+    <div class="w-full bg-zinc-700 rounded-full h-1 mb-3">
+      <div class="bg-volt h-1 rounded-full transition-all" style="width: <%= (benchmark_done.to_f / benchmark_total * 100).round %>%"></div>
+    </div>
+
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden">
+      <% FitnessTests::BENCHMARKS.each_with_index do |test, i| %>
+        <% entries = @entries_by_key[test[:key]] || [] %>
+        <% best = test[:scoring] == :lower ? entries.min_by(&:value) : entries.max_by(&:value) %>
+        <% is_done = best.present? %>
+        <div class="flex items-center gap-3 px-5 py-3.5 <%= i < benchmark_total - 1 ? 'border-b border-zinc-700/50' : '' %>">
+          <div class="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center <%= is_done ? 'bg-volt' : 'border-2 border-zinc-600' %>">
+            <% if is_done %>
+              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            <% end %>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm <%= is_done ? 'text-gray-400' : 'text-white font-semibold' %> leading-snug"><%= test[:name] %></p>
+            <% if test[:hint] && !is_done %>
+              <p class="text-gray-600 text-xs mt-0.5"><%= test[:hint] %></p>
+            <% end %>
+          </div>
+          <% if best %>
+            <div class="text-right flex-shrink-0 mr-1">
+              <p class="text-volt font-black text-sm"><%= format_test_value(best.value, test[:unit]) %></p>
+              <p class="text-gray-600 text-xs"><%= best.recorded_on.strftime("%-d %b %Y") %></p>
+            </div>
+          <% end %>
+          <%= link_to progress_test_path(test[:key]),
+                class: "flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full #{is_done ? 'bg-zinc-700 hover:bg-zinc-600' : 'bg-volt/20 hover:bg-volt/30'} transition-colors" do %>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="<%= is_done ? '#9ca3af' : '#eafc23' %>" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <%# Full test library %>
+  <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-4 px-1">All Tests</h2>
+  <% FitnessTests::CATEGORIES.each do |category| %>
+    <div class="mb-5">
+      <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2 px-1"><%= category[:name] %></p>
+      <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden">
+        <% category[:tests].each_with_index do |test, i| %>
+          <% entries = @entries_by_key[test[:key]] || [] %>
+          <% best = test[:scoring] == :lower ? entries.min_by(&:value) : entries.max_by(&:value) %>
+          <div class="flex items-center gap-4 px-5 py-3.5 <%= i < category[:tests].size - 1 ? 'border-b border-zinc-700/50' : '' %>">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <p class="text-white text-sm font-medium leading-snug"><%= test[:name] %></p>
+                <% if test[:benchmark] %>
+                  <span class="text-volt text-[9px] font-black uppercase tracking-wide">★</span>
+                <% end %>
+              </div>
+              <% if test[:hint] %>
+                <p class="text-gray-600 text-xs mt-0.5"><%= test[:hint] %></p>
+              <% end %>
+            </div>
+            <div class="text-right flex-shrink-0">
+              <% if best %>
+                <p class="text-volt font-black text-sm"><%= format_test_value(best.value, test[:unit]) %></p>
+                <p class="text-gray-600 text-xs"><%= best.recorded_on.strftime("%-d %b %Y") %></p>
+              <% else %>
+                <p class="text-gray-700 text-sm">Not tested</p>
+              <% end %>
+            </div>
+            <%= link_to progress_test_path(test[:key]),
+                  class: "flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full #{best ? 'bg-zinc-700 hover:bg-zinc-600' : 'bg-volt/20 hover:bg-volt/30'} transition-colors" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="<%= best ? '#9ca3af' : '#eafc23' %>" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+</div>

@@ -1,0 +1,67 @@
+<% content_for :title, "Calendar" %>
+
+<% prev_month = @first.prev_month %>
+<% next_month = @first.next_month %>
+<% today      = Date.current %>
+<% offset     = (@first.wday - 1) % 7 %>
+
+<div class="max-w-2xl mx-auto">
+
+  <%# Header %>
+  <div class="flex items-center gap-3 mb-6">
+    <%= render "shared/avatar", user: Current.user, classes: "w-10 h-10 text-sm" %>
+    <div>
+      <p class="text-white font-black text-lg leading-tight tracking-tight" style="font-family: 'Jost', sans-serif"><%= Current.user.display %></p>
+      <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest">Calendar</p>
+    </div>
+  </div>
+
+  <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden mb-4">
+
+    <%# Month navigation %>
+    <div class="flex items-center justify-between px-4 py-2 border-b border-zinc-700">
+      <%= link_to calendar_path(year: prev_month.year, month: prev_month.month),
+            class: "w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-white hover:bg-zinc-700 transition-colors" do %>
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      <% end %>
+      <p class="font-black text-white text-xs uppercase tracking-widest" style="font-family: 'Jost', sans-serif">
+        <%= @first.strftime("%B %Y") %>
+      </p>
+      <%= link_to calendar_path(year: next_month.year, month: next_month.month),
+            class: "w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-white hover:bg-zinc-700 transition-colors #{"opacity-30 pointer-events-none" if @first >= today.beginning_of_month}" do %>
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      <% end %>
+    </div>
+
+    <%# Just the days with workouts, as compact pills %>
+    <div class="px-4 py-3">
+      <% workout_days = (@first..@first.end_of_month).select { |d| (@counts[d] || 0) > 0 } %>
+      <% if workout_days.any? %>
+        <div class="flex flex-wrap gap-1.5">
+          <% workout_days.each do |day| %>
+            <% is_today = day == today %>
+            <%= link_to calendar_day_path(date: day),
+                  data: { turbo_frame: "calendar_day" },
+                  class: "flex flex-col items-center justify-center w-9 h-9 rounded-lg bg-volt hover:bg-volt/80 transition-colors #{is_today ? 'ring-2 ring-white ring-offset-1 ring-offset-zinc-800' : ''}" do %>
+              <span class="text-zinc-950 font-black text-xs leading-none"><%= day.day %></span>
+              <span class="text-zinc-700 text-[8px] font-bold leading-none mt-0.5 uppercase"><%= day.strftime("%a") %></span>
+            <% end %>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="text-gray-600 text-xs">No workouts logged this month.</p>
+      <% end %>
+    </div>
+
+
+  </div>
+
+  <%# Day detail — loaded via Turbo Frame on day tap %>
+  <%= turbo_frame_tag "calendar_day" do %>
+  <% end %>
+
+</div>

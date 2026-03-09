@@ -3,29 +3,37 @@
 <div class="max-w-2xl mx-auto">
 
   <%# Profile header %>
-  <div class="border border-gray-700 rounded-2xl p-6 mb-6">
-    <div class="flex items-start justify-between">
-      <div>
-        <h1 class="text-2xl font-bold"><%= @profile_user.display %></h1>
-        <% if @profile_user.username.present? %>
-          <p class="text-gray-500 text-sm mt-0.5">@<%= @profile_user.username %></p>
-        <% end %>
+  <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl p-6 mb-4">
+    <div class="flex items-start justify-between mb-5">
+      <div class="flex items-center gap-4">
+        <%= render "shared/avatar", user: @profile_user, classes: "w-14 h-14 text-xl" %>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-black tracking-tight" style="font-family: 'Jost', sans-serif"><%= @profile_user.display %></h1>
+            <% if @profile_user.pro? %>
+              <span class="bg-volt text-zinc-950 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Pro</span>
+            <% end %>
+          </div>
+          <% if @profile_user.username.present? %>
+            <p class="text-gray-500 text-sm">@<%= @profile_user.username %></p>
+          <% end %>
+        </div>
       </div>
       <%= render "shared/follow_button", user: @profile_user, follow_state: @follow_state, follow: @follow %>
     </div>
 
-    <div class="flex items-center gap-6 mt-4 text-center">
-      <div>
-        <p class="text-2xl font-bold"><%= @workout_count %></p>
-        <p class="text-gray-500 text-xs">Workouts</p>
+    <div class="grid grid-cols-3 gap-3 text-center">
+      <div class="bg-zinc-700/40 rounded-xl py-3">
+        <p class="text-2xl font-black text-white"><%= @workout_count %></p>
+        <p class="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Workouts</p>
       </div>
-      <div>
-        <p class="text-2xl font-bold"><%= @follower_count %></p>
-        <p class="text-gray-500 text-xs">Followers</p>
+      <div class="bg-zinc-700/40 rounded-xl py-3">
+        <p class="text-2xl font-black text-white"><%= @follower_count %></p>
+        <p class="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Followers</p>
       </div>
-      <div>
-        <p class="text-2xl font-bold"><%= @following_count %></p>
-        <p class="text-gray-500 text-xs">Following</p>
+      <div class="bg-zinc-700/40 rounded-xl py-3">
+        <p class="text-2xl font-black text-white"><%= @following_count %></p>
+        <p class="text-gray-500 text-xs uppercase tracking-wide mt-0.5">Following</p>
       </div>
     </div>
   </div>
@@ -33,37 +41,50 @@
   <%# Workout list %>
   <% if @follow_state == :accepted %>
     <% if @recent_logs.any? %>
-      <div class="space-y-4">
-        <% @recent_logs.each do |wl| %>
-          <div class="border border-gray-700 rounded-2xl px-4 py-3 hover:border-gray-600 transition-colors">
-            <% workout = wl.workout %>
-            <p class="text-white text-base font-bold leading-snug"><%= workout.name.presence || "Workout" %></p>
-            <p class="text-gray-500 text-xs mt-1"><%= workout.duration_mins %> min &middot; <%= workout.difficulty.capitalize %></p>
-            <p class="text-gray-600 text-xs mt-1"><%= wl.completed_at.strftime("%-d %b %Y") %></p>
-            <% if workout.tags.any? %>
-              <div class="flex flex-wrap gap-1.5 mt-2">
-                <% workout.tags.each do |tag| %>
-                  <span class="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full"><%= tag.name %></span>
-                <% end %>
+      <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden">
+        <div class="px-5 py-3 border-b border-zinc-700">
+          <p class="text-xs font-black text-gray-500 uppercase tracking-widest">Recent Workouts</p>
+        </div>
+        <div class="divide-y divide-zinc-700/50">
+          <% @recent_logs.each do |wl| %>
+            <%= link_to workout_log_path(wl), class: "flex items-center gap-4 px-5 py-4 hover:bg-zinc-700/30 transition-colors" do %>
+              <div class="flex flex-col items-center justify-center w-10 h-10 rounded-full bg-volt flex-shrink-0">
+                <span class="text-zinc-950 font-black text-sm leading-none"><%= wl.workout.duration_mins %></span>
+                <span class="text-zinc-800 text-[7px] font-bold leading-none mt-0.5 uppercase">min</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-white font-bold text-sm truncate"><%= wl.workout.name.presence || "Workout" %></p>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <% main_tag = wl.workout.tags.find(&:main?) %>
+                  <% if main_tag %>
+                    <span class="text-volt text-xs font-bold uppercase"><%= main_tag.name %></span>
+                    <span class="text-gray-700 text-xs">·</span>
+                  <% end %>
+                  <span class="text-gray-500 text-xs"><%= wl.workout.difficulty.capitalize %></span>
+                  <span class="text-gray-700 text-xs">·</span>
+                  <span class="text-gray-500 text-xs"><%= wl.completed_at.strftime("%-d %b") %></span>
+                </div>
               </div>
             <% end %>
-          </div>
-        <% end %>
+          <% end %>
+        </div>
       </div>
     <% else %>
-      <p class="text-gray-500 text-sm text-center py-12">No workouts logged yet.</p>
+      <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl p-12 text-center">
+        <p class="text-gray-600 text-sm">No workouts logged yet.</p>
+      </div>
     <% end %>
   <% elsif @follow_state == :pending %>
-    <div class="text-center py-12 border border-gray-800 rounded-2xl">
-      <p class="text-2xl mb-3">🔒</p>
-      <p class="text-gray-400 font-semibold">Follow request pending</p>
-      <p class="text-gray-600 text-sm mt-1">Workouts will be visible once your request is accepted.</p>
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl p-12 text-center">
+      <p class="text-3xl mb-3">🔒</p>
+      <p class="text-white font-bold">Follow request pending</p>
+      <p class="text-gray-500 text-sm mt-1">Workouts will be visible once your request is accepted.</p>
     </div>
   <% else %>
-    <div class="text-center py-12 border border-gray-800 rounded-2xl">
-      <p class="text-2xl mb-3">🔒</p>
-      <p class="text-gray-400 font-semibold">Follow to see workouts</p>
-      <p class="text-gray-600 text-sm mt-1">Send a follow request to view their training.</p>
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl p-12 text-center">
+      <p class="text-3xl mb-3">🔒</p>
+      <p class="text-white font-bold">Follow to see workouts</p>
+      <p class="text-gray-500 text-sm mt-1">Send a follow request to view their training.</p>
     </div>
   <% end %>
 

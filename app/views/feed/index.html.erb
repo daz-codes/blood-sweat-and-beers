@@ -3,6 +3,10 @@
 
   <div class="max-w-2xl mx-auto">
 
+    <% if @today_challenge %>
+      <%= render "challenges/widget", challenge: @today_challenge %>
+    <% end %>
+
     <% if @tag %>
       <div class="flex items-center gap-2 mb-4">
         <span class="text-sm text-gray-400">Tagged:</span>

@@ -1,0 +1,38 @@
+<%= turbo_frame_tag "calendar_day" do %>
+  <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden">
+    <div class="px-5 py-3 border-b border-zinc-700">
+      <p class="text-xs font-black text-gray-500 uppercase tracking-widest"><%= @date.strftime("%A, %-d %B %Y") %></p>
+    </div>
+
+    <% if @day_logs.any? %>
+      <div class="divide-y divide-zinc-700/50">
+        <% @day_logs.each do |log| %>
+          <%= link_to workout_log_path(log), class: "flex items-center gap-4 px-5 py-4 hover:bg-zinc-700/30 transition-colors" do %>
+            <div class="flex flex-col items-center justify-center w-10 h-10 rounded-full bg-volt flex-shrink-0">
+              <span class="text-zinc-950 font-black text-sm leading-none"><%= log.workout.duration_mins %></span>
+              <span class="text-zinc-800 text-[7px] font-bold leading-none mt-0.5 uppercase">min</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-white font-bold text-sm truncate"><%= log.workout.name.presence || "Workout" %></p>
+              <div class="flex items-center gap-2 mt-0.5">
+                <% main_tag = log.workout.tags.find(&:main?) %>
+                <% if main_tag %>
+                  <span class="text-volt text-xs font-bold uppercase"><%= main_tag.name %></span>
+                  <span class="text-gray-700 text-xs">·</span>
+                <% end %>
+                <span class="text-gray-500 text-xs"><%= log.workout.difficulty.capitalize %></span>
+              </div>
+            </div>
+            <div class="flex gap-px flex-shrink-0">
+              <% 5.times do |i| %>
+                <span class="text-xs <%= i < log.sweat_rating ? "opacity-90" : "opacity-15" %>">💧</span>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="text-gray-600 text-sm text-center py-8">No workouts logged on this day.</p>
+    <% end %>
+  </div>
+<% end %>

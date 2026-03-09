@@ -7,7 +7,12 @@
     <div class="flex items-center gap-4">
       <%= render "shared/avatar", user: @user, classes: "w-14 h-14 text-xl" %>
       <div>
-        <h1 class="text-2xl font-bold tracking-tight"><%= @user.display %></h1>
+        <div class="flex items-center gap-2">
+          <h1 class="text-2xl font-bold tracking-tight"><%= @user.display %></h1>
+          <% if @user.pro? %>
+            <span class="bg-volt text-zinc-950 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Pro</span>
+          <% end %>
+        </div>
         <% if @user.username.present? %>
           <p class="text-gray-500 text-sm">@<%= @user.username %></p>
         <% end %>
@@ -20,6 +25,50 @@
       </svg>
       Edit
     <% end %>
+  </div>
+
+  <%# Plan section %>
+  <div class="mb-8">
+    <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-4">Plan</h2>
+    <div class="bg-zinc-800 border border-zinc-700 rounded-2xl p-5">
+      <% if @user.pro? %>
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="bg-volt text-zinc-950 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full">Pro</span>
+              <span class="text-white font-bold text-sm">Volt Pro</span>
+            </div>
+            <p class="text-gray-500 text-xs">Generate unlimited workouts · Priority features</p>
+          </div>
+          <%= link_to "Downgrade", downgrade_subscription_path,
+              data: { turbo_method: :patch, turbo_confirm: "Downgrade to the Free plan?" },
+              class: "text-gray-500 hover:text-white text-xs font-medium transition-colors flex-shrink-0 ml-4" %>
+        </div>
+      <% else %>
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <p class="text-white font-bold text-sm mb-1">Free Plan</p>
+            <% remaining = @user.generations_remaining %>
+            <p class="text-gray-500 text-xs"><%= remaining %> of <%= User::FREE_GENERATION_LIMIT %> generations left this week</p>
+          </div>
+        </div>
+        <div class="bg-zinc-700/50 rounded-xl p-4 mb-4">
+          <p class="text-white font-bold text-sm mb-2">Upgrade to Pro</p>
+          <ul class="space-y-1.5 mb-4">
+            <li class="flex items-center gap-2 text-gray-300 text-xs">
+              <span class="text-volt">✓</span> Unlimited AI workout generations
+            </li>
+            <li class="flex items-center gap-2 text-gray-300 text-xs">
+              <span class="text-volt">✓</span> Priority access to new features
+            </li>
+          </ul>
+          <%= link_to "Upgrade to Pro (Free for now)",
+              upgrade_subscription_path,
+              data: { turbo_method: :patch },
+              class: "block w-full bg-volt hover:bg-volt/80 text-zinc-950 font-bold py-2.5 rounded-xl text-sm transition-colors text-center" %>
+        </div>
+      <% end %>
+    </div>
   </div>
 
   <%# Physical %>
@@ -56,16 +105,10 @@
   <% end %>
 
   <%# Training Environment %>
-  <% if @user.run_preference.present? || @user.pool_length.present? || @user.equipment.any? %>
+  <% if @user.pool_length.present? || @user.equipment.any? %>
     <div class="mb-8">
       <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-4">Training</h2>
       <div class="space-y-3">
-        <% if @user.run_preference.present? %>
-          <div class="flex items-center justify-between py-2 border-b border-zinc-800">
-            <span class="text-gray-400 text-sm">Run preference</span>
-            <span class="text-white text-sm font-medium"><%= @user.run_preference.capitalize %></span>
-          </div>
-        <% end %>
         <% if @user.pool_length.present? %>
           <div class="flex items-center justify-between py-2 border-b border-zinc-800">
             <span class="text-gray-400 text-sm">Pool</span>
@@ -86,55 +129,44 @@
     </div>
   <% end %>
 
-  <%# Personal Bests %>
-  <% pb = @user.personal_bests || {} %>
-  <% unless pb.empty? %>
-    <% def fmt_time_show(secs); return "" if secs.blank? || secs.to_i == 0; s = secs.to_i; h = s/3600; m = (s%3600)/60; r = s%60; h > 0 ? "#{'%02d'%h}:#{'%02d'%m}:#{'%02d'%r}" : "#{'%d'%m}:#{'%02d'%r}"; end %>
-    <div class="mb-8">
-      <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-4">Personal Bests</h2>
-      <div class="space-y-1">
-        <% {
-          "run_1mile" => "1 Mile Run", "run_1_5mile" => "1.5 Mile Run (Cooper)", "run_5km" => "5km Run", "run_10km" => "10km Run",
-          "run_half_marathon" => "Half Marathon",
-          "swim_100m_fc" => "100m Freestyle", "swim_400m" => "400m Swim",
-          "swim_1500m" => "1500m Swim", "swim_1mile" => "1 Mile Swim",
-          "row_500m" => "500m Row", "row_1000m" => "1000m Row", "row_2000m" => "2000m Row",
-          "ski_500m" => "500m SkiErg", "ski_2000m" => "2000m SkiErg",
-          "assault_bike_50cal" => "Assault Bike 50cal", "assault_bike_100cal" => "Assault Bike 100cal",
-          "floor_to_ceiling_30" => "30 Floor-to-Ceilings", "thrusters_50" => "50 Thrusters",
-          "wall_balls_100" => "100 Wall Balls", "hyrox_race" => "Hyrox Race", "deka_fit" => "Deka Fit"
-        }.each do |key, label| %>
-          <% next unless pb[key].present? %>
-          <div class="flex items-center justify-between py-2 border-b border-zinc-800">
-            <span class="text-gray-400 text-sm"><%= label %></span>
-            <span class="text-white text-sm font-mono font-medium"><%= fmt_time_show(pb[key]) %></span>
-          </div>
-        <% end %>
-        <% {
-          "bench_1rm" => "Bench Press 1RM", "squat_1rm" => "Back Squat 1RM",
-          "deadlift_1rm" => "Deadlift 1RM", "clean_jerk_1rm" => "Clean & Jerk 1RM", "snatch_1rm" => "Snatch 1RM"
-        }.each do |key, label| %>
-          <% next unless pb[key].present? %>
-          <div class="flex items-center justify-between py-2 border-b border-zinc-800">
-            <span class="text-gray-400 text-sm"><%= label %></span>
-            <span class="text-white text-sm font-medium"><%= pb[key].to_f.round(1) %>kg</span>
-          </div>
-        <% end %>
-        <% {
-          "press_ups_2min" => "Press-ups (2 min)", "pull_ups_max" => "Max Pull-ups", "burpees_1min" => "Burpees (1 min)"
-        }.each do |key, label| %>
-          <% next unless pb[key].present? %>
-          <div class="flex items-center justify-between py-2 border-b border-zinc-800">
-            <span class="text-gray-400 text-sm"><%= label %></span>
-            <span class="text-white text-sm font-medium"><%= pb[key].to_i %> reps</span>
-          </div>
-        <% end %>
-      </div>
+  <%# Benchmark Tests %>
+  <div class="mb-8">
+    <div class="flex items-center justify-between mb-3 px-1">
+      <h2 class="text-xs font-black uppercase tracking-widest text-gray-500">Benchmarks</h2>
+      <%= link_to progress_path, class: "text-volt text-xs font-bold hover:text-volt/80 transition-colors" do %>View all →<% end %>
     </div>
-  <% end %>
+    <% benchmark_done = @best_by_key.values.count(&:present?) %>
+    <% benchmark_total = FitnessTests::BENCHMARKS.size %>
+    <div class="w-full bg-zinc-700 rounded-full h-1 mb-3">
+      <div class="bg-volt h-1 rounded-full" style="width: <%= (benchmark_done.to_f / benchmark_total * 100).round %>%"></div>
+    </div>
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden">
+      <% FitnessTests::BENCHMARKS.each_with_index do |test, i| %>
+        <% best = @best_by_key[test[:key]] %>
+        <%= link_to progress_test_path(test[:key]), class: "flex items-center gap-3 px-5 py-3.5 hover:bg-zinc-700/30 transition-colors <%= i < benchmark_total - 1 ? 'border-b border-zinc-700/50' : '' %>" do %>
+          <div class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center <%= best ? 'bg-volt' : 'border-2 border-zinc-600' %>">
+            <% if best %>
+              <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            <% end %>
+          </div>
+          <p class="flex-1 text-sm <%= best ? 'text-gray-400' : 'text-white font-medium' %>"><%= test[:name] %></p>
+          <% if best %>
+            <p class="text-volt font-black text-sm mr-1"><%= format_test_value(best.value, test[:unit]) %></p>
+          <% else %>
+            <span class="text-gray-600 text-xs mr-1">Add result</span>
+          <% end %>
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-600 flex-shrink-0">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
 
   <%# Empty state %>
-  <% if @user.age.blank? && @user.height_cm.blank? && @user.weight_kg.blank? && @user.gender.blank? && @user.run_preference.blank? && !@user.equipment.any? && pb.empty? %>
+  <% if @user.age.blank? && @user.height_cm.blank? && @user.weight_kg.blank? && @user.gender.blank? && !@user.equipment.any? %>
     <div class="text-center py-12 text-gray-600">
       <p class="mb-4">No profile info yet.</p>
       <%= link_to edit_profile_path, class: "text-lime-400 hover:text-lime-300 text-sm font-medium" do %>

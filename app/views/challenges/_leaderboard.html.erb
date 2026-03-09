@@ -1,0 +1,19 @@
+<% entries = challenge.leaderboard.includes(:user).limit(10) %>
+<% if entries.any? %>
+  <div class="border-t border-zinc-700 px-5 py-4">
+    <p class="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">Leaderboard</p>
+    <div class="space-y-2.5">
+      <% entries.each_with_index do |entry, i| %>
+        <div class="flex items-center gap-3">
+          <span class="text-xs font-black w-4 <%= i == 0 ? 'text-volt' : 'text-gray-600' %>"><%= i + 1 %></span>
+          <%= render "shared/avatar", user: entry.user, classes: "w-6 h-6 text-[10px] flex-shrink-0" %>
+          <span class="text-sm text-gray-300 flex-1 truncate"><%= entry.user.display %></span>
+          <% unless entry.rx %>
+            <span class="text-xs text-gray-600 border border-zinc-700 px-1.5 py-0.5 rounded-full">Scaled</span>
+          <% end %>
+          <span class="text-sm font-bold <%= i == 0 ? 'text-volt' : 'text-white' %>"><%= format_challenge_score(entry.score, challenge.scoring_type) %></span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>

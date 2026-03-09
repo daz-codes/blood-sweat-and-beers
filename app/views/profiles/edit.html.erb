@@ -1,13 +1,12 @@
 <% content_for :title, "Edit Profile" %>
 
-<% def fmt_time(secs); return "" if secs.blank? || secs.to_i == 0; s = secs.to_i; h = s/3600; m = (s%3600)/60; r = s%60; h > 0 ? "#{'%02d'%h}:#{'%02d'%m}:#{'%02d'%r}" : "#{'%d'%m}:#{'%02d'%r}"; end %>
 
 <div class="max-w-lg mx-auto pb-16">
 
   <div class="mb-8 flex items-center justify-between">
     <div>
       <h1 class="text-3xl font-bold tracking-tight">Edit Profile</h1>
-      <p class="text-gray-400 mt-1 text-sm">Your details, training context, and personal bests.</p>
+      <p class="text-gray-400 mt-1 text-sm">Your details and training context.</p>
     </div>
     <%= link_to profile_path, class: "text-gray-500 hover:text-gray-300 text-sm transition-colors" do %>
       ← Back
@@ -96,147 +95,6 @@
         </div>
 
       </div>
-    </div>
-
-    <%# ── Personal Bests ── %>
-    <div class="mb-10">
-      <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Personal Bests</h2>
-      <p class="text-gray-600 text-xs mb-5">Enter times as M:SS or H:MM:SS. Weights in kg. Leave blank if unknown.</p>
-
-      <% pb = @user.personal_bests || {} %>
-
-      <%# Rowing %>
-      <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6">Rowing</h3>
-      <div class="grid grid-cols-3 gap-3">
-        <% [
-          ["row_500m", "500m", "M:SS"],
-          ["row_1000m", "1000m", "M:SS"],
-          ["row_2000m", "2000m", "M:SS"],
-        ].each do |key, label, hint| %>
-          <div>
-            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1"><%= label %></label>
-            <input type="text" name="personal_bests[<%= key %>]"
-                   value="<%= fmt_time(pb[key]) %>"
-                   placeholder="<%= hint %>"
-                   class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400">
-          </div>
-        <% end %>
-      </div>
-
-      <%# Ski Erg %>
-      <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6">Ski Erg</h3>
-      <div class="grid grid-cols-2 gap-3">
-        <% [
-          ["ski_500m", "500m", "M:SS"],
-          ["ski_2000m", "2000m", "M:SS"],
-        ].each do |key, label, hint| %>
-          <div>
-            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1"><%= label %></label>
-            <input type="text" name="personal_bests[<%= key %>]"
-                   value="<%= fmt_time(pb[key]) %>"
-                   placeholder="<%= hint %>"
-                   class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400">
-          </div>
-        <% end %>
-      </div>
-
-      <%# Assault / Echo Bike %>
-      <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6">Assault / Echo Bike</h3>
-      <div class="grid grid-cols-2 gap-3">
-        <% [
-          ["assault_bike_50cal", "50 Calories", "M:SS"],
-          ["assault_bike_100cal", "100 Calories", "M:SS"],
-        ].each do |key, label, hint| %>
-          <div>
-            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1"><%= label %></label>
-            <input type="text" name="personal_bests[<%= key %>]"
-                   value="<%= fmt_time(pb[key]) %>"
-                   placeholder="<%= hint %>"
-                   class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400">
-          </div>
-        <% end %>
-      </div>
-
-      <%# Strength %>
-      <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6">Strength (1 Rep Max)</h3>
-      <div class="grid grid-cols-3 gap-3">
-        <% [
-          ["bench_1rm", "Bench Press"],
-          ["squat_1rm", "Back Squat"],
-          ["deadlift_1rm", "Deadlift"],
-          ["clean_jerk_1rm", "Clean & Jerk"],
-          ["snatch_1rm", "Snatch"],
-        ].each do |key, label| %>
-          <div>
-            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1"><%= label %></label>
-            <div class="relative">
-              <input type="number" name="personal_bests[<%= key %>]"
-                     value="<%= pb[key].presence %>"
-                     min="0" step="0.5" placeholder="0"
-                     class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 pr-8 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400">
-              <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 text-xs">kg</span>
-            </div>
-          </div>
-        <% end %>
-      </div>
-
-      <%# Bodyweight / AMRAP Tests %>
-      <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6">Bodyweight &amp; AMRAP Tests</h3>
-      <div class="grid grid-cols-3 gap-3">
-        <div>
-          <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Press-ups (2 min)</label>
-          <div class="relative">
-            <input type="number" name="personal_bests[press_ups_2min]"
-                   value="<%= pb["press_ups_2min"].presence %>"
-                   min="0" placeholder="0"
-                   class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 pr-10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400">
-            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 text-xs">reps</span>
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Pull-ups (max)</label>
-          <div class="relative">
-            <input type="number" name="personal_bests[pull_ups_max]"
-                   value="<%= pb["pull_ups_max"].presence %>"
-                   min="0" placeholder="0"
-                   class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 pr-10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400">
-            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 text-xs">reps</span>
-          </div>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Burpees (1 min)</label>
-          <div class="relative">
-            <input type="number" name="personal_bests[burpees_1min]"
-                   value="<%= pb["burpees_1min"].presence %>"
-                   min="0" placeholder="0"
-                   class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 pr-10 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400">
-            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 text-xs">reps</span>
-          </div>
-        </div>
-      </div>
-
-      <%# Hyrox / Deka Style Tests %>
-      <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 mt-6">Hyrox / Functional Tests</h3>
-      <p class="text-gray-600 text-xs mb-3">Men's / Women's standards shown — enter your time for your category.</p>
-      <div class="grid grid-cols-2 gap-3">
-        <% [
-          ["floor_to_ceiling_30", "30 Floor-to-Ceilings", "45kg M · 30kg W"],
-          ["thrusters_50", "50 Thrusters", "30kg M · 20kg W"],
-          ["wall_balls_100", "100 Wall Balls", "6kg M · 4kg W"],
-          ["hyrox_race", "Hyrox Race", "Full race time"],
-          ["deka_fit", "Deka Fit", "Full event time"],
-        ].each do |key, label, note| %>
-          <div>
-            <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-0.5"><%= label %></label>
-            <p class="text-gray-700 text-[10px] mb-1"><%= note %></p>
-            <input type="text" name="personal_bests[<%= key %>]"
-                   value="<%= fmt_time(pb[key]) %>"
-                   placeholder="M:SS or H:MM:SS"
-                   class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-lime-400">
-          </div>
-        <% end %>
-      </div>
-
     </div>
 
     <div class="mt-8">
