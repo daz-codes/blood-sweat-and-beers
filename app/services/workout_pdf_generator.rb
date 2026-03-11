@@ -10,13 +10,9 @@ class WorkoutPdfGenerator
     @workout = workout
   end
 
-  JOST_BOLD    = Rails.root.join("app/assets/fonts/Jost-Bold.ttf").to_s
-  JOST_REGULAR = Rails.root.join("app/assets/fonts/Jost-Regular.ttf").to_s
-
   def generate
     Prawn::Document.new(page_size: "A4", margin: [ 40, 40, 50, 40 ]) do |pdf|
-      pdf.font_families.update("Jost" => { bold: JOST_BOLD, normal: JOST_REGULAR })
-      pdf.font("Jost")
+      pdf.font("Helvetica")
       draw_header(pdf)
       draw_meta(pdf)
       draw_structure(pdf)
