@@ -782,22 +782,23 @@ class WorkoutLLMGenerator
 
     archetypes = {
       1 => [
-        "STRENGTH FOCUS — Feature exactly ONE tabata as a conditioning burst. Build the session around Bear Mountain and a 10-1 ladder as the two main structural blocks, then place the single tabata before the strength sets. No continuous circuit block.",
-        "MACHINE DAY — Feature exactly ONE tabata. Lead with a continuous circuit block as the primary conditioning, follow with a cardio intervals block, then ONE tabata before strength sets. No ladder, no Bear Mountain.",
-        "LADDER FOCUS — Feature exactly ONE tabata. Open with a 10-1 ladder, add a death race or 20-20 block, then ONE tabata. No continuous circuit block."
+        "BEAR & LADDER — Bear Mountain (10 min) + 10-1 Ladder (12 min) + exactly 1 tabata (6 min) = 28 min. This is the biggest session shape. No continuous circuit.",
+        "MACHINE DAY — Continuous Circuit + cardio intervals (10 min) + exactly 1 tabata (6 min). No ladder, no Bear Mountain.",
+        "LADDER & CIRCUIT — 10-1 Ladder (12 min) + continuous circuit + exactly 1 tabata (6 min). No Bear Mountain."
       ],
       2 => [
-        "LADDER SESSION — Include a 10-1 ladder and Bear Mountain as the two main structural blocks. Add exactly 2 tabatas around them. No continuous circuit block.",
-        "CARDIO CORE — Lead with a continuous circuit block. Follow with exactly 2 tabatas and one interval circuit. No ladder, no Bear Mountain.",
-        "BEAR FOCUS — Make Bear Mountain the centrepiece. Add exactly 2 tabatas. Include a death race or 20-20 block. No continuous circuit block, no ladder.",
-        "MIXED LADDER — Open with a 10-1 ladder. Add exactly 2 tabatas and a cardio intervals block. No continuous circuit block, no Bear Mountain."
+        "CIRCUIT & TABATAS — Continuous circuit + exactly 2 tabatas (12 min). No ladder, no Bear Mountain.",
+        "BEAR & TABATAS — Bear Mountain (10 min) + exactly 2 tabatas (12 min) = 22 min. No ladder, no continuous circuit.",
+        "LADDER & TABATAS — 10-1 Ladder (12 min) + exactly 2 tabatas (12 min) = 24 min. No Bear Mountain, no continuous circuit.",
+        "LADDER & CIRCUIT & TABATAS — 10-1 Ladder (12 min) + continuous circuit + exactly 2 tabatas (12 min). No Bear Mountain."
       ],
       3 => [
-        "INTERVAL HEAVY — Lead with a 20-20 block or death race. Follow with exactly 3 tabatas. No ladder, no continuous circuit block.",
-        "TRIPLE BURN — Open with a continuous circuit block. Add exactly 3 tabatas. Skip the ladder and Bear Mountain."
+        "LADDER & 3 TABATAS — 10-1 Ladder (12 min) + exactly 3 tabatas (18 min) = 30 min. No Bear Mountain, no continuous circuit.",
+        "TRIPLE BURN — Continuous circuit + exactly 3 tabatas (18 min). No ladder, no Bear Mountain.",
+        "DEATH RACE & 3 TABATAS — Death race (8 min) + exactly 3 tabatas (18 min) = 26 min. No ladder, no Bear Mountain."
       ],
       4 => [
-        "TABATA HEAVY — Build this session around exactly 4 tabatas as the primary conditioning. Skip the continuous circuit block. Add one other block (interval circuit, every-2-min EMOM, or death race) to fill the session."
+        "TABATA HEAVY — Exactly 4 tabatas (24 min) + one small block: death race (8 min) or every-2-min EMOM (10 min). No ladder, no Bear Mountain, no continuous circuit."
       ]
     }
 
@@ -823,14 +824,14 @@ class WorkoutLLMGenerator
 
       2. METABOLIC BLOCKS (always before strength): Build the metabolic section according to the SESSION SHAPE given above — it tells you exactly how many tabatas to include. Do not add extra tabatas beyond the count specified.
 
-        TIME BUDGET — fixed sections consume most of the hour. You MUST stay within the metabolic time budget or the session will run over. Calculate carefully:
-          Fixed sections (non-negotiable): Warm-up 5 min + Upper Body Strength 10 min + Lower Body Strength 10 min + Abs 5 min + Cool-down 5 min = 35 min
-          Remaining for ALL metabolic blocks combined (including tabatas): #{@duration_mins - 35} min
-          Each tabata = 4 min. Plan the non-tabata blocks to fill the remainder — do not exceed it.
+        TIME BUDGET — fixed sections consume half the session. You MUST stay within the metabolic budget or the session will run over. Calculate carefully:
+          Fixed sections: Warm-up 5 min + Upper Body Strength 8 min + Lower Body Strength 8 min + Abs 5 min + Cool-down 4 min = 30 min
+          Remaining for ALL metabolic blocks combined (including tabatas): #{@duration_mins - 30} min
+          Each tabata = 4 min. Add up your chosen blocks — total must not exceed #{@duration_mins - 30} min.
 
         Block time estimates — use these to budget:
-          Tabata [H]: 4 min
-          Bear Mountain [I]: 15 min — this is a LARGE block. If you include Bear Mountain, it is the ONLY non-tabata block. Do NOT add a ladder or continuous circuit in the same session.
+          Tabata [H]: 6 min (4 min work + transitions)
+          Bear Mountain [I]: 10 min
           10-1 Ladder [C]: 12 min
           Continuous Circuit [A]: duration_mins as specified above
           Cardio Intervals [D]: 10 min (5 rounds × 2 min)
@@ -857,7 +858,7 @@ class WorkoutLLMGenerator
 
         [H] TABATA — Use 2 exercises per tabata (ABABABAB = 4 rounds each) — this is the standard format. Standard tabatas: EVERY exercise MUST be a compound (two movements fused into one flowing rep, name must contain "and", "with", "to", or "+"). Each tabata gets DIFFERENT compound pairs — never repeat the same compound in one session. You are encouraged to INVENT new combinations — the goal is creative, flowing pairings that contrast muscle groups. Some examples to spark ideas (don't just copy these): "Squat Curl and Press", "KB Swing with Side Lunge", "Wood Chop with Reverse Lunge", "Bent Over Row to Deadlift", "Side Lunge and Lateral Raise", "Lunge and Overhead Tricep Extension", "Hop onto Box and Bicep Curl", "Clean and Lateral Lunge", "Squat Jump and Shoulder Press", "Plate Halo and Twist", "Push Up to T-Rotation", "Renegade Row to Deadlift", "Reverse Lunge and High Pull", "Squat and Rainbow Press", "Gorilla Row and Jump Squat", "Devil Press and Box Step", "KB Clean and Pivot Press", "Bent Over Row and Clean and Press". CARDIO MACHINE TABATA (use occasionally — at most once per session): one of the two exercises may be a cardio machine (Assault Bike, Rowing Machine, or Ski Erg) — pair it with a compound movement. Example pairings: Assault Bike + Squat Curl and Press, Rowing Machine + Wood Chop with Reverse Lunge, Ski Erg + KB Swing with Side Lunge. Do NOT set reps or calories on the machine exercise — it's a 20s burst, the interval is the constraint. Single compound movements alone (burpees, KB swings, mountain climbers without a second movement) are never acceptable.
 
-        [I] BEAR MOUNTAIN — format: mountain, start: 1, peak: 5, end: 1, step: 1 (1-2-3-4-5-4-3-2-1 reps = 25 bears total). One exercise only: "Bear" (clean → press → front squat → press → back squat = 1 rep). Use a moderate barbell weight (20–30kg). Rest as needed between rungs. WARNING: this block takes approximately 15 minutes. If you include Bear Mountain, do NOT add any other large blocks (ladder, continuous circuit, 20-20). Pair it only with tabatas within the remaining budget.
+        [I] BEAR MOUNTAIN — format: mountain, start: 1, peak: 5, end: 1, step: 1 (1-2-3-4-5-4-3-2-1 reps = 25 bears total). One exercise only: "Bear" (clean → press → front squat → press → back squat = 1 rep). Use a moderate barbell weight (20–30kg). Rest as needed between rungs. Takes approximately 10 minutes.
 
       3. UPPER BODY STRENGTH (after all metabolic blocks): MANDATORY — must be present in every session. ONE section only, named "Upper Body Strength". format: rounds, rounds: 5, rest_secs: 60, reps: 10. Exactly ONE exercise — pick one at random from this list each time: Low Row, Lat Pulldown, Bench Press, Shoulder Press, Chest Fly, Reverse Fly, Side Raises, Front Raises. Do NOT default to Lat Pulldown or Shoulder Press — every option is equally valid. One exercise, 5 rounds, 10 reps. Nothing else.
 
