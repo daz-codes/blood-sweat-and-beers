@@ -143,7 +143,8 @@
     <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden">
       <% FitnessTests::BENCHMARKS.each_with_index do |test, i| %>
         <% best = @best_by_key[test[:key]] %>
-        <%= link_to progress_test_path(test[:key]), class: "flex items-center gap-3 px-5 py-3.5 hover:bg-zinc-700/30 transition-colors <%= i < benchmark_total - 1 ? 'border-b border-zinc-700/50' : '' %>" do %>
+        <% border_class = i < benchmark_total - 1 ? "border-b border-zinc-700/50" : "" %>
+        <%= link_to progress_test_path(test[:key]), class: "flex items-center gap-3 px-5 py-3.5 hover:bg-zinc-700/30 transition-colors #{border_class}" do %>
           <div class="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center <%= best ? 'bg-volt' : 'border-2 border-zinc-600' %>">
             <% if best %>
               <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#18181b" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
