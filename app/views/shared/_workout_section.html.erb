@@ -60,6 +60,8 @@
        detail_parts << (rounds_each ? "#{n} exercises · #{rounds_each} rounds each — fill each minute" : "#{n} exercises · fill each minute")
        ["Continuous Circuit", detail_parts.join(" · ").presence]
      else
+       n = Array(section["exercises"]).size
+       detail_parts << "all #{n} exercises each minute" if n > 1
        ["EMOM", detail_parts.join(" · ").presence]
      end
    when "tabata"

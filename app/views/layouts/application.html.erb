@@ -46,14 +46,14 @@
                 </svg>
                 Generate
               </button>
-              <%= link_to new_workout_path,
-                    class: "flex items-center gap-1.5 border border-zinc-600 hover:border-gray-500 text-gray-300 hover:text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors" do %>
+              <button type="button" onclick="document.getElementById('build_choice_dialog').showModal()"
+                      class="flex items-center gap-1.5 border border-zinc-600 hover:border-gray-500 text-gray-300 hover:text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors cursor-pointer">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
                 Build
-              <% end %>
+              </button>
               <%= link_to library_path, class: "flex items-center gap-1.5 text-gray-400 hover:text-white text-xs font-medium transition-colors" do %>
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -159,14 +159,15 @@
               </svg>
               Generate Workout
             </button>
-            <%= link_to new_workout_path,
-                  class: "flex items-center gap-3 w-full border border-zinc-600 hover:border-gray-500 text-gray-300 hover:text-white font-bold px-4 py-3 rounded-xl text-sm transition-colors" do %>
+            <button type="button" onclick="document.getElementById('build_choice_dialog').showModal()"
+                    data-action="click->mobile-nav#toggle"
+                    class="flex items-center gap-3 w-full border border-zinc-600 hover:border-gray-500 text-gray-300 hover:text-white font-bold px-4 py-3 rounded-xl text-sm transition-colors cursor-pointer">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
-              Build Workout
-            <% end %>
+              Build
+            </button>
             <div class="pt-2 space-y-1">
               <%= link_to library_path, class: "flex items-center gap-3 text-gray-300 hover:text-white font-medium px-4 py-3 rounded-xl hover:bg-zinc-700/50 transition-colors" do %>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -240,6 +241,49 @@
     <main class="container mx-auto px-5 py-8">
       <%= yield %>
     </main>
+
+    <% if authenticated? %>
+      <%# Build choice modal (workout vs program) %>
+      <dialog id="build_choice_dialog"
+              class="w-full max-w-sm rounded-2xl border border-zinc-600 bg-zinc-800 text-white p-0 shadow-2xl backdrop:bg-black/70"
+              onclick="if(event.target===this) this.close()">
+        <div class="px-6 py-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-black tracking-tight">What do you want to build?</h2>
+            <button type="button" onclick="this.closest('dialog').close()"
+                    class="flex items-center justify-center w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-zinc-700 transition-colors outline-none">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="space-y-3">
+            <%= link_to new_workout_path, class: "flex items-center gap-4 bg-zinc-700/50 hover:bg-zinc-700 border border-zinc-600 hover:border-zinc-500 rounded-xl p-4 transition-all group" do %>
+              <div class="w-10 h-10 rounded-full bg-volt flex items-center justify-center flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-950">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </div>
+              <div>
+                <p class="font-black text-white uppercase tracking-wide text-sm">Single Workout</p>
+                <p class="text-gray-500 text-xs mt-0.5">Generate or build one session</p>
+              </div>
+            <% end %>
+            <%= link_to new_program_path, class: "flex items-center gap-4 bg-zinc-700/50 hover:bg-zinc-700 border border-zinc-600 hover:border-zinc-500 rounded-xl p-4 transition-all group" do %>
+              <div class="w-10 h-10 rounded-full bg-zinc-600 group-hover:bg-lime-400/20 border border-zinc-500 group-hover:border-lime-400/50 flex items-center justify-center flex-shrink-0 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-hover:text-lime-400 transition-colors">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+              </div>
+              <div>
+                <p class="font-black text-white uppercase tracking-wide text-sm">Training Program</p>
+                <p class="text-gray-500 text-xs mt-0.5">Multi-week plan with progressive sessions</p>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </dialog>
+    <% end %>
 
     <%# Generate workout modal — pre-rendered, shown/hidden via dialog controller %>
     <dialog class="w-full max-w-2xl rounded-2xl border border-gray-600 bg-zinc-900 text-white p-0 shadow-2xl"

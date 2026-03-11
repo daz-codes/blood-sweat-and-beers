@@ -26,14 +26,12 @@
     </div>
     <div class="flex items-center justify-between">
       <%= link_to root_path, class: "text-gray-500 hover:text-gray-300 text-sm" do %>&larr; Feed<% end %>
-      <%= render "workouts/like_button", workout: @workout, liked: @liked, like_count: @like_count %>
     </div>
   </div>
 
-  <%# Desktop: back + like %>
+  <%# Desktop: back %>
   <div class="hidden sm:flex mb-6 items-center justify-between">
     <%= link_to root_path, class: "text-gray-500 hover:text-gray-300 text-sm" do %>&larr; Feed<% end %>
-    <%= render "workouts/like_button", workout: @workout, liked: @liked, like_count: @like_count %>
   </div>
 
   <%= turbo_frame_tag "workout_preview" do %>
