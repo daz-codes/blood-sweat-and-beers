@@ -1,0 +1,51 @@
+<%# Locals: program_workout %>
+<% pw = program_workout %>
+
+<% if pw.pending? || pw.generating? %>
+  <div class="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 min-h-[140px] flex flex-col items-center justify-center gap-2 text-center">
+    <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest">Session <%= pw.session_number %></p>
+    <% if pw.generating? %>
+      <svg class="animate-spin w-5 h-5 text-lime-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+      <span class="text-xs text-lime-400 font-medium">Generating…</span>
+    <% else %>
+      <div class="w-5 h-5 rounded-full bg-zinc-700 animate-pulse"></div>
+      <span class="text-xs text-gray-600">Queued</span>
+    <% end %>
+  </div>
+
+<% elsif pw.failed? %>
+  <div class="bg-zinc-800 border border-red-900/40 rounded-2xl p-4 min-h-[140px] flex flex-col items-center justify-center gap-1">
+    <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest">Session <%= pw.session_number %></p>
+    <p class="text-red-400 text-xs font-medium">Generation failed</p>
+  </div>
+
+<% elsif pw.complete? && pw.workout %>
+  <% workout = pw.workout %>
+  <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden hover:border-gray-500 transition-all duration-200">
+    <div class="px-4 pt-4 pb-3">
+      <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest mb-1.5">Session <%= pw.session_number %></p>
+      <p class="text-gray-300 text-base font-black leading-tight tracking-tight uppercase" style="font-family: 'Jost', sans-serif"><%= workout.name %></p>
+      <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+        <% main_tag = workout.tags.find(&:main?) %>
+        <% if main_tag %>
+          <span class="text-lime-400 text-[10px] font-black uppercase tracking-wide"><%= main_tag.name %></span>
+        <% end %>
+        <span class="text-xs font-bold px-2 py-0.5 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300"><%= workout.difficulty.capitalize %></span>
+        <span class="text-gray-600 text-xs"><%= workout.duration_mins %> min</span>
+      </div>
+    </div>
+    <div class="bg-zinc-900 border-t border-zinc-700 px-4 py-3 flex gap-2">
+      <%= link_to "View", workout_path(workout),
+            class: "flex-1 text-center text-xs font-bold border border-zinc-600 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-2 rounded-xl transition-colors" %>
+      <button type="button"
+              onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
+              class="flex-1 text-center text-xs font-black bg-volt hover:bg-volt/80 text-zinc-950 px-3 py-2 rounded-xl transition-colors cursor-pointer uppercase tracking-wide">
+        Do this
+      </button>
+    </div>
+    <%= render "shared/complete_workout_dialog", workout: workout %>
+  </div>
+<% end %>

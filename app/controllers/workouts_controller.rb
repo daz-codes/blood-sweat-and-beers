@@ -4,6 +4,7 @@ class WorkoutsController < ApplicationController
 
   # GET /library
   def index
+    @programs  = Current.user.programs.includes(:tag).order(created_at: :desc)
     @workouts  = Current.user.workouts
                        .includes(:tags)
                        .order(created_at: :desc)

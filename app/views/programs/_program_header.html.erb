@@ -1,0 +1,31 @@
+<%# Locals: program %>
+<div class="flex items-start justify-between mb-6 gap-4">
+  <div>
+    <p class="text-lime-400 text-xs font-black uppercase tracking-wider mb-1"><%= program.tag.name %></p>
+    <h1 class="text-2xl font-black tracking-tight uppercase" style="font-family: 'Jost', sans-serif"><%= program.name %></h1>
+    <p class="text-gray-500 text-sm mt-1">
+      <%= program.weeks_count %> weeks · <%= program.sessions_per_week %>×/week · <%= program.duration_mins %> min · <%= program.difficulty.capitalize %>
+    </p>
+  </div>
+  <div class="flex items-center gap-3">
+    <% if program.building? %>
+      <span class="text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+        <svg class="animate-spin w-3 h-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        Building
+      </span>
+    <% elsif program.complete? %>
+      <span class="text-xs font-bold text-lime-400 uppercase tracking-wide">Ready</span>
+    <% end %>
+    <%= button_to program_path(program), method: :delete,
+          data: { turbo_confirm: "Delete \"#{program.name}\"? This will delete all #{program.weeks_count * program.sessions_per_week} workouts." },
+          class: "text-xs text-gray-600 hover:text-red-400 transition-colors cursor-pointer" do %>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+        <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+      </svg>
+    <% end %>
+  </div>
+</div>

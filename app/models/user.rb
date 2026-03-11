@@ -11,6 +11,7 @@ class User < ApplicationRecord
   has_many :workouts, dependent: :destroy
   has_many :workout_logs, dependent: :destroy
   has_many :generation_uses, dependent: :destroy
+  has_many :programs, dependent: :destroy
   has_many :fitness_test_entries, dependent: :destroy
   has_many :notifications, foreign_key: :recipient_id, dependent: :destroy
 

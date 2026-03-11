@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_03_09_121529) do
+ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -167,6 +167,36 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_09_121529) do
     t.index ["workout_log_id"], name: "index_personal_records_on_workout_log_id"
   end
 
+  create_table "program_workouts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "program_id", null: false
+    t.text "session_notes"
+    t.integer "session_number", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.integer "week_number", null: false
+    t.bigint "workout_id"
+    t.index ["program_id", "week_number", "session_number"], name: "index_program_workouts_on_program_week_session", unique: true
+    t.index ["program_id"], name: "index_program_workouts_on_program_id"
+    t.index ["workout_id"], name: "index_program_workouts_on_workout_id"
+  end
+
+  create_table "programs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "difficulty", default: "intermediate", null: false
+    t.integer "duration_mins", null: false
+    t.string "name", null: false
+    t.integer "sessions_per_week", null: false
+    t.string "status", default: "pending", null: false
+    t.bigint "tag_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.integer "weeks_count", null: false
+    t.index ["tag_id"], name: "index_programs_on_tag_id"
+    t.index ["user_id", "created_at"], name: "index_programs_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_programs_on_user_id"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ip_address"
@@ -288,6 +318,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_09_121529) do
   add_foreign_key "notifications", "users", column: "recipient_id"
   add_foreign_key "personal_records", "users"
   add_foreign_key "personal_records", "workout_logs"
+  add_foreign_key "program_workouts", "programs"
+  add_foreign_key "program_workouts", "workouts"
+  add_foreign_key "programs", "tags"
+  add_foreign_key "programs", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "taggings", "tags"
   add_foreign_key "workout_likes", "users"
