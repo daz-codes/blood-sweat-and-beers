@@ -80,6 +80,7 @@ class WorkoutValidator
       fix_fm_strength_sets(sections)
       fix_fm_warmup(sections)
       fix_fm_strip_machine_suffix(sections)
+      fix_fm_trim_metabolic_blocks(sections)
       fix_fm_ensure_abs(sections)
       fix_fm_section_order(sections)
     end
@@ -625,6 +626,50 @@ class WorkoutValidator
     insert_at = sections.index { |s| s["name"].to_s.match?(/cool|stretch/i) } || sections.size
     sections.insert(insert_at, abs_section)
     @fixes << "FM: synthesised Abs Finisher (100 reps) — LLM omitted abs section"
+  end
+
+  # FM: enforce the metabolic time budget.
+  # Fixed sections (warm-up 5 + upper strength 8 + lower strength 8 + abs 5 + cool-down 4) = 30 min.
+  # Remaining budget = duration_mins - 30. If metabolic blocks exceed this, remove from the end.
+  FM_BLOCK_MINUTES = {
+    "tabata"   => 6,
+    "mountain" => 10,
+    "ladder"   => 12,
+    "hundred"  => 5,
+  }.freeze
+  FM_FIXED_MINS = 30
+
+  def fix_fm_trim_metabolic_blocks(sections)
+    budget = (@duration_mins || 60) - FM_FIXED_MINS
+    return if budget <= 0
+
+    metabolic = sections.reject do |s|
+      name = s["name"].to_s
+      name.match?(WARMUP_COOLDOWN_PATTERN) ||
+        name.match?(ABS_PILATES_PATTERN) ||
+        name.match?(/strength/i)
+    end
+
+    total = metabolic.sum { |s| fm_block_estimated_mins(s) }
+    return if total <= budget
+
+    while total > budget && metabolic.size > 1
+      removed = metabolic.pop
+      removed_mins = fm_block_estimated_mins(removed)
+      sections.delete(removed)
+      total -= removed_mins
+      @fixes << "FM time budget: removed '#{removed["name"]}' (#{removed_mins} min) — over #{budget} min metabolic budget"
+    end
+  end
+
+  def fm_block_estimated_mins(section)
+    fmt = section["format"].to_s
+    return FM_BLOCK_MINUTES[fmt] if FM_BLOCK_MINUTES.key?(fmt)
+    if fmt == "emom"
+      dm = section["duration_mins"].to_i
+      return dm > 0 ? dm : 10
+    end
+    10
   end
 
   # Strip " Machine" suffix from exercise names in FM strength sections.

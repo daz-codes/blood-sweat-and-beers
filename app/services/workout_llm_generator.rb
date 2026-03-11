@@ -782,23 +782,23 @@ class WorkoutLLMGenerator
 
     archetypes = {
       1 => [
-        "BEAR & LADDER — Bear Mountain (10 min) + 10-1 Ladder (12 min) + exactly 1 tabata (6 min) = 28 min. This is the biggest session shape. No continuous circuit.",
-        "MACHINE DAY — Continuous Circuit + cardio intervals (10 min) + exactly 1 tabata (6 min). No ladder, no Bear Mountain.",
-        "LADDER & CIRCUIT — 10-1 Ladder (12 min) + continuous circuit + exactly 1 tabata (6 min). No Bear Mountain."
+        "BEAR & LADDER — Generate EXACTLY: Bear Mountain + 10-1 Ladder + 1 tabata. Total: 28 min. STOP. Do not add a continuous circuit or any other block.",
+        "MACHINE DAY — Generate EXACTLY: Continuous Circuit + Cardio Intervals + 1 tabata. Total: ~26 min. STOP. No ladder, no Bear Mountain.",
+        "LADDER & CIRCUIT — Generate EXACTLY: 10-1 Ladder + Continuous Circuit + 1 tabata. Total: ~28 min. STOP. No Bear Mountain."
       ],
       2 => [
-        "CIRCUIT & TABATAS — Continuous circuit + exactly 2 tabatas (12 min). No ladder, no Bear Mountain.",
-        "BEAR & TABATAS — Bear Mountain (10 min) + exactly 2 tabatas (12 min) = 22 min. No ladder, no continuous circuit.",
-        "LADDER & TABATAS — 10-1 Ladder (12 min) + exactly 2 tabatas (12 min) = 24 min. No Bear Mountain, no continuous circuit.",
-        "LADDER & CIRCUIT & TABATAS — 10-1 Ladder (12 min) + continuous circuit + exactly 2 tabatas (12 min). No Bear Mountain."
+        "CIRCUIT & TABATAS — Generate EXACTLY: Continuous Circuit + 2 tabatas. Total: ~24 min. STOP. No ladder, no Bear Mountain.",
+        "BEAR & TABATAS — Generate EXACTLY: Bear Mountain + 2 tabatas. Total: 22 min. STOP. No ladder, no continuous circuit.",
+        "LADDER & TABATAS — Generate EXACTLY: 10-1 Ladder + 2 tabatas. Total: 24 min. STOP. No Bear Mountain, no continuous circuit.",
+        "LADDER & CIRCUIT & TABATAS — Generate EXACTLY: 10-1 Ladder + Continuous Circuit + 2 tabatas. Total: ~28 min. STOP. No Bear Mountain."
       ],
       3 => [
-        "LADDER & 3 TABATAS — 10-1 Ladder (12 min) + exactly 3 tabatas (18 min) = 30 min. No Bear Mountain, no continuous circuit.",
-        "TRIPLE BURN — Continuous circuit + exactly 3 tabatas (18 min). No ladder, no Bear Mountain.",
-        "DEATH RACE & 3 TABATAS — Death race (8 min) + exactly 3 tabatas (18 min) = 26 min. No ladder, no Bear Mountain."
+        "LADDER & 3 TABATAS — Generate EXACTLY: 10-1 Ladder + 3 tabatas. Total: 30 min. STOP. No Bear Mountain, no continuous circuit.",
+        "TRIPLE BURN — Generate EXACTLY: Continuous Circuit + 3 tabatas. Total: ~28 min. STOP. No ladder, no Bear Mountain.",
+        "DEATH RACE & 3 TABATAS — Generate EXACTLY: Death Race + 3 tabatas. Total: 26 min. STOP. No ladder, no Bear Mountain."
       ],
       4 => [
-        "TABATA HEAVY — Exactly 4 tabatas (24 min) + one small block: death race (8 min) or every-2-min EMOM (10 min). No ladder, no Bear Mountain, no continuous circuit."
+        "TABATA HEAVY — Generate EXACTLY: 4 tabatas + 1 small block (death race OR every-2-min EMOM). Total: ~30 min. STOP. No ladder, no Bear Mountain, no continuous circuit."
       ]
     }
 
@@ -846,7 +846,7 @@ class WorkoutLLMGenerator
 
         [B] INTERVAL CIRCUIT — format: rounds, rounds: 5. 2–3 exercises performed every 2 minutes (add this to section notes). Include specific reps and weights. E.g. 20 KB swings + 10 slams + 5 thrusters.
 
-        [C] 10-1 LADDER — format: ladder, start: 10, end: 1, step: 1. ALWAYS exactly 3 exercises from contrasting movement patterns (push + pull + legs, or swing + slam + squat etc).
+        [C] 10-1 LADDER — format: ladder, start: 10, end: 1, step: 1. ALWAYS exactly 3 exercises from contrasting movement patterns (push + pull + legs, or swing + slam + squat etc). VARY the exercises every session — do NOT default to KB Swings / Wall Balls / Box Jumps. Draw from this pool: KB Swings, Goblet Squats, KB Clean and Press, Thrusters, Upright Rows, Bent Over Rows, Renegade Rows, Burpees, Box Jumps, Step-ups, Jump Squats, Slam Ball, Push Press, Devil Press, DB Lunges, Plate Good Mornings, KB Deadlifts, Pull-ups, Ring Rows, Dips, Push-ups. Pick 3 that contrast (one cardio/plyometric, one push, one pull or hinge).
 
         [D] CARDIO INTERVALS — format: rounds, rounds: 5. 1 min hard / 1 min rest on a single machine. Ski (target 10 cal/min), Row (target 200m/min), Bike (10–15 cal).
 
