@@ -53,7 +53,8 @@
       "Bash(rm:*)",
       "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:/usr/bin:$PATH\" bin/rails db:seed:*)",
       "Bash(PATH=\"/opt/homebrew/opt/postgresql@17/bin:/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:/usr/bin:$PATH\" bin/rails runner:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle lock:*)"
     ]
   }
 }
