@@ -1,7 +1,7 @@
 <% content_for :title, @program.name %>
 <%= turbo_stream_from "program_#{@program.id}" %>
 
-<div class="max-w-4xl mx-auto px-4">
+<div class="max-w-5xl mx-auto px-4">
   <div id="program_header_<%= @program.id %>">
     <%= render "programs/program_header", program: @program %>
   </div>
@@ -9,11 +9,10 @@
   <% @grid.each do |week_number, slots| %>
     <div class="mb-8">
       <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">Week <%= week_number %></h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <% cols_class = { 2 => "lg:grid-cols-2", 3 => "lg:grid-cols-3", 4 => "lg:grid-cols-4", 5 => "lg:grid-cols-5" }[@program.sessions_per_week] || "lg:grid-cols-3" %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 <%= cols_class %> gap-3">
         <% slots.each do |pw| %>
-          <div id="<%= pw.turbo_dom_id %>">
-            <%= render "programs/program_workout_slot", program_workout: pw %>
-          </div>
+          <%= render "programs/program_workout_slot", program_workout: pw %>
         <% end %>
       </div>
     </div>

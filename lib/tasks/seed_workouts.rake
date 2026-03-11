@@ -3,7 +3,7 @@ namespace :seed_workouts do
        "  rails seed_workouts:export                       # exports system user's workouts\n" \
        "  rails 'seed_workouts:export[you@example.com]'   # exports a specific user's workouts"
   task :export, [ :email ] => :environment do |_, args|
-    email = args[:email].presence || "system@bloodsweatbeers.app"
+    email = args[:email].presence || "system@volt.app"
     user  = User.find_by!(email_address: email)
 
     workouts = user.workouts.includes(:tags).order(:name).map do |w|

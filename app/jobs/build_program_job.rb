@@ -47,7 +47,8 @@ class BuildProgramJob < ApplicationJob
         user:           program.user,
         source_workout: source,
         duration_mins:  program.duration_mins,
-        difficulty:     program.difficulty
+        difficulty:     program.difficulty,
+        session_notes:  pw.session_notes
       )
     else
       WorkoutLLMGenerator.call(

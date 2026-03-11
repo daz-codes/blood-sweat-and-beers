@@ -6,7 +6,7 @@ class CreateWorkouts < ActiveRecord::Migration[8.2]
       t.integer :duration_mins, null: false
       t.string :difficulty, null: false, default: "intermediate"  # "beginner", "intermediate", "advanced"
       t.string :status, null: false, default: "active"            # "active", "template", "queued"
-      t.jsonb :structure, null: false, default: []                # array of station/exercise objects
+      t.json :structure, null: false, default: []                 # array of station/exercise objects
       t.references :source_workout, foreign_key: { to_table: :workouts }, null: true
 
       t.timestamps
@@ -14,6 +14,5 @@ class CreateWorkouts < ActiveRecord::Migration[8.2]
 
     add_index :workouts, :workout_type
     add_index :workouts, :status
-    add_index :workouts, :structure, using: :gin
   end
 end

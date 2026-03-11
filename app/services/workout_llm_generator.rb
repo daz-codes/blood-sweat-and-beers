@@ -597,14 +597,20 @@ class WorkoutLLMGenerator
 
     if @session_notes.present?
       sections << <<~NOTES
-        ## Athlete's Requests for This Session
-        The athlete has provided the following instructions — treat these as hard requirements, not suggestions:
-        #{@session_notes}
+        ## *** ATHLETE'S SESSION FOCUS — HIGHEST PRIORITY ***
+        The athlete has specifically requested the following focus for this session. This is the SINGLE MOST IMPORTANT instruction — it overrides default exercise selection and must be clearly reflected in the exercises chosen:
 
-        Examples of how to interpret requests:
-        - Injury mentions (e.g. "injured knee", "bad shoulder") → avoid exercises that load or stress that area; substitute with movements that work around it
-        - Equipment constraints (e.g. "dumbbells only", "no barbell") → use only the specified equipment throughout
-        - Style preferences (e.g. "heavy lifting", "cardio focus") → weight the session accordingly
+        >>> #{@session_notes} <<<
+
+        How to apply this:
+        - "strength focus" → heavy compound lifts (deadlifts, squats, bench, overhead press), low reps (3-6), long rest, minimal cardio. At least 60% of the session should be barbell/dumbbell strength work.
+        - "cardio focus" → sustained machine work (rower, ski, bike, run), high-rep bodyweight, AMRAPs, EMOMs. At least 60% of the session should be cardio/conditioning.
+        - "sled focus" → sled pushes, sled pulls, sled drags must appear in MULTIPLE sections, as the primary exercises. The sled is the centrepiece — not a single appearance.
+        - "burpee focus" → burpee variations (burpee box jump-overs, burpee pull-ups, bar-facing burpees, lateral burpees) must appear in MULTIPLE sections. Build the session around burpees.
+        - Any specific exercise/equipment mentioned → that exercise must appear in at least 2-3 sections as a primary movement.
+        - Injury mentions → avoid exercises that load or stress that area
+        - Equipment constraints → use only the specified equipment throughout
+        - The workout NAME should reflect this focus (e.g. a sled focus session should reference sleds in the name)
       NOTES
     end
 
@@ -658,6 +664,7 @@ class WorkoutLLMGenerator
       - NEVER repeat the same exercise as multiple entries in the exercises array. This is a critical mistake — do NOT list "Bench Press (Set 1)", "Bench Press (Set 2)", "Bench Press (Set 3)" as three separate entries. Instead, use a single entry and set rounds: 3 on the section. Notes like "Set 1:", "Set 2:" in exercise notes are forbidden.
       - SINGLE-EXERCISE SECTIONS are valid and often better than circuits, especially for strength and power work. A section with just one exercise is perfectly correct: e.g. '5 × 5 Deadlift (heavy)', 'EMOM 10: 8 Thrusters', '4 × 8 Romanian Deadlift'. Do not feel obligated to bundle every movement into a multi-exercise circuit. HOWEVER: a single-exercise section MUST always use multiple sets (rounds: 3 minimum) or a timed modality (emom/amrap/for_time). BANNED: a section with 1 exercise and rounds ≤ 2 (or no rounds). This is always wrong. Every section must represent real training volume, not a single isolated set.
       - NEVER list the same exercise more than once in a section's exercises array. If you need the same movement repeated (e.g. 5 × 25m Freestyle), use rounds: 5 with a single exercise entry — not 5 separate entries. Duplicate entries are always wrong.
+      #{@session_notes.present? ? "\n      *** REMINDER — ATHLETE'S SESSION FOCUS (HIGHEST PRIORITY): \"#{@session_notes}\" — The exercises you select MUST clearly reflect this focus. If the athlete asked for sleds, use sleds heavily. If they asked for strength, programme heavy barbell work. Do not just change the name — change the actual exercises. ***" : ""}
       RULES
 
     sections.join("\n")
@@ -1012,7 +1019,7 @@ class WorkoutLLMGenerator
       #{source_json}
 
       Draw on its movement patterns, energy systems, and overall feel — but this must be a genuinely different session. Swap exercises, change rep schemes, restructure sections, or shift the emphasis. Someone who does both workouts back-to-back should feel like they trained differently.
-
+      #{@session_notes.present? ? "\n      *** ATHLETE'S SESSION FOCUS (HIGHEST PRIORITY): \"#{@session_notes}\" — The exercises you select MUST clearly reflect this focus. The remixed workout must maintain this same focus — if the original was sled-heavy, the remix must also be sled-heavy with different exercises/formats. ***\n" : ""}
       Use the create_workout tool. Requirements:
       - Total duration close to #{@duration_mins} minutes
       - Same training focus as the source but a clearly distinct session

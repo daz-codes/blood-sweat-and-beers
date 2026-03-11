@@ -699,7 +699,7 @@ kettlebell_workouts = [
 
 ]
 
-system_user = User.find_by!(email_address: "system@bloodsweatbeers.app")
+system_user = User.find_by!(email_address: "system@volt.app")
 
 puts "Seeding kettlebell workouts..."
 

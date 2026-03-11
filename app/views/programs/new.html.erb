@@ -1,6 +1,6 @@
 <% content_for :title, "Build a Training Program" %>
 
-<div class="max-w-2xl mx-auto px-4 pb-12">
+<div class="max-w-2xl mx-auto px-4 pb-12" data-controller="program-form">
   <div class="flex items-center justify-between mb-8">
     <div>
       <p class="text-lime-400 text-xs font-black uppercase tracking-widest mb-1">Programs</p>
@@ -31,9 +31,51 @@
           </label>
         <% end %>
       </div>
+      <div class="mt-3 flex items-center gap-3">
+        <span class="text-xs text-gray-600 flex-shrink-0">or type your own:</span>
+        <%= text_field_tag :custom_activity, params[:custom_activity],
+            placeholder: "e.g. Powerlifting, Olympic Lifting, Yoga…",
+            class: "flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
+      </div>
       <% if @program.errors[:tag_id].any? %>
         <p class="text-red-400 text-xs mt-2"><%= @program.errors[:tag_id].first %></p>
       <% end %>
+    </div>
+
+    <%# Program Length — slider 2–16 weeks %>
+    <div class="mb-8">
+      <div class="flex items-baseline justify-between mb-3">
+        <p class="text-sm font-bold text-gray-300 uppercase tracking-wide">Program Length</p>
+        <p class="text-3xl font-black text-white">
+          <span data-program-form-target="weeksDisplay"><%= @program.weeks_count %></span>
+          <span class="text-base font-normal text-gray-400">weeks</span>
+        </p>
+      </div>
+      <%= f.range_field :weeks_count, value: @program.weeks_count, min: 2, max: 16, step: 1,
+          class: "w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-lime-400",
+          data: { program_form_target: "weeksInput", action: "input->program-form#updateWeeks" },
+          required: true %>
+      <div class="flex justify-between text-xs text-gray-600 mt-1.5">
+        <span>2 weeks</span><span>16 weeks</span>
+      </div>
+    </div>
+
+    <%# Sessions per week %>
+    <div class="mb-8">
+      <p class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-4">Sessions per Week</p>
+      <div class="flex gap-2 flex-wrap">
+        <% (2..5).each do |n| %>
+          <label class="cursor-pointer">
+            <%= f.radio_button :sessions_per_week, n, class: "peer sr-only",
+                checked: @program.sessions_per_week == n,
+                data: { action: "change->program-form#updateSessions" } %>
+            <div class="border-2 border-zinc-600 rounded-xl px-5 py-3 peer-checked:border-lime-400 peer-checked:bg-lime-400/15 transition-all text-center min-w-[72px]">
+              <p class="font-black text-base"><%= n %>×</p>
+              <p class="text-gray-500 text-xs">per week</p>
+            </div>
+          </label>
+        <% end %>
+      </div>
     </div>
 
     <%# Duration — reuse duration-slider Stimulus controller %>
@@ -54,38 +96,6 @@
       </div>
     </div>
 
-    <%# Weeks count %>
-    <div class="mb-8">
-      <p class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-4">Program Length</p>
-      <div class="flex gap-2 flex-wrap">
-        <% (2..6).each do |n| %>
-          <label class="cursor-pointer">
-            <%= f.radio_button :weeks_count, n, class: "peer sr-only", checked: @program.weeks_count == n %>
-            <div class="border-2 border-zinc-600 rounded-xl px-5 py-3 peer-checked:border-lime-400 peer-checked:bg-lime-400/15 transition-all text-center min-w-[72px]">
-              <p class="font-black text-base"><%= n %></p>
-              <p class="text-gray-500 text-xs">weeks</p>
-            </div>
-          </label>
-        <% end %>
-      </div>
-    </div>
-
-    <%# Sessions per week %>
-    <div class="mb-8">
-      <p class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-4">Sessions per Week</p>
-      <div class="flex gap-2 flex-wrap">
-        <% (2..5).each do |n| %>
-          <label class="cursor-pointer">
-            <%= f.radio_button :sessions_per_week, n, class: "peer sr-only", checked: @program.sessions_per_week == n %>
-            <div class="border-2 border-zinc-600 rounded-xl px-5 py-3 peer-checked:border-lime-400 peer-checked:bg-lime-400/15 transition-all text-center min-w-[72px]">
-              <p class="font-black text-base"><%= n %>×</p>
-              <p class="text-gray-500 text-xs">per week</p>
-            </div>
-          </label>
-        <% end %>
-      </div>
-    </div>
-
     <%# Difficulty %>
     <div class="mb-8">
       <p class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-4">Difficulty</p>
@@ -102,14 +112,15 @@
       </div>
     </div>
 
-    <%# Session notes — one per session slot %>
+    <%# Session focus — dynamically matches sessions_per_week %>
     <div class="mb-10">
       <p class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-1">Session Focus <span class="text-gray-600 normal-case font-normal">(optional)</span></p>
-      <p class="text-xs text-gray-500 mb-4">Give each weekly session a focus — e.g. "strength", "cardio", "upper body". Leave blank for auto-balance.</p>
+      <p class="text-xs text-gray-500 mb-4">Give each weekly session a focus — e.g. "strength", "cardio", "upper body". Leave blank and the AI will auto-balance.</p>
       <div class="space-y-2">
         <% (1..5).each do |i| %>
-          <div class="flex items-center gap-3">
-            <span class="text-gray-600 text-xs font-black uppercase tracking-widest w-16 flex-shrink-0">Session <%= i %></span>
+          <div class="flex items-center gap-3 <%= i > @program.sessions_per_week ? 'hidden' : '' %>"
+               data-program-form-target="sessionRow">
+            <span class="text-gray-600 text-xs font-black uppercase tracking-widest w-16 flex-shrink-0">Day <%= i %></span>
             <%= text_field_tag "session_notes[]", nil,
                 placeholder: "e.g. strength, cardio, upper body…",
                 class: "flex-1 bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>

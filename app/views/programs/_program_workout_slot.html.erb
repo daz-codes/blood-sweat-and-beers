@@ -1,51 +1,123 @@
 <%# Locals: program_workout %>
 <% pw = program_workout %>
 
-<% if pw.pending? || pw.generating? %>
-  <div class="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 min-h-[140px] flex flex-col items-center justify-center gap-2 text-center">
-    <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest">Session <%= pw.session_number %></p>
-    <% if pw.generating? %>
-      <svg class="animate-spin w-5 h-5 text-lime-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-      </svg>
-      <span class="text-xs text-lime-400 font-medium">Generating…</span>
-    <% else %>
-      <div class="w-5 h-5 rounded-full bg-zinc-700 animate-pulse"></div>
-      <span class="text-xs text-gray-600">Queued</span>
-    <% end %>
-  </div>
+<div id="<%= pw.turbo_dom_id %>">
+  <% if pw.pending? || pw.generating? %>
+    <div class="bg-zinc-800 border border-zinc-700 rounded-2xl p-4 min-h-[100px] flex items-center justify-center gap-3">
+      <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest">Session <%= pw.session_number %></p>
+      <% if pw.generating? %>
+        <svg class="animate-spin w-4 h-4 text-lime-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        <span class="text-xs text-lime-400 font-medium">Generating…</span>
+      <% else %>
+        <div class="w-4 h-4 rounded-full bg-zinc-700 animate-pulse"></div>
+        <span class="text-xs text-gray-600">Queued</span>
+      <% end %>
+    </div>
 
-<% elsif pw.failed? %>
-  <div class="bg-zinc-800 border border-red-900/40 rounded-2xl p-4 min-h-[140px] flex flex-col items-center justify-center gap-1">
-    <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest">Session <%= pw.session_number %></p>
-    <p class="text-red-400 text-xs font-medium">Generation failed</p>
-  </div>
+  <% elsif pw.failed? %>
+    <div class="bg-zinc-800 border border-red-900/40 rounded-2xl p-4 min-h-[100px] flex items-center justify-center gap-3">
+      <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest">Session <%= pw.session_number %></p>
+      <p class="text-red-400 text-xs font-medium">Generation failed</p>
+    </div>
 
-<% elsif pw.complete? && pw.workout %>
-  <% workout = pw.workout %>
-  <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden hover:border-gray-500 transition-all duration-200">
-    <div class="px-4 pt-4 pb-3">
-      <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest mb-1.5">Session <%= pw.session_number %></p>
-      <p class="text-gray-300 text-base font-black leading-tight tracking-tight uppercase" style="font-family: 'Jost', sans-serif"><%= workout.name %></p>
-      <div class="flex items-center gap-1.5 mt-2 flex-wrap">
-        <% main_tag = workout.tags.find(&:main?) %>
-        <% if main_tag %>
-          <span class="text-lime-400 text-[10px] font-black uppercase tracking-wide"><%= main_tag.name %></span>
+  <% elsif pw.complete? && pw.workout %>
+    <% workout = pw.workout %>
+    <% sections = workout.structure.is_a?(Hash) ? Array(workout.structure["sections"]) : [] %>
+    <% all_exercises = sections.flat_map { |s| Array(s["exercises"]).map { |e| e["name"] } }.uniq %>
+    <% summary_text = all_exercises.first(6).join(" · ") %>
+    <% summary_text += " +#{all_exercises.size - 6} more" if all_exercises.size > 6 %>
+    <% goal = workout.structure.is_a?(Hash) ? workout.structure["goal"] : nil %>
+
+    <div class="bg-zinc-800 border border-zinc-600/70 rounded-2xl overflow-hidden shadow-sm hover:border-gray-600 hover:shadow-md transition-all duration-200 cursor-pointer"
+         onclick="document.getElementById('program_workout_modal_<%= pw.id %>').showModal()">
+      <div class="px-4 pt-4 pb-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest mb-1">Session <%= pw.session_number %></p>
+            <p class="text-gray-300 text-2xl leading-tight tracking-tight font-jost uppercase">
+              <%= workout.name.presence || "Untitled Workout" %>
+            </p>
+          </div>
+          <div class="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
+            <% main_tag = workout.tags.find(&:main?) %>
+            <% if main_tag %>
+              <p class="text-lime-400 font-black text-sm uppercase tracking-wide leading-none"><%= main_tag.name %></p>
+            <% end %>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300"><%= workout.difficulty.capitalize %></span>
+              <div class="flex flex-col items-center justify-center w-10 h-10 rounded-full bg-volt shadow-sm shadow-volt/25 flex-shrink-0">
+                <span class="text-zinc-950 font-black text-sm leading-none"><%= workout.duration_mins %></span>
+                <span class="text-zinc-800 text-[7px] font-bold leading-none mt-0.5 uppercase tracking-wide">min</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <% if summary_text.present? %>
+          <p class="text-sky-200 text-xs font-medium mt-2 leading-relaxed"><%= summary_text %></p>
         <% end %>
-        <span class="text-xs font-bold px-2 py-0.5 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300"><%= workout.difficulty.capitalize %></span>
-        <span class="text-gray-600 text-xs"><%= workout.duration_mins %> min</span>
+      </div>
+
+      <%# Action buttons %>
+      <div class="bg-zinc-900 border-t border-zinc-700 px-4 py-3 flex items-center gap-2">
+        <%= link_to "Edit", edit_workout_path(workout),
+              onclick: "event.stopPropagation()",
+              class: "flex items-center justify-center flex-1 text-xs font-black border border-gray-600 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-2 rounded-xl transition-colors uppercase tracking-wide" %>
+        <button type="button"
+                onclick="event.stopPropagation(); document.getElementById('complete_workout_<%= workout.id %>').showModal()"
+                class="flex items-center justify-center text-xs font-black bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 px-3 py-2 rounded-xl transition-colors cursor-pointer shadow-sm shadow-volt/25 uppercase tracking-wide flex-1">
+          Do this
+        </button>
       </div>
     </div>
-    <div class="bg-zinc-900 border-t border-zinc-700 px-4 py-3 flex gap-2">
-      <%= link_to "View", workout_path(workout),
-            class: "flex-1 text-center text-xs font-bold border border-zinc-600 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-2 rounded-xl transition-colors" %>
-      <button type="button"
-              onclick="document.getElementById('complete_workout_<%= workout.id %>').showModal()"
-              class="flex-1 text-center text-xs font-black bg-volt hover:bg-volt/80 text-zinc-950 px-3 py-2 rounded-xl transition-colors cursor-pointer uppercase tracking-wide">
-        Do this
-      </button>
-    </div>
+
+    <%# Workout detail modal %>
+    <dialog id="program_workout_modal_<%= pw.id %>"
+            class="w-full max-w-2xl rounded-2xl border border-zinc-600 bg-zinc-800 text-white p-0 shadow-2xl backdrop:bg-black/70 max-h-[85vh]"
+            onclick="if(event.target===this) this.close()">
+      <div class="flex items-start justify-between px-5 pt-5 pb-3 sticky top-0 bg-zinc-800 z-10 border-b border-zinc-700">
+        <div class="min-w-0 mr-3">
+          <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest mb-1">Session <%= pw.session_number %></p>
+          <h2 class="text-xl font-black tracking-tight uppercase" style="font-family: 'Jost', sans-serif"><%= workout.name %></h2>
+          <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+            <% if main_tag %>
+              <span class="text-lime-400 text-[10px] font-black uppercase tracking-wide"><%= main_tag.name %></span>
+            <% end %>
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300"><%= workout.difficulty.capitalize %></span>
+            <span class="text-gray-600 text-xs"><%= workout.duration_mins %> min</span>
+          </div>
+          <% if goal.present? %>
+            <p class="text-gray-500 text-xs italic mt-2 leading-snug"><%= goal %></p>
+          <% end %>
+        </div>
+        <button type="button" onclick="this.closest('dialog').close()"
+                class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-zinc-700 transition-colors mt-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <% if sections.any? %>
+        <div class="px-4 py-4 space-y-3 overflow-y-auto">
+          <% sections.each do |section| %>
+            <%= render "shared/workout_section", section: section %>
+          <% end %>
+        </div>
+      <% end %>
+      <div class="sticky bottom-0 bg-zinc-800 border-t border-zinc-700 px-5 py-4 flex gap-2">
+        <%= link_to "Edit", edit_workout_path(workout),
+              class: "flex items-center justify-center flex-1 text-xs font-black border border-gray-600 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-2.5 rounded-xl transition-colors uppercase tracking-wide" %>
+        <button type="button"
+                onclick="this.closest('dialog').close(); document.getElementById('complete_workout_<%= workout.id %>').showModal()"
+                class="flex items-center justify-center text-xs font-black bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 px-3 py-2.5 rounded-xl transition-colors cursor-pointer shadow-sm shadow-volt/25 uppercase tracking-wide flex-1">
+          Do this
+        </button>
+      </div>
+    </dialog>
+
     <%= render "shared/complete_workout_dialog", workout: workout %>
-  </div>
-<% end %>
+  <% end %>
+</div>

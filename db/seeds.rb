@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
 # System user — owns seeded workouts
 # ---------------------------------------------------------------------------
-system_user = User.find_or_create_by!(email_address: "system@bloodsweatbeers.app") do |u|
+system_user = User.find_or_create_by!(email_address: "system@volt.app") do |u|
   u.password = SecureRandom.hex(24)
 end
 puts "System user: #{system_user.email_address}"

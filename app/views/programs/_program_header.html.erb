@@ -1,7 +1,14 @@
 <%# Locals: program %>
 <div class="flex items-start justify-between mb-6 gap-4">
   <div>
-    <p class="text-lime-400 text-xs font-black uppercase tracking-wider mb-1"><%= program.tag.name %></p>
+    <div class="flex items-center gap-2 mb-1">
+      <%= link_to library_path, class: "text-gray-600 hover:text-gray-300 transition-colors" do %>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      <% end %>
+      <p class="text-lime-400 text-xs font-black uppercase tracking-wider"><%= program.tag&.name || "Custom" %></p>
+    </div>
     <h1 class="text-2xl font-black tracking-tight uppercase" style="font-family: 'Jost', sans-serif"><%= program.name %></h1>
     <p class="text-gray-500 text-sm mt-1">
       <%= program.weeks_count %> weeks · <%= program.sessions_per_week %>×/week · <%= program.duration_mins %> min · <%= program.difficulty.capitalize %>

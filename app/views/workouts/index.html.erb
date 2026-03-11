@@ -9,20 +9,13 @@
         <p class="text-gray-500 text-xs font-semibold uppercase tracking-widest">Workout Library</p>
       </div>
     </div>
-    <div class="flex items-center gap-2">
-      <%= link_to new_program_path, class: "flex items-center gap-1.5 border border-zinc-600 hover:border-lime-400 text-gray-400 hover:text-lime-400 text-sm font-bold px-4 py-2.5 rounded-xl transition-colors uppercase tracking-wide" do %>
-        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        Program
-      <% end %>
-      <%= link_to new_workout_path, class: "flex items-center gap-1.5 bg-volt hover:bg-volt/80 text-zinc-950 text-sm font-black px-4 py-2.5 rounded-xl transition-colors uppercase tracking-wide shadow-sm shadow-volt/20" do %>
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        Build
-      <% end %>
-    </div>
+    <button type="button" onclick="document.getElementById('build_choice_dialog').showModal()"
+            class="flex items-center gap-1.5 bg-volt hover:bg-volt/80 text-zinc-950 text-sm font-black px-4 py-2.5 rounded-xl transition-colors uppercase tracking-wide shadow-sm shadow-volt/20 cursor-pointer">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Build
+    </button>
   </div>
 
   <%# Programs section %>
@@ -34,33 +27,44 @@
       </div>
       <div class="space-y-2">
         <% @programs.each do |program| %>
-          <%= link_to program_path(program), class: "flex items-center justify-between bg-zinc-800 border border-zinc-600/70 hover:border-gray-500 rounded-2xl px-4 py-3.5 transition-all duration-200 group" do %>
-            <div class="min-w-0">
-              <p class="text-lime-400 text-[10px] font-black uppercase tracking-wider mb-0.5"><%= program.tag.name %></p>
-              <p class="text-gray-200 font-black text-sm tracking-tight truncate" style="font-family: 'Jost', sans-serif"><%= program.name %></p>
-              <p class="text-gray-600 text-xs mt-0.5">
-                <%= program.weeks_count %> weeks · <%= program.sessions_per_week %>×/week · <%= program.duration_mins %> min
-              </p>
-            </div>
-            <div class="flex items-center gap-2 flex-shrink-0 ml-3">
-              <% if program.building? %>
-                <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1">
-                  <svg class="animate-spin w-2.5 h-2.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                  </svg>
-                  Building
-                </span>
-              <% elsif program.complete? %>
-                <span class="text-[10px] font-bold text-lime-400 uppercase tracking-wide">Ready</span>
-              <% elsif program.failed? %>
-                <span class="text-[10px] font-bold text-red-400 uppercase tracking-wide">Failed</span>
-              <% end %>
-              <svg class="text-gray-600 group-hover:text-gray-400 transition-colors" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 18 15 12 9 6"/>
+          <div class="flex items-center gap-2">
+            <%= link_to program_path(program), class: "flex-1 flex items-center justify-between bg-zinc-800 border border-zinc-600/70 hover:border-gray-500 rounded-2xl px-4 py-3.5 transition-all duration-200 group min-w-0" do %>
+              <div class="min-w-0">
+                <p class="text-lime-400 text-[10px] font-black uppercase tracking-wider mb-0.5"><%= program.tag&.name || "Custom" %></p>
+                <p class="text-gray-200 font-black text-sm tracking-tight truncate" style="font-family: 'Jost', sans-serif"><%= program.name %></p>
+                <p class="text-gray-600 text-xs mt-0.5">
+                  <%= program.weeks_count %> weeks · <%= program.sessions_per_week %>×/week · <%= program.duration_mins %> min
+                </p>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0 ml-3">
+                <% if program.building? %>
+                  <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1">
+                    <svg class="animate-spin w-2.5 h-2.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    Building
+                  </span>
+                <% elsif program.complete? %>
+                  <span class="text-[10px] font-bold text-lime-400 uppercase tracking-wide">Ready</span>
+                <% elsif program.failed? %>
+                  <span class="text-[10px] font-bold text-red-400 uppercase tracking-wide">Failed</span>
+                <% end %>
+                <svg class="text-gray-600 group-hover:text-gray-400 transition-colors" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"/>
+                </svg>
+              </div>
+            <% end %>
+            <%= button_to program_path(program), method: :delete,
+                  form: { class: "contents" },
+                  data: { turbo_confirm: "Delete \"#{program.name}\"?" },
+                  class: "flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors cursor-pointer p-2" do %>
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
               </svg>
-            </div>
-          <% end %>
+            <% end %>
+          </div>
         <% end %>
       </div>
     </div>
@@ -260,3 +264,43 @@
     </div>
   <% end %>
 </div>
+
+<dialog id="build_choice_dialog"
+        class="w-full max-w-sm rounded-2xl border border-zinc-600 bg-zinc-800 text-white p-0 shadow-2xl backdrop:bg-black/70"
+        onclick="if(event.target===this) this.close()">
+  <div class="px-6 py-6">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl font-black tracking-tight">What do you want to build?</h2>
+      <button type="button" onclick="this.closest('dialog').close()"
+              class="flex items-center justify-center w-8 h-8 rounded-full text-gray-500 hover:text-white hover:bg-zinc-700 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="space-y-3">
+      <%= link_to new_workout_path, class: "flex items-center gap-4 bg-zinc-700/50 hover:bg-zinc-700 border border-zinc-600 hover:border-zinc-500 rounded-xl p-4 transition-all group" do %>
+        <div class="w-10 h-10 rounded-full bg-volt flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-950">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </div>
+        <div>
+          <p class="font-black text-white uppercase tracking-wide text-sm">Single Workout</p>
+          <p class="text-gray-500 text-xs mt-0.5">Generate or build one session</p>
+        </div>
+      <% end %>
+      <%= link_to new_program_path, class: "flex items-center gap-4 bg-zinc-700/50 hover:bg-zinc-700 border border-zinc-600 hover:border-zinc-500 rounded-xl p-4 transition-all group" do %>
+        <div class="w-10 h-10 rounded-full bg-zinc-600 group-hover:bg-lime-400/20 border border-zinc-500 group-hover:border-lime-400/50 flex items-center justify-center flex-shrink-0 transition-all">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-hover:text-lime-400 transition-colors">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <div>
+          <p class="font-black text-white uppercase tracking-wide text-sm">Training Program</p>
+          <p class="text-gray-500 text-xs mt-0.5">Multi-week plan with progressive sessions</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</dialog>

@@ -11,9 +11,6 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
-  # These are extensions that must be enabled in order to support this database
-  enable_extension "pg_catalog.plpgsql"
-
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -44,13 +41,13 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
 
   create_table "challenge_entries", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.bigint "daily_challenge_id", null: false
+    t.integer "daily_challenge_id", null: false
     t.datetime "logged_at", null: false
     t.text "notes"
     t.boolean "rx", default: true, null: false
     t.decimal "score", precision: 10, scale: 2, null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
+    t.integer "user_id", null: false
     t.index ["daily_challenge_id"], name: "index_challenge_entries_on_daily_challenge_id"
     t.index ["user_id", "daily_challenge_id"], name: "index_challenge_entries_on_user_id_and_daily_challenge_id", unique: true
     t.index ["user_id"], name: "index_challenge_entries_on_user_id"
@@ -60,8 +57,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.text "body", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
-    t.bigint "workout_log_id", null: false
+    t.integer "user_id", null: false
+    t.integer "workout_log_id", null: false
     t.index ["user_id"], name: "index_comments_on_user_id"
     t.index ["workout_log_id", "created_at"], name: "index_comments_on_workout_log_id_and_created_at"
     t.index ["workout_log_id"], name: "index_comments_on_workout_log_id"
@@ -79,23 +76,22 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
 
   create_table "exercise_logs", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.bigint "exercise_id"
-    t.jsonb "sets_data", default: [], null: false
+    t.integer "exercise_id"
+    t.json "sets_data", default: [], null: false
     t.integer "step_order", null: false
     t.datetime "updated_at", null: false
-    t.bigint "workout_log_id", null: false
+    t.integer "workout_log_id", null: false
     t.index ["exercise_id"], name: "index_exercise_logs_on_exercise_id"
-    t.index ["sets_data"], name: "index_exercise_logs_on_sets_data", using: :gin
     t.index ["step_order"], name: "index_exercise_logs_on_step_order"
     t.index ["workout_log_id"], name: "index_exercise_logs_on_workout_log_id"
   end
 
   create_table "exercises", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.jsonb "defaults", default: {}
+    t.json "defaults", default: {}
     t.integer "deka_station_order"
     t.string "equipment"
-    t.string "format_tags", default: [], array: true
+    t.json "format_tags", default: []
     t.integer "hyrox_station_order"
     t.string "metric", default: "reps", null: false
     t.string "movement_type", null: false
@@ -108,7 +104,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.date "recorded_on", null: false
     t.string "test_key", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
+    t.integer "user_id", null: false
     t.decimal "value", precision: 12, scale: 3, null: false
     t.index ["user_id", "test_key", "recorded_on"], name: "idx_on_user_id_test_key_recorded_on_56491a2c50"
     t.index ["user_id"], name: "index_fitness_test_entries_on_user_id"
@@ -117,8 +113,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
   create_table "follows", force: :cascade do |t|
     t.datetime "accepted_at"
     t.datetime "created_at", null: false
-    t.bigint "follower_id", null: false
-    t.bigint "following_id", null: false
+    t.integer "follower_id", null: false
+    t.integer "following_id", null: false
     t.datetime "requested_at", null: false
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
@@ -132,19 +128,19 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
   create_table "generation_uses", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
+    t.integer "user_id", null: false
     t.index ["user_id", "created_at"], name: "index_generation_uses_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_generation_uses_on_user_id"
   end
 
   create_table "notifications", force: :cascade do |t|
     t.string "action", null: false
-    t.bigint "actor_id", null: false
+    t.integer "actor_id", null: false
     t.datetime "created_at", null: false
-    t.bigint "notifiable_id", null: false
+    t.integer "notifiable_id", null: false
     t.string "notifiable_type", null: false
     t.datetime "read_at"
-    t.bigint "recipient_id", null: false
+    t.integer "recipient_id", null: false
     t.datetime "updated_at", null: false
     t.index ["actor_id"], name: "index_notifications_on_actor_id"
     t.index ["notifiable_type", "notifiable_id"], name: "index_notifications_on_notifiable"
@@ -159,9 +155,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.string "exercise_name", null: false
     t.string "metric", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
+    t.integer "user_id", null: false
     t.decimal "value", precision: 10, scale: 2, null: false
-    t.bigint "workout_log_id", null: false
+    t.integer "workout_log_id", null: false
     t.index ["user_id", "exercise_name", "metric"], name: "index_prs_on_user_exercise_metric"
     t.index ["user_id"], name: "index_personal_records_on_user_id"
     t.index ["workout_log_id"], name: "index_personal_records_on_workout_log_id"
@@ -169,13 +165,13 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
 
   create_table "program_workouts", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.bigint "program_id", null: false
+    t.integer "program_id", null: false
     t.text "session_notes"
     t.integer "session_number", null: false
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
     t.integer "week_number", null: false
-    t.bigint "workout_id"
+    t.integer "workout_id"
     t.index ["program_id", "week_number", "session_number"], name: "index_program_workouts_on_program_week_session", unique: true
     t.index ["program_id"], name: "index_program_workouts_on_program_id"
     t.index ["workout_id"], name: "index_program_workouts_on_workout_id"
@@ -188,9 +184,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.string "name", null: false
     t.integer "sessions_per_week", null: false
     t.string "status", default: "pending", null: false
-    t.bigint "tag_id", null: false
+    t.integer "tag_id", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
+    t.integer "user_id", null: false
     t.integer "weeks_count", null: false
     t.index ["tag_id"], name: "index_programs_on_tag_id"
     t.index ["user_id", "created_at"], name: "index_programs_on_user_id_and_created_at"
@@ -202,16 +198,16 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.string "ip_address"
     t.datetime "updated_at", null: false
     t.string "user_agent"
-    t.bigint "user_id", null: false
+    t.integer "user_id", null: false
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
   create_table "solid_cache_entries", force: :cascade do |t|
-    t.integer "byte_size", null: false
+    t.integer "byte_size", limit: 4, null: false
     t.datetime "created_at", null: false
-    t.binary "key", null: false
-    t.bigint "key_hash", null: false
-    t.binary "value", null: false
+    t.binary "key", limit: 1024, null: false
+    t.integer "key_hash", limit: 8, null: false
+    t.binary "value", limit: 536870912, null: false
     t.index ["byte_size"], name: "index_solid_cache_entries_on_byte_size"
     t.index ["key_hash", "byte_size"], name: "index_solid_cache_entries_on_key_hash_and_byte_size"
     t.index ["key_hash"], name: "index_solid_cache_entries_on_key_hash", unique: true
@@ -219,8 +215,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
 
   create_table "taggings", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.bigint "tag_id", null: false
-    t.bigint "taggable_id", null: false
+    t.integer "tag_id", null: false
+    t.integer "taggable_id", null: false
     t.string "taggable_type", null: false
     t.index ["tag_id", "taggable_type", "taggable_id"], name: "index_taggings_on_tag_id_and_taggable_type_and_taggable_id", unique: true
     t.index ["tag_id"], name: "index_taggings_on_tag_id"
@@ -241,12 +237,12 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.datetime "created_at", null: false
     t.string "display_name"
     t.string "email_address", null: false
-    t.string "equipment", default: [], array: true
-    t.jsonb "exercise_weights", default: {}, null: false
+    t.json "equipment", default: []
+    t.json "exercise_weights", default: {}, null: false
     t.string "gender"
     t.integer "height_cm"
     t.string "password_digest", null: false
-    t.jsonb "personal_bests", default: {}
+    t.json "personal_bests", default: {}
     t.string "plan", default: "free", null: false
     t.string "pool_length"
     t.string "run_preference"
@@ -260,8 +256,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
   create_table "workout_likes", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
-    t.bigint "workout_id", null: false
+    t.integer "user_id", null: false
+    t.integer "workout_id", null: false
     t.index ["user_id", "workout_id"], name: "index_workout_likes_on_user_id_and_workout_id", unique: true
     t.index ["user_id"], name: "index_workout_likes_on_user_id"
     t.index ["workout_id"], name: "index_workout_likes_on_workout_id"
@@ -275,9 +271,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.text "notes"
     t.integer "sweat_rating", null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
+    t.integer "user_id", null: false
     t.string "visibility", default: "public", null: false
-    t.bigint "workout_id", null: false
+    t.integer "workout_id", null: false
     t.index ["completed_at"], name: "index_workout_logs_on_completed_at"
     t.index ["user_id"], name: "index_workout_logs_on_user_id"
     t.index ["visibility"], name: "index_workout_logs_on_visibility"
@@ -289,15 +285,14 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.string "difficulty", default: "intermediate", null: false
     t.integer "duration_mins", null: false
     t.string "name"
-    t.bigint "source_workout_id"
+    t.integer "source_workout_id"
     t.string "status", default: "active", null: false
-    t.jsonb "structure", default: [], null: false
+    t.json "structure", default: [], null: false
     t.datetime "updated_at", null: false
-    t.bigint "user_id", null: false
+    t.integer "user_id", null: false
     t.string "workout_type", null: false
     t.index ["source_workout_id"], name: "index_workouts_on_source_workout_id"
     t.index ["status"], name: "index_workouts_on_status"
-    t.index ["structure"], name: "index_workouts_on_structure", using: :gin
     t.index ["user_id"], name: "index_workouts_on_user_id"
     t.index ["workout_type"], name: "index_workouts_on_workout_type"
   end

@@ -1,6 +1,6 @@
 class Program < ApplicationRecord
   belongs_to :user
-  belongs_to :tag
+  belongs_to :tag, optional: true
   has_many :program_workouts, dependent: :destroy
   has_many :workouts, through: :program_workouts
 
@@ -8,7 +8,7 @@ class Program < ApplicationRecord
   DIFFICULTIES = %w[beginner intermediate advanced].freeze
 
   validates :name,              presence: true
-  validates :weeks_count,       inclusion: { in: 2..6 }
+  validates :weeks_count,       inclusion: { in: 2..16 }
   validates :sessions_per_week, inclusion: { in: 2..5 }
   validates :duration_mins,     numericality: { greater_than: 0 }
   validates :difficulty,        inclusion: { in: DIFFICULTIES }
