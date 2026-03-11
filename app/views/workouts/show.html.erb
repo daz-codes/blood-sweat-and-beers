@@ -37,7 +37,7 @@
   </div>
 
   <%= turbo_frame_tag "workout_preview" do %>
-    <%= render "workouts/preview", workout: @workout %>
+    <%= render "workouts/preview", workout: @workout, debug_info: @debug_info %>
   <% end %>
 
 </div>

@@ -57,9 +57,11 @@
      if section["emom_style"] == "rotating"
        n = Array(section["exercises"]).size
        rounds_each = n > 0 && section["duration_mins"].to_i > 0 ? section["duration_mins"].to_i / n : nil
-       detail_parts << (rounds_each ? "#{n} exercises · #{rounds_each} rounds each" : "#{n} exercises rotating")
+       detail_parts << (rounds_each ? "#{n} exercises · #{rounds_each} rounds each — fill each minute" : "#{n} exercises · fill each minute")
+       ["Continuous Circuit", detail_parts.join(" · ").presence]
+     else
+       ["EMOM", detail_parts.join(" · ").presence]
      end
-     ["EMOM", detail_parts.join(" · ").presence]
    when "tabata"
      n = Array(section["exercises"]).size
      rotation = case n
@@ -70,9 +72,13 @@
        end
      ["Tabata", rotation]
    when "for_time"
-     ["For Time", nil]
+     ft_rounds = section["rounds"].to_i
+     ft_detail = ft_rounds > 1 ? "#{ft_rounds} rounds" : nil
+     ["For Time", ft_detail]
    when "hundred"
-     ["100 Reps", "For Time"]
+     hundred_ex = Array(section["exercises"]).first
+     hundred_label = hundred_ex&.dig("calories").to_i > 0 ? "100 Cal" : "100 Reps"
+     [hundred_label, "For Time"]
    when "ladder", "mountain"
      parts = [ ladder_seq_str ]
      parts << "#{section["rest_between_rungs"]}s rest between rungs" if section["rest_between_rungs"].to_i > 0

@@ -109,7 +109,7 @@
                   Do this
                 </button>
               </div>
-              <%# Row 2: show workout + delete %>
+              <%# Row 2: show workout + pdf + delete %>
               <div class="flex items-center justify-between">
                 <% if lib_sections.any? %>
                   <span class="text-gray-600 text-xs font-bold uppercase tracking-wide group-open:text-gray-400 transition-colors">
@@ -119,15 +119,26 @@
                 <% else %>
                   <span></span>
                 <% end %>
-                <%= button_to workout_path(workout), method: :delete,
-                      form: { class: "contents" },
-                      data: { turbo_confirm: "Delete \"#{workout.name}\"? This can't be undone." },
-                      class: "text-xs text-gray-600 hover:text-red-400 transition-colors cursor-pointer" do %>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                    <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                  </svg>
-                <% end %>
+                <div class="flex items-center gap-3">
+                  <% if Current.user.pro? %>
+                    <%= link_to export_pdf_workout_path(workout),
+                          data: { turbo: false },
+                          class: "flex items-center gap-1 text-gray-600 hover:text-gray-300 transition-colors",
+                          title: "Export workout as PDF" do %>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                      <span class="text-xs">PDF</span>
+                    <% end %>
+                  <% end %>
+                  <%= button_to workout_path(workout), method: :delete,
+                        form: { class: "contents" },
+                        data: { turbo_confirm: "Delete \"#{workout.name}\"? This can't be undone." },
+                        class: "text-xs text-gray-600 hover:text-red-400 transition-colors cursor-pointer" do %>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                      <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                    </svg>
+                  <% end %>
+                </div>
               </div>
             </summary>
             <% if lib_sections.any? %>

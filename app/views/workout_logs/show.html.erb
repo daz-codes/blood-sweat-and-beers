@@ -117,7 +117,7 @@
   </div>
 
   <%# Comments %>
-  <%= turbo_frame_tag "comments_#{@workout_log.id}", src: workout_log_comments_path(@workout_log) do %>
+  <%= turbo_frame_tag dom_id(@workout_log, :comments), src: workout_log_comments_path(@workout_log) do %>
     <p class="text-gray-700 text-sm text-center py-4">Loading comments…</p>
   <% end %>
 
@@ -125,6 +125,19 @@
   <div class="flex gap-3 mt-4">
     <%= link_to "Back to Feed", root_path,
         class: "flex-1 text-center border border-zinc-600 hover:border-gray-500 text-gray-300 hover:text-white font-bold py-3 rounded-xl text-sm transition-colors" %>
+    <% if Current.user.pro? %>
+      <%= link_to export_pdf_workout_path(@workout),
+          class: "flex items-center gap-1.5 border border-zinc-600 hover:border-gray-500 text-gray-300 hover:text-white font-bold py-3 px-4 rounded-xl text-sm transition-colors",
+          title: "Export workout as PDF" do %>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        PDF
+      <% end %>
+    <% else %>
+      <span class="flex items-center gap-1.5 border border-zinc-700 text-gray-600 font-bold py-3 px-4 rounded-xl text-sm cursor-default" title="Pro feature">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        PDF
+      </span>
+    <% end %>
   </div>
 
 </div>

@@ -17,6 +17,7 @@ Rails.application.routes.draw do
   resources :workouts, only: [ :new, :create, :show, :edit, :update, :destroy ] do
     member do
       get   :log
+      get   :export_pdf
       patch :save_template
       post  :like, to: "workout_likes#toggle"
       post  :clone

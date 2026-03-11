@@ -162,6 +162,18 @@ class WorkoutsController < ApplicationController
     redirect_to workout_path(old), alert: "Something went wrong. Please try again."
   end
 
+  # GET /workouts/:id/export_pdf
+  def export_pdf
+    unless Current.user.pro?
+      redirect_to workout_path(params[:id]), alert: "PDF export is a Pro feature."
+      return
+    end
+    @workout = Workout.find(params[:id])
+    pdf_data = WorkoutPdfGenerator.new(@workout).generate
+    filename = "volt-workout-#{@workout.name.parameterize}-#{Date.today}.pdf"
+    send_data pdf_data, filename: filename, type: "application/pdf", disposition: "attachment"
+  end
+
   # GET /workouts/:id/log
   def log
     @workout = Workout.find(params[:id])
@@ -172,6 +184,7 @@ class WorkoutsController < ApplicationController
     @workout    = Workout.find(params[:id])
     @liked      = @workout.workout_likes.exists?(user: Current.user)
     @like_count = @workout.workout_likes.count
+    @debug_info = Rails.cache.read("workout_llm_debug_#{@workout.id}")
   end
 
   # PATCH /workouts/:id/save_template

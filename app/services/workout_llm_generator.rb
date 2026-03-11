@@ -534,6 +534,7 @@ class WorkoutLLMGenerator
   def build_prompt(context_workouts, program_research = nil, recent_names = [], recent_fm_formats = nil)
     main_name  = @main_tag&.name || "general fitness"
     minor_str  = @minor_tags.map(&:name).join(", ")
+    cc_config  = fm_continuous_circuit_config  # reuse same pool for all session types
 
     selected_stations = pick_event_stations
     station_constraint = if selected_stations
@@ -631,27 +632,28 @@ class WorkoutLLMGenerator
       - Main sets: do NOT set duration_mins on main sets — let the reps, rounds, and format define the work. Only amrap and emom sections need a duration_mins (their time cap). A short punchy finisher (e.g. Tabata, The Hundred/Centurion, for_time sprint) is a welcome extra at the end of the main work.
       #{core_rule}
       #{training_rule}
+      - Rep counts and calorie targets must be "clean" numbers — even numbers (2, 4, 6, 8, 10, 12, 16, 20…) or multiples of 5 (5, 10, 15, 20, 25…). Never use odd, awkward counts like 13, 7, 11, 17, or 19. When scaling from competition volumes, round to the nearest clean number.
       - Be specific with reps, distances, and weights
       - Give it a punchy, memorable name — something a gym community would actually call it. Be creative and unpredictable: draw from feelings, imagery, places, days, animals, weather, mythology, slang — anything vivid. Actively vary the style each time (e.g. a cheeky two-worder one time, a dramatic three-worder the next, a dry/ironic name after that). BANNED WORDS — never use: Iron, Gauntlet, Grinder, Thunder, Beast, Inferno, Blitz, Crusher, Destroyer, Titan. #{recent_names.any? ? "The user's recent workout names are: #{recent_names.map { |n| "\"#{n}\"" }.join(", ")}. Do NOT reuse any word or theme from these." : ""}
       #{recent_fm_formats.present? ? "- RECENT SESSIONS — the user's recent Functional Muscle sessions were:\n#{recent_fm_formats.lines.map { |l| "        #{l}" }.join}\n      Use this to avoid repetition: pick different strength machines from the ones listed, pick a different Pilates 100 exercise, and vary the tabata compounds. Block types (12-min, ladder etc) can repeat if they fit — but machines and finisher should rotate." : ""}
       #{sport_rule}
       #{pace_limits}
-      - FORMAT SELECTION — choose the best format for each section. Actively vary formats across sections (do not use the same format for every section):
-        * tabata — high-intensity cardio bursts or bodyweight finishers. 20s on / 10s off × 8 rounds = exactly 4 minutes. Set duration_mins: 4. Great for: assault bike, ski erg, burpees, KB swings, box jumps, jump rope. Do NOT add reps or calories to tabata exercises — the 20s interval is the constraint. You may specify distance_m or weight_kg where relevant. EXERCISE COUNT RULES: exercises in a tabata section must be exactly 1, 2, 4, or 8 (factors of 8). Multiple exercises ROTATE through the 8 rounds — 2 exercises = ABABABAB (4 rounds each), 4 exercises = ABCDABCD (2 rounds each), 8 exercises = each done once. Use a SEPARATE tabata section if you want two independent tabatas.
+      - FORMAT SELECTION — choose the best format for each section. VARIETY IS MANDATORY: no two adjacent sections may share the same format, and across the full session you must use at least 3 different formats. Do not default to rounds and tabata for everything — ladders, amraps, rotating EMOMs, hundreds, and for_time efforts are equally valid and make sessions far more interesting. Here are the available formats:
+        * tabata — high-intensity cardio bursts or bodyweight finishers. 20s on / 10s off × 8 rounds = exactly 4 minutes. Set duration_mins: 4. Do NOT set reps, calories, or distance_m on tabata exercises — the 20s interval is the only constraint. You may specify weight_kg where relevant. EXERCISE COUNT RULES: exercises in a tabata section must be exactly 1, 2, 4, or 8 (factors of 8). Multiple exercises ROTATE through the 8 rounds — 2 exercises = ABABABAB (4 rounds each), 4 exercises = ABCDABCD (2 rounds each), 8 exercises = each done once. Use a SEPARATE tabata section if you want two independent tabatas.
         * emom — two distinct styles, set emom_style accordingly:
-          - circuit (emom_style: "circuit"): all exercises done together each minute, rest for the remainder. Max 3 exercises. HARD REP CAP — total reps across all exercises per minute: beginner ≤6, intermediate ≤9, advanced ≤12. Equipment transitions cost ~10s each, so 2 exercises is usually the max (3 only if all bodyweight). E.g. "EMOM 10: 6 thrusters + 4 burpees". Set duration_mins for the total time cap.
-          - rotating (emom_style: "rotating"): a different exercise each minute, cycling through the list. E.g. 3 exercises over 12 min = ABCABCABCABC (4 rounds each). duration_mins MUST be a multiple of the exercise count. Rep cap does not apply — each exercise fills the full minute. Great for variety and skill work.
-        * amrap — clock-driven main set. Complete as many rounds as possible. E.g. "AMRAP 12 min: 10 KB swings + 10 box jumps + 200m run". Great for: mixed modal circuits.
-        * for_time — single-effort challenge, record finishing time. E.g. "5 rounds: 400m run + 20 push-ups". Great for: benchmark efforts, race-pace work.
-        * hundred — "The Centurion": exactly 100 reps of a single exercise, done for time. Set reps: 100 on the one exercise. Great as a punchy finisher. Works for any high-rep-friendly movement: wall balls, KB swings, press-ups, box jumps, thrusters, burpees, sit-ups, air squats. Not restricted to any sport type — use it freely whenever a brutal single-movement finish fits.
-        * rounds — structured circuit with planned rest. Good for strength, controlled conditioning with recovery.
-        * ladder / mountain — rep or distance progression each rung. ONLY when all exercises share the same metric AND the step size is realistic:
+          - circuit (emom_style: "circuit"): all exercises done together each minute, rest for the remainder. Max 3 exercises. HARD REP CAP — total reps+calories across all exercises per minute: beginner ≤10, intermediate ≤15, advanced ≤20. Equipment transitions cost ~10s each, so 2 exercises is usually the max (3 only if all bodyweight). E.g. "EMOM 10: 8 thrusters + 6 burpees". CARDIO MACHINE CAP: on a SkiErg, Rowing Machine, or Air/Assault Bike you cannot hit more than 10 calories in one minute while sharing it with other exercises — NEVER set calories above 10 for a cardio machine in a circuit EMOM. Set duration_mins for the total time cap.
+          - rotating (emom_style: "rotating"): THE CONTINUOUS CIRCUIT — a different exercise each minute, cycling non-stop through the full duration. Each exercise fills its own minute — no reps, no calories, no distance, no duration on exercises. Do NOT add minute-assignment notes like "Min 1, 3, 5:" — exercises just rotate in order. Coaching notes only (e.g. "explosive hip extension"). duration_mins MUST be a multiple of the exercise count. *** FOR THIS SESSION use: #{cc_config} *** Mix one cardio machine + strength/skill movements + an active recovery or core exercise for best effect. The cardio minute is the "recovery" — keep it to a sustainable hard effort, not a sprint.
+        * amrap — clock-driven main set. Complete as many rounds as possible in the time cap. Scores rounds+reps. Great for mixed-modal circuits, testing work capacity. E.g. "AMRAP 12: 10 KB swings + 8 box jumps + 6 burpees". Use freely — this is underused and highly effective.
+        * for_time — complete the prescribed work as fast as possible, record finishing time. When using multiple exercises, always set rounds: 3 minimum — a single pass through a mixed circuit is not a meaningful conditioning block. E.g. "3 rounds for time: 20 cal SkiErg + 20 KB swings + 12 box jumps", "5 rounds: 400m row + 10 burpees". Single-exercise for_time (e.g. 100 cal row for time) can use rounds: 1.
+        * hundred — "The Centurion": exactly 100 reps of a single exercise, done for time. Set reps: 100 on the one exercise. A genuinely brutal and satisfying finisher for ANY session type — not just Functional Muscle. Works for: KB swings, wall balls, box jumps, push-ups, burpees, thrusters, air squats, sit-ups, rowing calories, ski calories. Use it as a punchy end to a main set when you want one last gut-check. Not just a gimmick — it's a legitimate conditioning tool.
+        * rounds — structured circuit with planned rest. Good for strength work, controlled conditioning with recovery between efforts. ALWAYS set rounds explicitly (e.g. rounds: 5 for 5×5 strength, rounds: 3 for a conditioning circuit) — never leave rounds absent or zero.
+        * ladder / mountain — rep or distance progression each rung. Highly effective and underused — use it regularly, not just occasionally. ONLY when all exercises share the same metric AND the step size is realistic:
           - reps: step 1–5. E.g. start:10 end:1 step:1 = 10,9,8...1 reps.
           - calories: step 5–10. E.g. start:20 end:5 step:5 = 20,15,10,5 cal.
           - distance_m: step 10–20. E.g. start:40 end:20 step:10 = 40m,30m,20m.
-          - mountain: ascend then descend. E.g. start:5 peak:15 end:5 step:5 = 5,10,15,10,5 reps.
+          - mountain: ascend then descend. E.g. start:5 peak:15 end:5 step:5 = 5,10,15,10,5 reps. Great for barbell strength work (Bears, cleans, deadlifts).
           - INVALID: mixing reps, distance, and calorie exercises in the same ladder.
-        * straight — fixed sets with rest. Use for simple warm-ups or isolated exercises.
+        * straight — fixed sets with rest. Use for simple warm-ups or isolated single exercises.
         * matrix — progressive exercise combinations. List 3–5 exercises in order. The section builds up then strips back: for 3 exercises: A, A+B, A+B+C, B+C, C. For 4: A, A+B, A+B+C, A+B+C+D, B+C+D, C+D, D. For 5: A, A+B, A+B+C, A+B+C+D, A+B+C+D+E, B+C+D+E, C+D+E, D+E, E. IMPORTANT: all exercises must use the same metric — either all reps (same count each) or all duration_s (same seconds each). Prefer duration_s: 30 for each exercise most of the time — this is the most common Metafit style. Set rest_secs for the rest between each combination (typically 30–60s).
       - NEVER repeat the same exercise as multiple entries in the exercises array. This is a critical mistake — do NOT list "Bench Press (Set 1)", "Bench Press (Set 2)", "Bench Press (Set 3)" as three separate entries. Instead, use a single entry and set rounds: 3 on the section. Notes like "Set 1:", "Set 2:" in exercise notes are forbidden.
       - SINGLE-EXERCISE SECTIONS are valid and often better than circuits, especially for strength and power work. A section with just one exercise is perfectly correct: e.g. '5 × 5 Deadlift (heavy)', 'EMOM 10: 8 Thrusters', '4 × 8 Romanian Deadlift'. Do not feel obligated to bundle every movement into a multi-exercise circuit. HOWEVER: a single-exercise section MUST always use multiple sets (rounds: 3 minimum) or a timed modality (emom/amrap/for_time). BANNED: a section with 1 exercise and rounds ≤ 2 (or no rounds). This is always wrong. Every section must represent real training volume, not a single isolated set.
@@ -746,29 +748,72 @@ class WorkoutLLMGenerator
     @minor_tags.any? { |t| t.slug.in?(RACE_SIM_SLUGS) }
   end
 
+  # Randomly selects a Continuous Circuit duration/exercise-count for FM sessions.
+  # Ruby picks so the LLM can't default to 12 min every time.
+  FM_CONTINUOUS_CIRCUIT_OPTIONS = [
+    { exercises: 2, rounds: 4, mins: 8  },
+    { exercises: 3, rounds: 3, mins: 9  },
+    { exercises: 3, rounds: 4, mins: 12 },
+    { exercises: 4, rounds: 3, mins: 12 },
+    { exercises: 3, rounds: 5, mins: 15 },
+    { exercises: 5, rounds: 3, mins: 15 },
+    { exercises: 3, rounds: 6, mins: 18 },
+    { exercises: 4, rounds: 5, mins: 20 },
+  ].freeze
+
+  def fm_continuous_circuit_config
+    opt = FM_CONTINUOUS_CIRCUIT_OPTIONS.sample
+    "duration_mins: #{opt[:mins]}, exactly #{opt[:exercises]} exercises (#{opt[:exercises]} exercises × #{opt[:rounds]} rounds = #{opt[:mins]} min)"
+  end
+
   # Randomly selects a session archetype for Functional Muscle so the LLM gets
   # a concrete structural directive rather than being asked to "vary" on its own.
+  # Tabata frequency distribution: 40% = 1, 40% = 2, 15% = 3, 5% = 4.
   def fm_session_archetype
     return nil unless @main_tag&.slug == "functional-muscle"
 
-    archetypes = [
-      "TABATA HEAVY — Build this session around 3–4 tabatas as the primary conditioning. Skip the 12-min block. Add one other block (interval circuit, every-2-min EMOM, or death race) to fill the session.",
-      "LADDER SESSION — Include a 10-1 ladder and Bear Mountain as the two main structural blocks. Add 2 tabatas around them. No 12-min block.",
-      "CARDIO CORE — Lead with a 12-min continuous block. Follow with 2 tabatas and one interval circuit. No ladder, no Bear Mountain.",
-      "BEAR FOCUS — Make Bear Mountain the centrepiece. Add 2–3 tabatas. Include a death race or 20-20 block. No 12-min block, no ladder.",
-      "INTERVAL HEAVY — Lead with a 20-20 block or death race. Follow with 2–3 tabatas. No ladder, no 12-min block.",
-      "MIXED LADDER — Open with a 10-1 ladder. Add 2 tabatas and a cardio intervals block. No 12-min block, no Bear Mountain."
-    ]
+    roll = rand(100)
+    tabata_count = case roll
+                   when  0..39 then 1
+                   when 40..79 then 2
+                   when 80..94 then 3
+                   else             4
+                   end
 
-    "- SESSION SHAPE FOR THIS WORKOUT: #{archetypes.sample} Follow this shape while still obeying the full Functional Muscle rules below."
+    archetypes = {
+      1 => [
+        "STRENGTH FOCUS — Feature exactly ONE tabata as a conditioning burst. Build the session around Bear Mountain and a 10-1 ladder as the two main structural blocks, then place the single tabata before the strength sets. No continuous circuit block.",
+        "MACHINE DAY — Feature exactly ONE tabata. Lead with a continuous circuit block as the primary conditioning, follow with a cardio intervals block, then ONE tabata before strength sets. No ladder, no Bear Mountain.",
+        "LADDER FOCUS — Feature exactly ONE tabata. Open with a 10-1 ladder, add a death race or 20-20 block, then ONE tabata. No continuous circuit block."
+      ],
+      2 => [
+        "LADDER SESSION — Include a 10-1 ladder and Bear Mountain as the two main structural blocks. Add exactly 2 tabatas around them. No continuous circuit block.",
+        "CARDIO CORE — Lead with a continuous circuit block. Follow with exactly 2 tabatas and one interval circuit. No ladder, no Bear Mountain.",
+        "BEAR FOCUS — Make Bear Mountain the centrepiece. Add exactly 2 tabatas. Include a death race or 20-20 block. No continuous circuit block, no ladder.",
+        "MIXED LADDER — Open with a 10-1 ladder. Add exactly 2 tabatas and a cardio intervals block. No continuous circuit block, no Bear Mountain."
+      ],
+      3 => [
+        "INTERVAL HEAVY — Lead with a 20-20 block or death race. Follow with exactly 3 tabatas. No ladder, no continuous circuit block.",
+        "TRIPLE BURN — Open with a continuous circuit block. Add exactly 3 tabatas. Skip the ladder and Bear Mountain."
+      ],
+      4 => [
+        "TABATA HEAVY — Build this session around exactly 4 tabatas as the primary conditioning. Skip the continuous circuit block. Add one other block (interval circuit, every-2-min EMOM, or death race) to fill the session."
+      ]
+    }
+
+    "- SESSION SHAPE FOR THIS WORKOUT: #{archetypes[tabata_count].sample} Follow this shape while still obeying the full Functional Muscle rules below."
   end
 
   # Hard rules specific to Functional Muscle sessions.
   def functional_muscle_rule
     return nil unless @main_tag&.slug == "functional-muscle"
 
+    cc = fm_continuous_circuit_config
+
     <<~RULE.strip
       - FUNCTIONAL MUSCLE — IGNORE ALL GENERAL WORKOUT DESIGN INSTINCTS. This is a specific class format. Follow this SESSION ORDER exactly — do not rearrange it:
+
+      *** CONTINUOUS CIRCUIT DURATION FOR THIS SESSION (pre-determined — do not change): #{cc} ***
 
       WEIGHTS: These are high-intensity metabolic sessions. Keep weights light and sustainable. Tabata/metabolic compound exercises: 8–12kg dumbbells, 12–16kg kettlebells. Bear Mountain barbell: 20–30kg only. Strength sets (5×10): sensible working weight — e.g. 40–60kg leg press, 20–30kg shoulder press, 15–25kg side raises. Do NOT prescribe heavy barbell weights (40kg+) for tabata or metabolic blocks. Do NOT prescribe 60kg+ for any strength section.
 
@@ -776,11 +821,27 @@ class WorkoutLLMGenerator
 
       1. WARM-UP (always first): format: straight, duration_mins: 5. ONE exercise only — a single cardio machine (assault bike, rower, or ski erg) at easy pace. No mobility, no activation, no circuits. One machine, 5 mins.
 
-      2. METABOLIC BLOCKS (always before strength): The metabolic section is built around TABATAS as the primary feature, supplemented by 1–2 other block types. Structure it like this:
-        - TABATAS FIRST: Always include 2–4 separate tabata sections. On sessions with 3–4 tabatas, skip the 12-min block or ladder entirely — the tabatas ARE the session. On sessions with 2 tabatas, add 1–2 other blocks.
-        - OTHER BLOCKS: Choose from [A]–[I] below to complement the tabatas. Do NOT always use the 12-min continuous block — it should appear in roughly half of sessions at most.
+      2. METABOLIC BLOCKS (always before strength): Build the metabolic section according to the SESSION SHAPE given above — it tells you exactly how many tabatas to include. Do not add extra tabatas beyond the count specified.
 
-        [A] 12-MIN CONTINUOUS — format: emom, emom_style: rotating, duration_mins: 12, exactly 3 exercises. One cardio machine (ski/row/bike) + one KB or barbell movement + one abs or bodyweight movement. NO reps on any exercise — each fills the full minute. Weight only where relevant. Calorie target in notes on cardio exercise only.
+        TIME BUDGET — fixed sections consume most of the hour. You MUST stay within the metabolic time budget or the session will run over. Calculate carefully:
+          Fixed sections (non-negotiable): Warm-up 5 min + Upper Body Strength 10 min + Lower Body Strength 10 min + Abs 5 min + Cool-down 5 min = 35 min
+          Remaining for ALL metabolic blocks combined (including tabatas): #{@duration_mins - 35} min
+          Each tabata = 4 min. Plan the non-tabata blocks to fill the remainder — do not exceed it.
+
+        Block time estimates — use these to budget:
+          Tabata [H]: 4 min
+          Bear Mountain [I]: 15 min — this is a LARGE block. If you include Bear Mountain, it is the ONLY non-tabata block. Do NOT add a ladder or continuous circuit in the same session.
+          10-1 Ladder [C]: 12 min
+          Continuous Circuit [A]: duration_mins as specified above
+          Cardio Intervals [D]: 10 min (5 rounds × 2 min)
+          Every-2-min EMOM [E]: 10 min
+          Death Race [G]: 8 min
+          Interval Circuit [B]: 10 min (5 rounds × 2 min)
+          20-20 Block [F]: 20 min — only suitable for longer sessions (75+ min)
+
+        - OTHER BLOCKS: Choose from [A]–[I] below to fill the session within the time budget. Do NOT always use the continuous circuit block — it should appear in roughly half of sessions at most.
+
+        [A] CONTINUOUS CIRCUIT — format: emom, emom_style: rotating, #{cc}. One cardio machine (ski/row/bike) + one KB or barbell movement per exercise slot + optionally one abs or bodyweight movement. NO reps, calories, distance, or duration on any exercise — each fills its full minute. Coaching notes only. Do NOT label exercises with minute numbers.
 
         [B] INTERVAL CIRCUIT — format: rounds, rounds: 5. 2–3 exercises performed every 2 minutes (add this to section notes). Include specific reps and weights. E.g. 20 KB swings + 10 slams + 5 thrusters.
 
@@ -788,21 +849,27 @@ class WorkoutLLMGenerator
 
         [D] CARDIO INTERVALS — format: rounds, rounds: 5. 1 min hard / 1 min rest on a single machine. Ski (target 10 cal/min), Row (target 200m/min), Bike (10–15 cal).
 
-        [E] EVERY-2-MIN EMOM — format: emom, emom_style: circuit, duration_mins: 10. ALWAYS exactly 3 exercises done together at the start of every 2-minute window, rest for remainder. Reps are always multiples of 5. Use varied rep schemes to reflect exercise difficulty and load — examples: 15/10/5 (descending), 5/10/20 (ascending), 10/10/10 (even), 5/5/5 (heavy or technical movements). Total work per round should take 45–60 seconds leaving 60–75 seconds rest. E.g. 5 clean and press + 10 KB swings + 15 box jumps every 2 mins. Or: 10 thrusters + 10 burpees + 20 sit-ups every 2 mins.
+        [E] EVERY-2-MIN EMOM — format: emom, emom_style: circuit, duration_mins: 10. ALWAYS exactly 3 exercises done together at the start of every 2-minute window, rest for remainder. Reps are always multiples of 5. MINIMUM 25 total reps across all 3 exercises — never use 5/5/5 or any combination that totals less than 25. Use varied rep schemes: 15/10/5 (descending), 5/10/20 (ascending), 10/10/10 (even), 10/15/5. Total work per round should take 45–60 seconds leaving 60–75 seconds rest. E.g. 5 clean and press + 10 KB swings + 15 box jumps every 2 mins. Or: 10 thrusters + 10 burpees + 20 sit-ups every 2 mins.
 
-        [F] 20-20 BLOCK — format: rounds, rounds: 10. Every 2 mins: 20 cal cardio + 20 reps of a punchy movement (KB swings, slams, jump squats). 20-minute total block.
+        [F] 20-20 BLOCK — format: rounds, rounds: 10. Every 2 mins: 20 cal cardio + 20 reps of a punchy movement (KB swings, slams, jump squats). 20-minute total block. Only use for 75+ min sessions.
 
         [G] DEATH RACE — format: rounds, rounds: 5. 10–15 cal bike + 10 burpees. All out.
 
-        [H] TABATA — Tabatas are the signature of this session type. Use 2 exercises per tabata (ABABABAB = 4 rounds each) — this is the standard format. EVERY exercise MUST be a compound (two movements fused into one flowing rep, name must contain "and", "with", "to", or "+"). Each tabata gets DIFFERENT compound pairs — never repeat the same compound in one session. You are encouraged to INVENT new combinations — the goal is creative, flowing pairings that contrast muscle groups. Some examples to spark ideas (don't just copy these): "Squat Curl and Press", "KB Swing with Side Lunge", "Wood Chop with Reverse Lunge", "Bent Over Row to Deadlift", "Side Lunge and Lateral Raise", "Lunge and Overhead Tricep Extension", "Hop onto Box and Bicep Curl", "Clean and Lateral Lunge", "Squat Jump and Shoulder Press", "Plate Halo and Twist", "Push Up to T-Rotation", "Renegade Row to Deadlift", "Reverse Lunge and High Pull", "Squat and Rainbow Press", "Gorilla Row and Jump Squat", "Devil Press and Box Step", "KB Clean and Pivot Press", "Bent Over Row and Clean and Press". Single movements alone (burpees, KB swings, mountain climbers) are NEVER acceptable — they must always be fused with a second movement.
+        [H] TABATA — Use 2 exercises per tabata (ABABABAB = 4 rounds each) — this is the standard format. Standard tabatas: EVERY exercise MUST be a compound (two movements fused into one flowing rep, name must contain "and", "with", "to", or "+"). Each tabata gets DIFFERENT compound pairs — never repeat the same compound in one session. You are encouraged to INVENT new combinations — the goal is creative, flowing pairings that contrast muscle groups. Some examples to spark ideas (don't just copy these): "Squat Curl and Press", "KB Swing with Side Lunge", "Wood Chop with Reverse Lunge", "Bent Over Row to Deadlift", "Side Lunge and Lateral Raise", "Lunge and Overhead Tricep Extension", "Hop onto Box and Bicep Curl", "Clean and Lateral Lunge", "Squat Jump and Shoulder Press", "Plate Halo and Twist", "Push Up to T-Rotation", "Renegade Row to Deadlift", "Reverse Lunge and High Pull", "Squat and Rainbow Press", "Gorilla Row and Jump Squat", "Devil Press and Box Step", "KB Clean and Pivot Press", "Bent Over Row and Clean and Press". CARDIO MACHINE TABATA (use occasionally — at most once per session): one of the two exercises may be a cardio machine (Assault Bike, Rowing Machine, or Ski Erg) — pair it with a compound movement. Example pairings: Assault Bike + Squat Curl and Press, Rowing Machine + Wood Chop with Reverse Lunge, Ski Erg + KB Swing with Side Lunge. Do NOT set reps or calories on the machine exercise — it's a 20s burst, the interval is the constraint. Single compound movements alone (burpees, KB swings, mountain climbers without a second movement) are never acceptable.
 
-        [I] BEAR MOUNTAIN — format: mountain, start: 1, peak: 5, end: 1, step: 1 (1-2-3-4-5-4-3-2-1 reps). One exercise only: "Bear" (clean → press → front squat → press → back squat = 1 rep). Use a moderate barbell weight. Rest as needed between rungs. This is a STAPLE of Functional Muscle — use it regularly, especially when the session has fewer tabatas or no 10-1 ladder.
+        [I] BEAR MOUNTAIN — format: mountain, start: 1, peak: 5, end: 1, step: 1 (1-2-3-4-5-4-3-2-1 reps = 25 bears total). One exercise only: "Bear" (clean → press → front squat → press → back squat = 1 rep). Use a moderate barbell weight (20–30kg). Rest as needed between rungs. WARNING: this block takes approximately 15 minutes. If you include Bear Mountain, do NOT add any other large blocks (ladder, continuous circuit, 20-20). Pair it only with tabatas within the remaining budget.
 
       3. UPPER BODY STRENGTH (after all metabolic blocks): MANDATORY — must be present in every session. ONE section only, named "Upper Body Strength". format: rounds, rounds: 5, rest_secs: 60, reps: 10. Exactly ONE exercise — pick one at random from this list each time: Low Row, Lat Pulldown, Bench Press, Shoulder Press, Chest Fly, Reverse Fly, Side Raises, Front Raises. Do NOT default to Lat Pulldown or Shoulder Press — every option is equally valid. One exercise, 5 rounds, 10 reps. Nothing else.
 
       4. LOWER BODY STRENGTH (after upper body): MANDATORY — must be present in every session. ONE section only, named "Lower Body Strength". format: rounds, rounds: 5, rest_secs: 60, reps: 10. Exactly ONE exercise — pick one at random from this list each time: Leg Press, Leg Extension, Leg Curl, Calf Raise, Squats, Deadlifts, Lunges. Do NOT default to Leg Press — every option is equally valid. One exercise, 5 rounds, 10 reps. Nothing else.
 
-      5. PILATES 100 / ABS (after strength): format: hundred. A staple — include it in roughly half of sessions. When included: always 100 reps of ONE exercise for time. Vary the exercise — do NOT always use wall ball slams. Options: wall ball slams, bicep curls (light), lateral raises (light), plate serves (front raise to overhead), sit-ups, overhead crunches. Choose based on what hasn't been hammered in the metabolic blocks. When omitted: end with a short abs block (sit-ups, leg raises, overhead crunches) as a straight section before the cool-down.
+      5. ABS / PILATES 100 (after strength, always just before the cool-down): MANDATORY in 90% of sessions — only skip if the metabolic blocks already had heavy abs work throughout. Always 100 reps total, ~5 minutes. Choose ONE of these formats each time (vary across sessions):
+        - format: hundred — 100 reps of a single non-abs pilates-style exercise (wall ball slams, bicep curls light, lateral raises light, plate serves). Do not use sit-ups or crunches here.
+        - format: straight — 4–5 abs exercises, each 20–25 reps, one pass through (total = ~100 reps). Give the section a name like "Abs Finisher" or "Core 100".
+        - format: rounds, rounds: 5 — a single abs exercise × 20 reps per round, or rounds: 4 × 25 reps, or rounds: 2 × 50 reps.
+        ABS EXERCISE MENU (pick from this list — mix them up across sessions, never repeat the same combination):
+        Sit-ups, Crunches, Overhead crunches, Leg raises, Alternating toe touches, V-ups, Bicycle crunches, Russian twists, Flutter kicks, Hollow holds (timed), Dead bugs, Plank shoulder taps, Mountain climbers (slow), Side plank dips.
+        Choose exercises that contrast what was already hit in the metabolic blocks. If the session had lots of KB swings and hip work, lean towards upper-abs and rotation. If it was push-heavy, choose leg raises and lower-abs work.
 
       6. COOL-DOWN (always last): format: straight, duration_mins: 5. Simple stretch, 2–3 holds only.
 
@@ -1303,7 +1370,13 @@ class WorkoutLLMGenerator
   end
 
   # Makes a fast, cheap LLM call to look up a fitness program by name.
+  # Results are cached in Solid Cache (DB-backed) for 7 days — program descriptions
+  # don't change, so re-researching every generation is wasteful.
   def research_program(program_name)
+    cache_key = "workout_llm_research_#{program_name.parameterize}"
+    cached = Rails.cache.read(cache_key)
+    return cached if cached.present?
+
     prompt = <<~PROMPT
       You are an expert fitness coach with deep knowledge of group fitness programs, gym classes, and training methodologies.
 
@@ -1324,7 +1397,9 @@ class WorkoutLLMGenerator
       Use the describe_fitness_program tool to return your answer.
     PROMPT
 
-    call_llm(prompt, tools: [ RESEARCH_TOOL_DEFINITION ], tool_choice: { type: "any" }, max_tokens: 1500)
+    result = call_llm(prompt, tools: [ RESEARCH_TOOL_DEFINITION ], tool_choice: { type: "any" }, max_tokens: 1500)
+    Rails.cache.write(cache_key, result, expires_in: 7.days) if result.present?
+    result
   end
 
   # Formats the research result into a prompt section.
@@ -1369,6 +1444,7 @@ class WorkoutLLMGenerator
   end
 
   def call_llm(prompt, tools: [ TOOL_DEFINITION ], tool_choice: { type: "any" }, max_tokens: 4096)
+    @llm_calls ||= []
     api_key = ENV.fetch("ANTHROPIC_API_KEY") { raise WorkoutGenerationError, "ANTHROPIC_API_KEY not configured" }
 
     body = {
@@ -1426,6 +1502,8 @@ class WorkoutLLMGenerator
     tool_block = parsed["content"].find { |b| b["type"] == "tool_use" }
     raise WorkoutGenerationError, "No workout returned by LLM" unless tool_block
 
+    @llm_calls << { prompt: prompt, response: tool_block["input"] }
+
     tool_block["input"]
   end
 
@@ -1450,6 +1528,7 @@ class WorkoutLLMGenerator
     )
 
     workout.tags = tags
+    Rails.cache.write("workout_llm_debug_#{workout.id}", @llm_calls, expires_in: 2.hours) if @llm_calls.present?
     workout
   end
 end

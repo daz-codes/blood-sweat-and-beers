@@ -10,12 +10,19 @@
 #
 # validate_and_fix mutates the hash in place AND returns it.
 class WorkoutValidator
-  # Max total reps across all exercises within a single EMOM minute, per difficulty.
+  # Max total work units (reps + calories combined) within a single EMOM circuit minute.
+  # Calories count the same as reps for timing purposes.
   EMOM_REP_CAPS = {
-    "beginner"     => 6,
-    "intermediate" => 9,
-    "advanced"     => 12
+    "beginner"     => 10,
+    "intermediate" => 15,
+    "advanced"     => 20
   }.freeze
+
+  # Cardio machines in circuit EMOMs: hard cap of 10 cal per exercise.
+  # On a SkiErg, Air Bike, or Rowing Machine you can't hit more than ~10 cal/min
+  # while sharing that minute with other exercises.
+  EMOM_CARDIO_CAL_CAP = 10
+  CARDIO_MACHINE_PATTERN = /ski|erg|row|bike|assault|air.?bike|concept/i.freeze
 
   # Valid step-size range per ladder/mountain metric.
   # distance_m has no upper bound — just a minimum of 10.
@@ -54,20 +61,27 @@ class WorkoutValidator
       end
     end
 
+    fix_for_time_rounds(sections)
     fix_alternating_reps(sections)
+    fix_clean_rep_counts(sections)
     fix_rest_secs(sections)
     fix_single_set_sections(sections)
+    fix_tabata_exercise_metrics(sections)
     fix_tabata_exercise_notes(sections)
+    fix_redundant_section_notes(sections)
+    fix_rotating_emom_reps(sections)
     check_cooldown(sections)
 
     if @main_tag_slug == "functional-muscle"
       fix_fm_remove_activation(sections)
-      fix_fm_rotating_emom_reps(sections)
+      fix_fm_circuit_emom_reps(sections)
       fix_fm_tabata_remove_non_compounds(sections)
       fix_fm_merge_strength_sections(sections)
       fix_fm_strength_sets(sections)
       fix_fm_warmup(sections)
       fix_fm_strip_machine_suffix(sections)
+      fix_fm_ensure_abs(sections)
+      fix_fm_section_order(sections)
     end
 
     @data
@@ -77,22 +91,41 @@ class WorkoutValidator
 
   # EMOM circuit: total reps per minute must not exceed the difficulty cap.
   # Rotating EMOMs don't have a per-minute rep cap (each exercise fills its own minute).
-  # Scales all rep exercises proportionally, flooring each to at least 1.
+  # Also enforces a per-exercise calorie cap for cardio machines (max 10 cal).
   def fix_emom_reps(section, idx)
     return if section["emom_style"] == "rotating"
-    cap = EMOM_REP_CAPS[@difficulty] || 12
-    rep_exercises = Array(section["exercises"]).select { |e| e["reps"].to_i > 0 }
-    total = rep_exercises.sum { |e| e["reps"].to_i }
-    return if total <= cap || rep_exercises.empty?
+    cap       = EMOM_REP_CAPS[@difficulty] || 20
+    exercises = Array(section["exercises"])
+    changed   = []
 
-    scale = cap.to_f / total
-    rep_exercises.each do |ex|
-      ex["reps"] = [ (ex["reps"].to_i * scale).floor, 1 ].max
+    # First pass: clamp cardio machine calories independently
+    exercises.each do |ex|
+      next unless ex["calories"].to_i > EMOM_CARDIO_CAL_CAP
+      next unless ex["name"].to_s.match?(CARDIO_MACHINE_PATTERN)
+      old = ex["calories"]
+      ex["calories"] = EMOM_CARDIO_CAL_CAP
+      changed << "#{ex["name"]} cal #{old} → #{EMOM_CARDIO_CAL_CAP}"
     end
 
-    new_total = rep_exercises.sum { |e| e["reps"].to_i }
-    @fixes << "EMOM '#{section["name"]}': scaled reps #{total} → #{new_total} " \
-              "(#{@difficulty} cap: #{cap}/min)"
+    # Second pass: scale total if still over cap
+    workload_exercises = exercises.select { |e| e["reps"].to_i > 0 || e["calories"].to_i > 0 }
+    total = workload_exercises.sum { |e| e["reps"].to_i + e["calories"].to_i }
+
+    if total > cap && workload_exercises.any?
+      scale = cap.to_f / total
+      workload_exercises.each do |ex|
+        if ex["reps"].to_i > 0
+          ex["reps"] = [ (ex["reps"].to_i * scale).floor, 1 ].max
+        end
+        if ex["calories"].to_i > 0
+          ex["calories"] = [ (ex["calories"].to_i * scale).floor, 1 ].max
+        end
+      end
+      new_total = workload_exercises.sum { |e| e["reps"].to_i + e["calories"].to_i }
+      changed << "total #{total} → #{new_total} (cap: #{cap})"
+    end
+
+    @fixes << "EMOM '#{section["name"]}': #{changed.join("; ")}" if changed.any?
   end
 
   # EMOM circuit: max 3 exercises per minute.
@@ -163,21 +196,83 @@ class WorkoutValidator
               "step #{step} invalid for #{varies} — corrected to #{corrected}"
   end
 
-  # Any non-exempt section with fewer than 3 rounds and exactly 1 exercise is almost
-  # certainly a mistake (single set). Enforce a minimum of 3 rounds.
+  # For-time sections with multiple exercises and fewer than 3 rounds are not a
+  # meaningful conditioning block — bump to 3 rounds. Single-exercise for_time
+  # (e.g. 100 cal row for time) is fine with 1 round.
+  def fix_for_time_rounds(sections)
+    sections.each do |section|
+      next unless section["format"] == "for_time"
+      next if Array(section["exercises"]).size <= 1
+      next if section["rounds"].to_i >= 3
+      old = section["rounds"].to_i
+      section["rounds"] = 3
+      @fixes << "For-time '#{section["name"]}': rounds #{old} → 3 (multi-exercise for_time needs multiple rounds)"
+    end
+  end
+
+  # Snap rep and calorie counts to "clean" numbers — even numbers or multiples of 5.
+  # Odd, awkward counts like 13 or 7 are artefacts of scaling and look wrong in a workout.
+  # Only applies to values >= 4; leaves small counts (1, 2, 3) untouched.
+  # Does not touch weight_kg, distance_m, or duration_s.
+  def fix_clean_rep_counts(sections)
+    sections.each do |section|
+      Array(section["exercises"]).each do |ex|
+        %w[reps calories].each do |field|
+          val = ex[field].to_i
+          next if val < 4
+          clean = nearest_clean_rep(val)
+          next if clean == val
+          ex[field] = clean
+          @fixes << "'#{ex["name"]}' in '#{section["name"]}': #{field} #{val} → #{clean} (snapped to clean number)"
+        end
+      end
+    end
+  end
+
+  def nearest_clean_rep(n)
+    return n if n % 2 == 0 || n % 5 == 0
+    # Find nearest value that is even or a multiple of 5
+    down = (n - 1).downto(1).find { |v| v % 2 == 0 || v % 5 == 0 }
+    up   = (n + 1).upto(n + 5).find { |v| v % 2 == 0 || v % 5 == 0 }
+    [ down, up ].compact.min_by { |v| (v - n).abs }
+  end
+
+  # Any non-exempt section with rounds missing/zero is almost certainly a mistake.
+  # - Single-exercise sections with < 3 rounds → 3 rounds
+  # - Any section with rounds completely absent (nil) → 3 rounds (LLM forgot to set it)
+  # - Unknown/invalid formats get normalised to "rounds"
   # Skips warm-up, cool-down, tabata, emom, amrap, for_time, ladder, mountain.
-  SINGLE_SET_EXEMPT = %w[tabata emom amrap for_time ladder mountain matrix hundred].freeze
+  SINGLE_SET_EXEMPT   = %w[tabata emom amrap for_time ladder mountain matrix hundred].freeze
+  KNOWN_FORMATS       = %w[rounds tabata emom amrap for_time ladder mountain matrix hundred].freeze
   WARMUP_COOLDOWN_PATTERN = /warm|cool|stretch|recovery/i
+  ABS_PILATES_PATTERN     = /abs|core|pilates|hundred/i
 
   def fix_single_set_sections(sections)
     sections.each do |section|
-      next if section["format"].to_s.in?(SINGLE_SET_EXEMPT)
       next if section["name"].to_s.match?(WARMUP_COOLDOWN_PATTERN)
-      next if section["rounds"].to_i >= 3
-      next if Array(section["exercises"]).size != 1
-      section["rounds"] = 3
-      section["format"] = "rounds"
-      @fixes << "'#{section["name"]}': single exercise with #{section["rounds"] || "no"} rounds — set to 3 rounds"
+      next if section["name"].to_s.match?(ABS_PILATES_PATTERN)
+
+      fmt = section["format"].to_s
+
+      # Normalise unknown formats to "rounds" so the view renders properly
+      unless fmt.in?(KNOWN_FORMATS)
+        @fixes << "'#{section["name"]}': unknown format '#{fmt}' → rounds"
+        section["format"] = "rounds"
+        fmt = "rounds"
+      end
+
+      next if fmt.in?(SINGLE_SET_EXEMPT)
+
+      rounds = section["rounds"]
+      if rounds.nil? || rounds.to_i.zero?
+        # Rounds completely absent — default to 3
+        section["rounds"] = 3
+        @fixes << "'#{section["name"]}': rounds missing → set to 3"
+      elsif rounds.to_i < 3 && Array(section["exercises"]).size == 1
+        # Single exercise, too few rounds
+        section["rounds"] = 3
+        @fixes << "'#{section["name"]}': single exercise with #{rounds} round(s) → 3 rounds"
+      end
     end
   end
 
@@ -213,6 +308,25 @@ class WorkoutValidator
   end
 
 
+  # Tabata is 20s work / 10s rest — the interval is the constraint, not reps or calories.
+  # Strip reps and calories from all tabata exercises; keep weight_kg and distance_m.
+  def fix_tabata_exercise_metrics(sections)
+    sections.each do |section|
+      next unless section["format"] == "tabata"
+      Array(section["exercises"]).each do |ex|
+        stripped = []
+        %w[reps calories distance_m].each do |field|
+          if ex[field].present?
+            stripped << "#{field}: #{ex[field]}"
+            ex.delete(field)
+          end
+        end
+        next if stripped.empty?
+        @fixes << "Tabata '#{section["name"]}': removed #{stripped.join(", ")} from '#{ex["name"]}' — 20s burst, no metric needed"
+      end
+    end
+  end
+
   # Tabata exercises often get notes like "20s on / 10s off × 8 rounds" from the LLM.
   # This is already shown in the UI under each exercise name — strip it from notes to avoid duplication.
   def fix_tabata_exercise_notes(sections)
@@ -223,6 +337,24 @@ class WorkoutValidator
         exercise.delete("notes")
         @fixes << "'#{exercise["name"]}' in '#{section["name"]}': removed tabata interval notes (shown in UI)"
       end
+    end
+  end
+
+  # Strip leading "N sets of N reps at Xkg" sentences from section notes — that
+  # information is already shown structurally in the section header and exercise rows.
+  REDUNDANT_NOTE_PATTERN = /\A\d+\s+sets?\s+of\s+\d+[^.]*\.\s*/i
+
+  def fix_redundant_section_notes(sections)
+    sections.each do |section|
+      next unless section["notes"].present?
+      cleaned = section["notes"].sub(REDUNDANT_NOTE_PATTERN, "").strip
+      next if cleaned == section["notes"]
+      if cleaned.empty?
+        section.delete("notes")
+      else
+        section["notes"] = cleaned
+      end
+      @fixes << "'#{section["name"]}': stripped redundant set/rep restatement from section notes"
     end
   end
 
@@ -240,10 +372,24 @@ class WorkoutValidator
     end
     ex = Array(section["exercises"]).first
     return unless ex
-    unless ex["reps"].to_i == 100
-      old = ex["reps"]
-      ex["reps"] = 100
-      @fixes << "Hundred '#{section["name"]}': reps #{old} → 100"
+
+    # Cardio machines should use calories: 100, not reps: 100
+    if ex["name"].to_s.match?(CARDIO_MACHINE_PATTERN)
+      if ex["reps"].to_i > 0
+        ex["calories"] = 100
+        ex.delete("reps")
+        @fixes << "Hundred '#{section["name"]}': #{ex["name"]} is a cardio machine — reps → calories: 100"
+      elsif ex["calories"].to_i != 100
+        old = ex["calories"]
+        ex["calories"] = 100
+        @fixes << "Hundred '#{section["name"]}': calories #{old} → 100"
+      end
+    else
+      unless ex["reps"].to_i == 100
+        old = ex["reps"]
+        ex["reps"] = 100
+        @fixes << "Hundred '#{section["name"]}': reps #{old} → 100"
+      end
     end
   end
 
@@ -259,21 +405,67 @@ class WorkoutValidator
     end
   end
 
-  # FM: rotating EMOM exercises (12-min continuous block) fill the full minute —
-  # they must NOT have reps, calories, or distance set. Strip them.
-  def fix_fm_rotating_emom_reps(sections)
+  # Rotating EMOM exercises fill the full minute — reps, calories, distance, and duration
+  # must not be set. Also strip notes that are just minute-assignment labels (e.g. "Min 1, 3, 5:").
+  # These are redundant — exercises just rotate in order; the athlete doesn't need minute callouts.
+  ROTATING_EMOM_NOTE_JUNK = /\A\s*min(?:ute)?s?\s+[\d,\s]+[:–\-]/i.freeze
+
+  def fix_rotating_emom_reps(sections)
     sections.each do |section|
       next unless section["format"] == "emom" && section["emom_style"] == "rotating"
       Array(section["exercises"]).each do |ex|
         stripped = []
-        %w[reps calories distance_m].each do |field|
+
+        %w[reps calories distance_m duration_s].each do |field|
           if ex[field].present?
             stripped << "#{field}: #{ex[field]}"
             ex.delete(field)
           end
         end
+
+        # Strip minute-assignment prefix from notes (e.g. "Min 1, 3, 5, 7: explosive snatch")
+        if ex["notes"].to_s.match?(ROTATING_EMOM_NOTE_JUNK)
+          cleaned = ex["notes"].sub(ROTATING_EMOM_NOTE_JUNK, "").strip.sub(/\A[,.\s]+/, "").strip
+          if cleaned.present?
+            ex["notes"] = cleaned
+          else
+            ex.delete("notes")
+          end
+          stripped << "minute-assignment note"
+        end
+
         next if stripped.empty?
-        @fixes << "FM rotating EMOM '#{section["name"]}': removed #{stripped.join(", ")} from '#{ex["name"]}' — exercise fills the full minute"
+        @fixes << "Continuous Circuit '#{section["name"]}': cleaned '#{ex["name"]}' (#{stripped.join(", ")})"
+      end
+    end
+  end
+
+  # FM circuit EMOMs (every-2-min style): reps must be multiples of 5, minimum 5 per
+  # exercise, and at least 25 total across all exercises. If total < 25, scale up
+  # proportionally (preserving ratios) until the minimum is met.
+  FM_CIRCUIT_EMOM_MIN_TOTAL = 25
+
+  def fix_fm_circuit_emom_reps(sections)
+    sections.each do |section|
+      next unless section["format"] == "emom" && section["emom_style"] != "rotating"
+      exercises = Array(section["exercises"]).select { |e| e["reps"].to_i > 0 }
+      next if exercises.empty?
+
+      # Step 1: snap each to nearest multiple of 5, min 5
+      exercises.each do |ex|
+        ex["reps"] = [ ((ex["reps"].to_i / 5.0).round * 5), 5 ].max
+      end
+
+      # Step 2: enforce minimum total of 25
+      total = exercises.sum { |e| e["reps"].to_i }
+      if total < FM_CIRCUIT_EMOM_MIN_TOTAL
+        # Scale up proportionally, keeping each as a multiple of 5, min 5
+        scale = FM_CIRCUIT_EMOM_MIN_TOTAL.to_f / total
+        exercises.each do |ex|
+          ex["reps"] = [ ((ex["reps"].to_i * scale / 5.0).ceil * 5), 5 ].max
+        end
+        new_total = exercises.sum { |e| e["reps"].to_i }
+        @fixes << "FM circuit EMOM '#{section["name"]}': scaled up reps (total #{total} → #{new_total}, minimum #{FM_CIRCUIT_EMOM_MIN_TOTAL} required)"
       end
     end
   end
@@ -287,6 +479,7 @@ class WorkoutValidator
     sections.each do |section|
       next if section["format"].to_s.in?(FM_STRENGTH_EXEMPT)
       next if section["name"].to_s.match?(WARMUP_COOLDOWN_PATTERN)
+      next if section["name"].to_s.match?(ABS_PILATES_PATTERN)
 
       # Fix rounds to 5
       if section["rounds"].to_i != 5
@@ -349,7 +542,7 @@ class WorkoutValidator
   # Splits exercises by lower-body keyword; anything that doesn't match goes upper.
   LOWER_BODY_PATTERN = /squat|lunge|deadlift|romanian|leg press|leg extension|calf|glute|hip|hamstring|step.?up|box jump/i.freeze
   FM_STRENGTH_EXEMPT_FORMATS = %w[tabata emom amrap for_time ladder mountain matrix hundred].freeze
-  FM_STRENGTH_EXEMPT_NAMES   = /warm|cool|stretch|recovery|pilates|abs|hundred/i.freeze
+  FM_STRENGTH_EXEMPT_NAMES   = /warm|cool|stretch|recovery|pilates|abs|core|hundred/i.freeze
 
   # Only these exercise name patterns are acceptable in FM strength sections.
   FM_UPPER_MACHINE_PATTERN = /low row|lat pull|bench press|shoulder press|chest fly|reverse fly|side raise|front raise/i.freeze
@@ -410,6 +603,30 @@ class WorkoutValidator
     @fixes << "FM: strength → #{new_sections.map { |s| "'#{s["name"]}': #{Array(s["exercises"]).first["name"]} 5×10" }.join(", ")}"
   end
 
+  # FM: if no abs/core section is present, synthesise one before the cool-down.
+  # Rotates through a small pool so fallback workouts have some variety.
+  FM_ABS_FALLBACK_POOL = [
+    [ { "name" => "Sit-ups", "reps" => 20 }, { "name" => "Leg raises", "reps" => 20 }, { "name" => "Bicycle crunches", "reps" => 30 }, { "name" => "Alternating toe touches", "reps" => 30 } ],
+    [ { "name" => "V-ups", "reps" => 25 }, { "name" => "Russian twists", "reps" => 25 }, { "name" => "Overhead crunches", "reps" => 25 }, { "name" => "Flutter kicks", "reps" => 25 } ],
+    [ { "name" => "Crunches", "reps" => 25 }, { "name" => "Leg raises", "reps" => 25 }, { "name" => "Plank shoulder taps", "reps" => 25 }, { "name" => "Dead bugs", "reps" => 25 } ]
+  ].freeze
+
+  def fix_fm_ensure_abs(sections)
+    has_abs = sections.any? { |s| s["name"].to_s.match?(ABS_PILATES_PATTERN) || s["format"] == "hundred" }
+    return if has_abs
+
+    exercises = FM_ABS_FALLBACK_POOL.sample
+    abs_section = {
+      "name"      => "Abs Finisher",
+      "format"    => "straight",
+      "exercises" => exercises
+    }
+
+    insert_at = sections.index { |s| s["name"].to_s.match?(/cool|stretch/i) } || sections.size
+    sections.insert(insert_at, abs_section)
+    @fixes << "FM: synthesised Abs Finisher (100 reps) — LLM omitted abs section"
+  end
+
   # Strip " Machine" suffix from exercise names in FM strength sections.
   def fix_fm_strip_machine_suffix(sections)
     sections.each do |section|
@@ -422,6 +639,27 @@ class WorkoutValidator
         @fixes << "'#{original}' → '#{cleaned}' (stripped Machine suffix)"
       end
     end
+  end
+
+  # FM: enforce section order — warm-up → metabolic → upper strength → lower strength → abs → cool-down.
+  # Pulls any abs/pilates sections out and reinserts them just before the cool-down.
+  def fix_fm_section_order(sections)
+    abs_sections = sections.select { |s| s["name"].to_s.match?(ABS_PILATES_PATTERN) || s["format"] == "hundred" }
+    return if abs_sections.empty?
+
+    cooldown_idx = sections.index { |s| s["name"].to_s.match?(/cool|stretch/i) }
+    target_idx   = cooldown_idx || sections.size
+
+    # Check if all abs sections are already just before the cool-down — if so, nothing to do
+    abs_indices = abs_sections.map { |s| sections.index(s) }
+    expected_start = target_idx - abs_sections.size
+    return if abs_indices == (expected_start...(expected_start + abs_sections.size)).to_a
+
+    abs_sections.each { |s| sections.delete(s) }
+    # Recalculate insert position after deletion
+    new_target = sections.index { |s| s["name"].to_s.match?(/cool|stretch/i) } || sections.size
+    sections.insert(new_target, *abs_sections)
+    @fixes << "FM: moved abs section(s) to just before cool-down"
   end
 
   # Warn if the last section doesn't look like a cool-down.

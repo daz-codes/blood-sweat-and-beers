@@ -11,7 +11,7 @@ Descending reps: 10, 9, 8 ... 1 across 2–3 paired exercises. Often combines a 
 **Tabata**
 20s work / 10s rest × 8 rounds. Typically alternates two exercises every interval. Compound "Alex Tabata" pairings are preferred — single movements that combine two patterns into one flowing rep. The end position of the first movement feeds naturally into the start of the second. Never pair two movements that fatigue the same muscle group.
 
-**RULE: Tabata sections in Functional Muscle workouts MUST use compound multi-movement exercises — never simple single-movement exercises like "KB Swings" or "Burpees" alone. Every Tabata exercise must combine two movements in one rep. Choose from the list below or invent new combinations using these principles:**
+**RULE: Tabata sections in Functional Muscle workouts MUST use compound multi-movement exercises — never simple single-movement exercises like "KB Swings" or "Burpees" alone. Every Tabata exercise must combine two movements in one rep. EXCEPTION: occasionally one of the two tabata exercises may be a cardio machine (Assault Bike, Rowing Machine, or Ski Erg) paired with a compound movement. Choose from the list below or invent new combinations using these principles:**
 - Lower body + upper body in one rep (lunge + shoulder press, squat + curl + press)
 - Hinge + pull flowing together (bent over row → deadlift, swing → overhead press)
 - Rotation or lateral movement added to a standard lift (wood chop + reverse lunge, clean + pivot press)
@@ -56,11 +56,24 @@ Descending reps: 10, 9, 8 ... 1 across 2–3 paired exercises. Often combines a 
 
 Avoid pairing two exercises that hammer the same muscle group.
 
-**12-Minute Continuous Block**
-1 min A / 1 min B / 1 min C — repeat 4 times without stopping. Typically one cardio machine + one KB or bodyweight movement + one abs or active recovery movement. Examples:
-- 1 min ski / 1 min KB swings / 1 min abs
-- 1 min row / 1 min sit-ups / 1 min alternating toe touches
-- 1 min ski / 1 min swings / 1 min burpees
+**Continuous Circuit**
+Rotating block where each exercise fills a full minute — no reps, no targets, just continuous work until the minute turns. Cycle non-stop through all exercises for the full duration. Typically one cardio machine + one KB or bodyweight movement + one abs or active recovery movement.
+
+VARY THE DURATION — do not default to 12 min every time:
+- 2 exercises × 4 rounds = 8 min
+- 3 exercises × 3 rounds = 9 min
+- 3 exercises × 4 rounds = 12 min (classic)
+- 4 exercises × 3 rounds = 12 min
+- 3 exercises × 5 rounds = 15 min
+- 5 exercises × 3 rounds = 15 min
+- 3 exercises × 6 rounds = 18 min
+- 4 exercises × 5 rounds = 20 min
+
+Examples:
+- 9 min (3×3): 1 min ski / 1 min KB swings / 1 min abs
+- 12 min (3×4): 1 min row / 1 min sit-ups / 1 min alternating toe touches
+- 15 min (3×5): 1 min ski / 1 min swings / 1 min burpees
+- 12 min (4×3): 1 min bike / 1 min goblet squats / 1 min push-ups / 1 min hollow hold
 
 **Bear Mountain**
 A Bear is: clean → press → front squat → press → back squat (one rep). Bear Mountain is a 1-2-3-4-5-4-3-2-1 ladder. Done as EMOM or with rest between sets. Builds full-body strength and coordination. Use a moderate barbell weight.
@@ -71,8 +84,8 @@ A Bear is: clean → press → front squat → press → back squat (one rep). B
 **Death Race**
 5 rounds of: bike cals (10–15) + 10 burpees. All-out effort. Short, brutal. Used as a warm-up finisher or standalone conditioning block.
 
-**Hyrox 12**
-3–4 rounds of 3 exercises, each 1 minute long, run continuously for 12 minutes. Uses cardio machines, KB movements, and active recovery. Example: 1 min assault bike / 1 min high pulls / 1 min boxer shuffle × 4.
+**Hyrox Continuous Circuit**
+3–4 rounds of 3–4 exercises, each 1 minute long, run continuously. Uses cardio machines, KB movements, and active recovery. Example: 1 min assault bike / 1 min high pulls / 1 min boxer shuffle × 4.
 
 **EMOM Strength Blocks**
 5–10 minute EMOMs for strength skill work. Bears, clean and press, wall ball slams. Low rep, moderate-heavy weight, rest within the minute. Example: 5 × 5 bears EMOM, 5 × 5 clean to Arnold press EMOM.
@@ -85,8 +98,8 @@ RULE: Strength work uses GYM MACHINES ONLY. Two sections, one exercise each, alw
 
 That's it. One machine, 5×10, per section.
 
-**Pilates 100**
-100 low-weight, high-rep arm and shoulder isolation reps. Plate serves, lateral raises, overhead crunches, wall ball slams, pilates-style movements. Builds shoulder endurance and stability. Used as a finisher or active recovery block.
+**Abs / Pilates 100**
+100 reps total, ~5 minutes, present in nearly every session. Can be a single exercise for time (hundred format), a circuit of 4–5 abs exercises × 20–25 reps each, or a rounds block (5×20, 4×25, 2×50). Abs menu: sit-ups, crunches, overhead crunches, leg raises, alternating toe touches, V-ups, bicycle crunches, Russian twists, flutter kicks, hollow holds, dead bugs, plank shoulder taps, mountain climbers (slow), side plank dips. Pilates-style single-exercise options: wall ball slams, lateral raises (light), plate serves, bicep curls (light).
 
 **Calorie Interval Work**
 Cardio machine intervals with specific output targets (not just effort):
@@ -126,13 +139,13 @@ Child Pose to Cobra (flowing), Good Morning with Twist, Shoulder Mobility (physi
 This order is non-negotiable. Do not rearrange it:
 
 1. **Warm-up** — 5 mins, one cardio machine only (bike/row/ski), easy pace. NO activation drills, NO mobility circuits.
-2. **Metabolic blocks** — 2–4 blocks of intense conditioning (12-min continuous, interval circuits, ladders, tabatas, death race, 20-20, etc.)
+2. **Metabolic blocks** — 2–4 blocks of intense conditioning (continuous circuit, interval circuits, ladders, tabatas, death race, 20-20, etc.)
 3. **Upper body strength** — 5×10 weighted sets (shoulder press, rows, biceps, triceps, side raises, lat pulldowns)
 4. **Lower body strength** — 5×10 or 5×5 weighted sets (leg press, deadlifts, goblet squats, calf raises, leg extensions)
-5. **Pilates 100 / Abs** — 100-rep finisher or short abs block
+5. **Abs / Pilates 100** — 100 reps (~5 mins), present in nearly every session. Mixed abs circuit or single-exercise pilates block.
 6. **Stretch** — 5 mins, simple holds
 
-The 12-min continuous block uses a rotating EMOM — exercises fill the full minute with no rep count. Do not add reps, calories, or distance to the exercises in this block.
+The Continuous Circuit uses a rotating EMOM (emom_style: "rotating") — exercises fill the full minute with no rep count. Do not add reps, calories, distance, or duration to any exercise in this block.
 
 ## Example Session Structures
 
@@ -148,7 +161,7 @@ These are real Functional Muscle sessions. Use them to understand the look, feel
 
 **Session B**
 - Warm-up
-- 12 mins: 1 min ski / 1 min KB swings / 1 min abs (repeat 4×)
+- Continuous Circuit 12 min (3×4): 1 min ski / 1 min KB swings / 1 min abs
 - Ski intervals: 1 min hard / 1 min rest × 5, target 10 cal/min
 - 100 biceps + 100 side raises + 100 plate serves
 - Tabata: good mornings alternating with child pose to cobra
@@ -160,7 +173,7 @@ These are real Functional Muscle sessions. Use them to understand the look, feel
 
 **Session D**
 - Warm-up
-- 12 mins: ski + swings + burpees
+- Continuous Circuit 9 min (3×3): ski + swings + burpees
 - Tabata: child pose to cobra alternating good morning with twist
 - 30 clean and press for time
 - Tabata: devil press alternating thruster
@@ -171,7 +184,7 @@ These are real Functional Muscle sessions. Use them to understand the look, feel
 **Session E**
 - Warm-up
 - Death race: 5 rounds — 10/15 cal bike + 10 burpees
-- 12 mins: 5 jump squats + 10 slams + 20 overhead crunches every 2 mins
+- Continuous Circuit 15 min (3×5): 1 min jump squats / 1 min slams / 1 min overhead crunches
 - 5×10 leg extensions
 - 5×10 shoulder press
 - Pilates 100 + abs
@@ -189,14 +202,14 @@ These are real Functional Muscle sessions. Use them to understand the look, feel
 - Warm-up is ALWAYS a single cardio machine, easy pace, 5 mins. No activation, no mobility drills.
 - Metabolic blocks come BEFORE any strength sets
 - Strength sets are ALWAYS 5×10 or 5×5 — never a single set, never 3×8 or 4×6
-- The 12-min continuous block exercises have NO rep count — they fill the whole minute
+- Continuous Circuit exercises have NO rep count — they fill the whole minute
 - Tabata sections ALWAYS use compound movements (two movements in one rep)
 - Pilates 100 and abs come AFTER the strength sets, before the stretch
 
 ## Coaching Cues
 - KB swings are hip-driven, not a squat — cue "hinge and snap, not a squat".
 - Tabata pairings should contrast muscle groups — never two pressing movements back to back.
-- In 12-min continuous blocks, the cardio minute is the recovery — keep it to a sustainable hard effort, not a sprint.
+- In continuous circuits, the cardio minute is the recovery — keep it to a sustainable hard effort, not a sprint.
 - Bear Mountain: the press is the limiting factor — choose weight based on overhead capacity, not squat strength.
 - 20-20 blocks: the cardio and the KB should both feel like a 7/10 effort — if the swings feel easy, the ski was too easy.
 - Strength finishers (5×10) use controlled tempo — not chasing reps, building quality volume.
