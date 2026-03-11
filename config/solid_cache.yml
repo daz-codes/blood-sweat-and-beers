@@ -1,8 +1,8 @@
 default: &default
   connects_to:
     database:
-      writing: primary
-      reading: primary
+      writing: cache
+      reading: cache
 
 development:
   <<: *default
