@@ -2,19 +2,6 @@
 
 # If running the rails server then create or migrate existing database
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
-  # SQLite auto-creates empty database files on first connection, which
-  # tricks db:prepare into thinking they already exist. Remove any empty
-  # databases so db:prepare will load their schemas fresh.
-  for f in storage/production*.sqlite3; do
-    if [ -f "$f" ]; then
-      tables=$(sqlite3 "$f" ".tables" 2>/dev/null | tr -d '[:space:]')
-      if [ -z "$tables" ]; then
-        echo "Removing empty database: $f"
-        rm -f "$f"
-      fi
-    fi
-  done
-
   ./bin/rails db:prepare
 fi
 

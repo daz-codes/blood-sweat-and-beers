@@ -33,9 +33,7 @@ env:
   secret:
     - RAILS_MASTER_KEY
     - ANTHROPIC_API_KEY
-  clear:
-    # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
-    SOLID_QUEUE_IN_PUMA: true
+  clear: {}
 
 # Aliases are triggered with "bin/kamal <alias>".
 aliases:
