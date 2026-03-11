@@ -3,9 +3,19 @@
 # If running the rails server then create or migrate existing database
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
   ./bin/rails db:prepare
-  ./bin/rails db:schema:load:queue 2>/dev/null || true
-  ./bin/rails db:schema:load:cache 2>/dev/null || true
-  ./bin/rails db:schema:load:cable 2>/dev/null || true
+  ./bin/rails runner '
+    %w[queue cache cable].each do |name|
+      config = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: name)
+      next unless config
+      schema = Rails.root.join("db/#{name}_schema.rb")
+      next unless schema.exist?
+      conn = ActiveRecord::Base.connected_to(database: { writing: name.to_sym }) { ActiveRecord::Base.connection }
+      if conn.tables.empty?
+        puts "Loading schema for #{name} database..."
+        ActiveRecord::Tasks::DatabaseTasks.load_schema(config, :ruby, schema.to_s)
+      end
+    end
+  '
 fi
 
 exec "${@}"
