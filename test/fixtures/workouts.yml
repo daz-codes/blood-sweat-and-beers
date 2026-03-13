@@ -1,0 +1,28 @@
+<% password_digest = BCrypt::Password.create("password") %>
+
+hyrox_session:
+  name: "Hyrox Grind"
+  user: one
+  activity: hyrox
+  difficulty: intermediate
+  duration_mins: 60
+  status: active
+  structure: '[{"order":1,"type":"section","name":"Warm-Up","format":"straight","exercises":[{"name":"Run","metric":"distance","distance_m":1000}]}]'
+
+strength_session:
+  name: "Upper Body Blast"
+  user: one
+  activity: strength_training
+  difficulty: advanced
+  duration_mins: 45
+  status: active
+  structure: '[{"order":1,"type":"section","name":"Push","format":"straight","exercises":[{"name":"Bench Press","sets":4,"reps":8}]}]'
+
+template_workout:
+  name: "Template Workout"
+  user: two
+  activity: general_fitness
+  difficulty: beginner
+  duration_mins: 30
+  status: template
+  structure: '[{"order":1,"type":"section","name":"Circuit","format":"rounds","exercises":[{"name":"Burpees","reps":10}]}]'

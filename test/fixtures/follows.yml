@@ -1,0 +1,6 @@
+one_follows_two:
+  follower_id: <%= ActiveRecord::FixtureSet.identify(:one) %>
+  following_id: <%= ActiveRecord::FixtureSet.identify(:two) %>
+  status: accepted
+  requested_at: <%= 1.week.ago.to_fs(:db) %>
+  accepted_at: <%= 1.week.ago.to_fs(:db) %>

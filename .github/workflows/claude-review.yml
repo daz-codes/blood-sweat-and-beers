@@ -1,0 +1,41 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+
+jobs:
+  review:
+    if: |
+      (github.event_name == 'pull_request') ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-5-20250514
+          review_comment_prompt: |
+            You are reviewing a pull request for a Rails 8 fitness app called Volt.
+            Stack: Rails 8, Hotwire (Turbo + Stimulus), Tailwind CSS, SQLite3.
+
+            Focus on:
+            1. Bugs or logic errors
+            2. Security issues (SQL injection, XSS, mass assignment)
+            3. N+1 queries or performance concerns
+            4. Missing validations or error handling
+            5. Breaking changes
+
+            Be concise. Only flag real issues, not style preferences.

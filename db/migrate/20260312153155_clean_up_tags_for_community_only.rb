@@ -1,5 +1,10 @@
 class CleanUpTagsForCommunityOnly < ActiveRecord::Migration[8.2]
   def up
+    # Remove tag_id from programs first (before deleting tags that programs reference)
+    remove_foreign_key :programs, :tags
+    remove_index :programs, :tag_id
+    remove_column :programs, :tag_id
+
     # Delete all main/minor tags and their taggings (keep group_code tags as community tags)
     execute <<~SQL
       DELETE FROM taggings WHERE tag_id IN (
@@ -12,11 +17,6 @@ class CleanUpTagsForCommunityOnly < ActiveRecord::Migration[8.2]
 
     # Remove tag_type column — all remaining tags are community tags
     remove_column :tags, :tag_type
-
-    # Remove tag_id from programs (replaced by activity string)
-    remove_foreign_key :programs, :tags
-    remove_index :programs, :tag_id
-    remove_column :programs, :tag_id
   end
 
   def down
