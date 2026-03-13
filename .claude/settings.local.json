@@ -65,7 +65,10 @@
       "WebFetch(domain:musclewiki.com)",
       "WebFetch(domain:api.musclewiki.com)",
       "Bash(sqlite3:*)",
-      "WebFetch(domain:assets.ctfassets.net)"
+      "WebFetch(domain:assets.ctfassets.net)",
+      "Bash(PATH=\"/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle exec:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:/usr/local/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" which git:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:/usr/bin:/usr/local/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle update:*)"
     ]
   }
 }

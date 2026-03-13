@@ -7,6 +7,14 @@ end
 puts "System user: #{system_user.email_address}"
 
 # ---------------------------------------------------------------------------
+# Seed default activities
+# ---------------------------------------------------------------------------
+%w[General\ Fitness Strength\ Training Hyrox Deka Functional\ Muscle Functional\ Workout F45].each do |name|
+  Activity.find_or_create_by!(name: name)
+end
+puts "Activities: #{Activity.count} seeded."
+
+# ---------------------------------------------------------------------------
 # Activity mapping for tag_names → activity (used by both JSON and hardcoded seeds)
 # ---------------------------------------------------------------------------
 TAG_TO_ACTIVITY = {
