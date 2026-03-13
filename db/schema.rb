@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
+ActiveRecord::Schema[8.2].define(version: 2026_03_12_175037) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -37,6 +37,13 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "activities", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_activities_on_name", unique: true
   end
 
   create_table "challenge_entries", force: :cascade do |t|
@@ -84,6 +91,16 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.index ["exercise_id"], name: "index_exercise_logs_on_exercise_id"
     t.index ["step_order"], name: "index_exercise_logs_on_step_order"
     t.index ["workout_log_id"], name: "index_exercise_logs_on_workout_log_id"
+  end
+
+  create_table "exercise_videos", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.string "slug", null: false
+    t.datetime "updated_at", null: false
+    t.string "url", null: false
+    t.boolean "verified", default: false, null: false
+    t.index ["slug"], name: "index_exercise_videos_on_slug", unique: true
   end
 
   create_table "exercises", force: :cascade do |t|
@@ -178,17 +195,17 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
   end
 
   create_table "programs", force: :cascade do |t|
+    t.integer "activity_id"
     t.datetime "created_at", null: false
     t.string "difficulty", default: "intermediate", null: false
     t.integer "duration_mins", null: false
     t.string "name", null: false
     t.integer "sessions_per_week", null: false
     t.string "status", default: "pending", null: false
-    t.integer "tag_id", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.integer "weeks_count", null: false
-    t.index ["tag_id"], name: "index_programs_on_tag_id"
+    t.index ["activity_id"], name: "index_programs_on_activity_id"
     t.index ["user_id", "created_at"], name: "index_programs_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_programs_on_user_id"
   end
@@ -227,7 +244,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.datetime "created_at", null: false
     t.string "name", null: false
     t.string "slug", null: false
-    t.string "tag_type", default: "minor", null: false
     t.datetime "updated_at", null: false
     t.index ["slug"], name: "index_tags_on_slug", unique: true
   end
@@ -258,7 +274,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.integer "workout_id", null: false
-    t.index ["user_id", "workout_id"], name: "index_workout_likes_on_user_id_and_workout_id", unique: true
+    t.index ["user_id", "workout_id"], name: "index_workout_likes_on_user_id_and_workout_id"
     t.index ["user_id"], name: "index_workout_likes_on_user_id"
     t.index ["workout_id"], name: "index_workout_likes_on_workout_id"
   end
@@ -281,20 +297,21 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
   end
 
   create_table "workouts", force: :cascade do |t|
+    t.integer "activity_id"
     t.datetime "created_at", null: false
     t.string "difficulty", default: "intermediate", null: false
     t.integer "duration_mins", null: false
     t.string "name"
+    t.text "session_notes"
     t.integer "source_workout_id"
     t.string "status", default: "active", null: false
     t.json "structure", default: [], null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
-    t.string "workout_type", null: false
+    t.index ["activity_id"], name: "index_workouts_on_activity_id"
     t.index ["source_workout_id"], name: "index_workouts_on_source_workout_id"
     t.index ["status"], name: "index_workouts_on_status"
     t.index ["user_id"], name: "index_workouts_on_user_id"
-    t.index ["workout_type"], name: "index_workouts_on_workout_type"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -315,7 +332,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
   add_foreign_key "personal_records", "workout_logs"
   add_foreign_key "program_workouts", "programs"
   add_foreign_key "program_workouts", "workouts"
-  add_foreign_key "programs", "tags"
+  add_foreign_key "programs", "activities"
   add_foreign_key "programs", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "taggings", "tags"
@@ -323,6 +340,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_11_111805) do
   add_foreign_key "workout_likes", "workouts"
   add_foreign_key "workout_logs", "users"
   add_foreign_key "workout_logs", "workouts"
+  add_foreign_key "workouts", "activities"
   add_foreign_key "workouts", "users"
   add_foreign_key "workouts", "workouts", column: "source_workout_id"
 end

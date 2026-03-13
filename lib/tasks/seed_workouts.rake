@@ -6,10 +6,10 @@ namespace :seed_workouts do
     email = args[:email].presence || "system@volt.app"
     user  = User.find_by!(email_address: email)
 
-    workouts = user.workouts.includes(:tags).order(:name).map do |w|
+    workouts = user.workouts.includes(:tags, :activity).order(:name).map do |w|
       {
         name:          w.name,
-        workout_type:  w.workout_type,
+        activity:      w.activity_name,
         duration_mins: w.duration_mins,
         difficulty:    w.difficulty,
         tags:          w.tags.map(&:name),

@@ -53,7 +53,7 @@ class BuildProgramJob < ApplicationJob
     else
       WorkoutLLMGenerator.call(
         user:          program.user,
-        main_tag_id:   program.tag_id,
+        activity:      program.activity&.name,
         duration_mins: program.duration_mins,
         difficulty:    program.difficulty,
         session_notes: pw.session_notes

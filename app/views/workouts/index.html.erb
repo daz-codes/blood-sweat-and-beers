@@ -39,7 +39,7 @@
           <div class="flex items-center gap-2">
             <%= link_to program_path(program), class: "flex-1 flex items-center justify-between bg-zinc-800 border border-zinc-600/70 hover:border-gray-500 rounded-2xl px-4 py-3.5 transition-all duration-200 group min-w-0" do %>
               <div class="min-w-0">
-                <p class="text-lime-400 text-[10px] font-black uppercase tracking-wider mb-0.5"><%= program.tag&.name || "Custom" %></p>
+                <p class="text-lime-400 text-[10px] font-black uppercase tracking-wider mb-0.5"><%= program.activity&.name || "Custom" %></p>
                 <p class="text-gray-200 font-black text-sm tracking-tight truncate" style="font-family: 'Jost', sans-serif"><%= program.name %></p>
                 <p class="text-gray-600 text-xs mt-0.5">
                   <%= program.weeks_count %> weeks · <%= program.sessions_per_week %>×/week · <%= program.duration_mins %> min
@@ -93,10 +93,16 @@
       </div>
     </div>
   <% else %>
-    <% if @tag %>
+    <% if @activity_filter %>
+      <div class="flex items-center gap-2 mb-4">
+        <span class="text-sm text-gray-400">Activity:</span>
+        <span class="text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 px-2.5 py-1 rounded-full font-semibold"><%= @activity_filter %></span>
+        <%= link_to "✕ clear", library_path, class: "text-xs text-gray-500 hover:text-gray-300 transition-colors" %>
+      </div>
+    <% elsif @tag %>
       <div class="flex items-center gap-2 mb-4">
         <span class="text-sm text-gray-400">Tagged:</span>
-        <span class="text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 px-2.5 py-1 rounded-full font-semibold"><%= @tag.name %></span>
+        <span class="text-xs bg-violet-500/15 border border-violet-400/40 text-violet-400 px-2.5 py-1 rounded-full font-semibold">#<%= @tag.name %></span>
         <%= link_to "✕ clear", library_path, class: "text-xs text-gray-500 hover:text-gray-300 transition-colors" %>
       </div>
     <% end %>
@@ -117,9 +123,8 @@
                 <%= workout.name.presence || "Untitled Workout" %>
               </p>
               <div class="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-                <% main_tag = workout.tags.find(&:main?) %>
-                <% if main_tag %>
-                  <p class="text-lime-400 font-black text-sm uppercase tracking-wide leading-none"><%= main_tag.name %></p>
+                <% if workout.activity.present? %>
+                  <p class="text-lime-400 font-black text-sm uppercase tracking-wide leading-none"><%= workout.activity.name %></p>
                 <% end %>
                 <div class="flex items-center gap-1.5">
                   <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300"><%= workout.difficulty.capitalize %></span>
@@ -139,11 +144,10 @@
               <p class="text-sky-200 text-xs font-medium mt-1 leading-relaxed"><%= summary_text %></p>
             <% end %>
 
-            <% minor_tags = workout.tags.reject(&:main?).reject(&:group_code?).first(3) %>
-            <% if minor_tags.any? %>
+            <% if workout.tags.any? %>
               <div class="flex items-center gap-1.5 mt-2 flex-wrap">
-                <% minor_tags.each do |tag| %>
-                  <%= link_to tag.name, library_path(tag_id: tag.id), class: "text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 hover:text-white hover:border-lime-400 px-2 py-0.5 rounded-full font-semibold transition-colors" %>
+                <% workout.tags.first(3).each do |tag| %>
+                  <%= link_to "##{tag.name}", library_path(tag_id: tag.id), class: "text-xs bg-violet-500/15 border border-violet-400/40 text-violet-400 hover:text-white hover:border-violet-400 px-2 py-0.5 rounded-full font-semibold transition-colors" %>
                 <% end %>
               </div>
             <% end %>

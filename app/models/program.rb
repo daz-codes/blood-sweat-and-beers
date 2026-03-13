@@ -1,6 +1,6 @@
 class Program < ApplicationRecord
   belongs_to :user
-  belongs_to :tag, optional: true
+  belongs_to :activity, optional: true
   has_many :program_workouts, dependent: :destroy
   has_many :workouts, through: :program_workouts
 
@@ -21,7 +21,7 @@ class Program < ApplicationRecord
   def failed?   = status == "failed"
 
   def grid
-    program_workouts.includes(workout: :tags)
+    program_workouts.includes(:workout)
                     .order(:week_number, :session_number)
                     .group_by(&:week_number)
   end

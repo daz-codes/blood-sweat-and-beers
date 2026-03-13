@@ -55,9 +55,8 @@
               <div class="flex-1 min-w-0">
                 <p class="text-white font-bold text-sm truncate"><%= wl.workout.name.presence || "Workout" %></p>
                 <div class="flex items-center gap-2 mt-0.5">
-                  <% main_tag = wl.workout.tags.find(&:main?) %>
-                  <% if main_tag %>
-                    <span class="text-volt text-xs font-bold uppercase"><%= main_tag.name %></span>
+                  <% if wl.workout.activity.present? %>
+                    <span class="text-volt text-xs font-bold uppercase"><%= wl.workout.activity.name %></span>
                     <span class="text-gray-700 text-xs">·</span>
                   <% end %>
                   <span class="text-gray-500 text-xs"><%= wl.workout.difficulty.capitalize %></span>

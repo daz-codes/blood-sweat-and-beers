@@ -10,10 +10,13 @@ class FeedController < ApplicationController
     visible_user_ids = [ Current.user.id ] + Current.user.accepted_following_ids
 
     logs = WorkoutLog.where(user_id: visible_user_ids)
-                     .includes(:user, :tags, photo_attachment: :blob, workout: [ :tags, :workout_likes ])
+                     .includes(:user, :tags, photo_attachment: :blob, workout: [ :tags, :activity, :workout_likes ])
                      .recent
 
-    if params[:tag_id].present?
+    if params[:activity].present?
+      @activity_filter = params[:activity]
+      logs = logs.joins(workout: :activity).where(activities: { name: params[:activity] })
+    elsif params[:tag_id].present?
       @tag = Tag.find_by(id: params[:tag_id])
       logs = logs.joins(workout: :tags).where(tags: { id: params[:tag_id] }) if @tag
     end

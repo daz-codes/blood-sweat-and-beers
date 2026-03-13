@@ -4,11 +4,14 @@ class WorkoutsController < ApplicationController
 
   # GET /library
   def index
-    @programs  = Current.user.programs.includes(:tag).order(created_at: :desc)
+    @programs  = Current.user.programs.order(created_at: :desc)
     @workouts  = Current.user.workouts
-                       .includes(:tags)
+                       .includes(:tags, :activity)
                        .order(created_at: :desc)
-    if params[:tag_id].present?
+    if params[:activity].present?
+      @activity_filter = params[:activity]
+      @workouts = @workouts.joins(:activity).where(activities: { name: params[:activity] })
+    elsif params[:tag_id].present?
       @tag = Tag.find_by(id: params[:tag_id])
       @workouts = @workouts.joins(:tags).where(tags: { id: params[:tag_id] }) if @tag
     end
@@ -49,7 +52,8 @@ class WorkoutsController < ApplicationController
   def clone
     copy = Current.user.workouts.create!(
       name:          "#{@workout.name} (copy)",
-      workout_type:  @workout.workout_type,
+      activity_id:   @workout.activity_id,
+      session_notes: @workout.session_notes,
       difficulty:    @workout.difficulty,
       duration_mins: @workout.duration_mins,
       status:        "active",
@@ -89,7 +93,8 @@ class WorkoutsController < ApplicationController
 
     copy = Current.user.workouts.create!(
       name:           source.name,
-      workout_type:   source.workout_type,
+      activity_id:    source.activity_id,
+      session_notes:  source.session_notes,
       difficulty:     source.difficulty,
       duration_mins:  source.duration_mins,
       status:         "active",
@@ -141,16 +146,10 @@ class WorkoutsController < ApplicationController
       redirect_to workout_path(old) and return
     end
 
-    old_tags      = old.tags
-    main_tag      = old_tags.find(&:main?)
-    group_tag     = old_tags.find(&:group_code?)
-    minor_tag_ids = old_tags.select(&:minor?).map(&:id)
-
     fresh = WorkoutLLMGenerator.call(
       user:          Current.user,
-      main_tag_id:   main_tag&.id,
-      minor_tag_ids: minor_tag_ids,
-      group_code_id: group_tag&.id,
+      activity:      old.activity_name,
+      session_notes: old.session_notes,
       duration_mins: old.duration_mins,
       difficulty:    old.difficulty
     )
@@ -215,7 +214,6 @@ class WorkoutsController < ApplicationController
   def create_manual
     @workout = Current.user.workouts.build(manual_workout_params)
     @workout.structure    = parse_structure(params[:sections])
-    @workout.workout_type = "custom"
     @workout.status       = "active"
 
     if @workout.save
@@ -232,40 +230,26 @@ class WorkoutsController < ApplicationController
       return
     end
 
-    if params[:new_main_tag_name].present?
-      custom_main = Tag.find_or_create_by!(slug: params[:new_main_tag_name].strip.parameterize) { |t| t.name = params[:new_main_tag_name].strip; t.tag_type = "main" }
-      main_tag_id = custom_main.id.to_s
-    else
-      main_tag_id = params[:main_tag_id].presence
-    end
-    minor_tag_ids = Array(params[:minor_tag_ids]).reject(&:blank?)
-
-    params[:new_tag_name].to_s.split(",").map(&:strip).reject(&:blank?).each do |name|
-      tag = Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name; t.tag_type = "minor" }
-      minor_tag_ids << tag.id.to_s
-    end
-
-    group_code_id = if params[:group_code].present?
-      tag = Tag.find_or_create_by!(slug: params[:group_code].strip.parameterize) { |t| t.name = params[:group_code].strip; t.tag_type = "group_code" }
-      tag.update!(tag_type: "group_code") unless tag.group_code?
-      tag.id
-    end
+    activity      = params[:activity].presence || params[:custom_activity].presence
+    session_notes = params[:session_notes].presence
+    group_tag_name = params[:group_code].presence
+    prompt_mode   = params[:prompt_mode] == "examples" ? :examples : :full
 
     @workout = WorkoutLLMGenerator.call(
       user:          Current.user,
-      main_tag_id:   main_tag_id,
-      minor_tag_ids: minor_tag_ids,
-      group_code_id: group_code_id,
+      activity:      activity,
+      session_notes: session_notes,
+      group_tag_name: group_tag_name,
       duration_mins: params[:duration_mins],
       difficulty:    params[:difficulty],
-      session_notes: params[:new_tag_name].presence
+      prompt_mode:   prompt_mode
     )
 
     Current.user.generation_uses.create!
     redirect_to workout_path(@workout)
   rescue WorkoutLLMGenerator::WorkoutGenerationError => e
     Rails.logger.warn "LLM generation failed (#{e.message}) — attempting fallback workout"
-    fallback = find_fallback_workout(main_tag_id, params[:difficulty])
+    fallback = find_fallback_workout(activity, params[:difficulty])
     if fallback
       redirect_to workout_path(fallback), alert: "#{e.message} Here's a popular workout to get you moving — try generating again when the AI is back."
     else
@@ -276,28 +260,22 @@ class WorkoutsController < ApplicationController
     redirect_to root_path, alert: "Something went wrong generating your workout. Please try again."
   end
 
-  # When the LLM is unavailable, find a popular existing workout with the same tag
-  # to show the user instead of an error page. Tries tag match first, falls back to any workout.
-  def find_fallback_workout(main_tag_id, difficulty)
+  # When the LLM is unavailable, find a popular existing workout with the same activity
+  # to show the user instead of an error page.
+  def find_fallback_workout(activity_name, difficulty)
     scope = Workout.where(status: "active").where.not(structure: nil)
 
-    if main_tag_id.present?
-      tag_match = scope.joins(:taggings)
-                       .where(taggings: { tag_id: main_tag_id, taggable_type: "Workout" })
-                       .where(difficulty: difficulty.presence || "intermediate")
-                       .order("RANDOM()")
-                       .first
-      return tag_match if tag_match
+    if activity_name.present?
+      match = scope.joins(:activity)
+                   .where(activities: { name: activity_name }, difficulty: difficulty.presence || "intermediate")
+                   .order("RANDOM()")
+                   .first
+      return match if match
 
-      # Relax difficulty constraint
-      tag_match = scope.joins(:taggings)
-                       .where(taggings: { tag_id: main_tag_id, taggable_type: "Workout" })
-                       .order("RANDOM()")
-                       .first
-      return tag_match if tag_match
+      match = scope.joins(:activity).where(activities: { name: activity_name }).order("RANDOM()").first
+      return match if match
     end
 
-    # Last resort — any active workout
     scope.order("RANDOM()").first
   end
 

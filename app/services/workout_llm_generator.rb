@@ -7,7 +7,7 @@ require "json"
 # Usage:
 #   workout = WorkoutLLMGenerator.call(
 #     user:          current_user,
-#     tag_ids:       [1, 3],
+#     activity:      "Hyrox",
 #     duration_mins: 30,
 #     difficulty:    "intermediate"
 #   )
@@ -93,17 +93,19 @@ class WorkoutLLMGenerator
     "RAM Weighted Burpees" => "20 reps | 20kg (M) / 10kg (F)"
   }.freeze
 
+  # Deka Atlas weights: { station => { peak: "...", foundation: "..." } }
+  # Peak = advanced, Foundation = beginner, Intermediate = blend of both shown.
   DEKA_ATLAS_REFERENCE = {
-    "Barbell Thrusters"                              => "20 reps | 45kg (M) / 30kg (F)",
-    "Bar-Facing Burpees Over Bar"                    => "20 reps",
-    "Surrender Lunges (weighted)"                    => "20 reps | 22.5kg (M) / 15kg (F)",
-    "Single Arm DB Ground to Overhead (alternating)" => "20 reps | 22.5kg (M) / 15kg (F)",
-    "Dumbbell Bear Crawl"                            => "40m | 22.5kg (M) / 15kg (F)",
-    "Weighted Sit-ups"                               => "20 reps | 15kg (M) / 9kg (F)",
-    "Farmer's Carry"                                 => "60m | 45kg each hand (M) / 32kg each hand (F)",
-    "DB Shoulder to Overhead Press"                  => "20 reps | 22.5kg (M) / 15kg (F)",
-    "Jump Rope Single Unders"                        => "100 reps",
-    "Atlas Shoulder to Carry"                        => "100m | 45kg (M) / 32kg (F)"
+    "Barbell Thrusters"                              => { peak: "20 reps | 45kg (M) / 30kg (F)", foundation: "20 reps | 30kg (M) / 20kg (F)" },
+    "Bar-Facing Burpees Over Bar"                    => { peak: "20 reps", foundation: "20 reps" },
+    "Surrender Lunges (weighted)"                    => { peak: "20 reps | 22.5kg (M) / 15kg (F)", foundation: "20 reps | 15kg (M) / 10kg (F)" },
+    "Single Arm DB Ground to Overhead (alternating)" => { peak: "20 reps | 22.5kg (M) / 15kg (F)", foundation: "20 reps | 15kg (M) / 10kg (F)" },
+    "Dumbbell Bear Crawl"                            => { peak: "40m | 22.5kg (M) / 15kg (F)", foundation: "40m | 15kg (M) / 10kg (F)" },
+    "Weighted Sit-ups"                               => { peak: "20 reps | 15kg (M) / 9kg (F)", foundation: "20 reps | 10kg (M) / 7.5kg (F)" },
+    "Farmer's Carry"                                 => { peak: "60m | 45kg each hand (M) / 32kg each hand (F)", foundation: "60m | 32kg each hand (M) / 22.5kg each hand (F)" },
+    "DB Shoulder to Overhead Press"                  => { peak: "20 reps | 22.5kg (M) / 15kg (F)", foundation: "20 reps | 15kg (M) / 10kg (F)" },
+    "Jump Rope Single Unders"                        => { peak: "100 reps", foundation: "100 reps" },
+    "Atlas Shoulder to Carry"                        => { peak: "100m | 45kg (M) / 32kg (F)", foundation: "100m | 32kg (M) / 22.5kg (F)" }
   }.freeze
 
   EVENT_REFERENCE = {
@@ -218,10 +220,9 @@ class WorkoutLLMGenerator
     description: "Create a structured workout plan in the required JSON format.",
     input_schema: {
       type: "object",
-      required: %w[name workout_type duration_mins difficulty structure],
+      required: %w[name duration_mins difficulty structure],
       properties: {
         name:          { type: "string",  description: "Punchy, imaginative workout name (2-4 words). Draw from a wide range of styles: feelings ('Tuesday's Regret', 'Happy Lungs'), imagery ('Desert Rain', 'Two Left Feet'), irony ('Light and Easy', 'Quick One'), structure ('The Long Way Round', 'Death By Threes'), mythology/slang ('The Minotaur', 'Fried Eggs'), or anything else vivid and memorable. Avoid over-relying on clichéd gym words like Iron, Gauntlet, Grinder, Thunder, Beast, Inferno, Blitz, Crusher, Destroyer, Titan — they can work occasionally but should not be your default. Avoid generic names like 'Full Body Workout'." },
-        workout_type:  { type: "string",  enum: Workout::TYPES },
         duration_mins: { type: "integer", description: "Total workout duration in minutes" },
         difficulty:    { type: "string",  enum: Workout::DIFFICULTIES },
         structure: {
@@ -273,29 +274,35 @@ class WorkoutLLMGenerator
     }
   }.freeze
 
-  def self.call(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], group_code_id: nil, tag_ids: [], source_workout: nil, session_notes: nil)
-    new(user: user, main_tag_id: main_tag_id, minor_tag_ids: minor_tag_ids, group_code_id: group_code_id, tag_ids: tag_ids, duration_mins: duration_mins, difficulty: difficulty, source_workout: source_workout, session_notes: session_notes).call
+  def self.call(user:, duration_mins:, difficulty:, activity: nil, group_tag_name: nil, source_workout: nil, session_notes: nil, prompt_mode: :full, **_legacy)
+    new(user: user, activity: activity, group_tag_name: group_tag_name, duration_mins: duration_mins, difficulty: difficulty, source_workout: source_workout, session_notes: session_notes, prompt_mode: prompt_mode).call
   end
 
-  def initialize(user:, duration_mins:, difficulty:, main_tag_id: nil, minor_tag_ids: [], group_code_id: nil, tag_ids: [], source_workout: nil, session_notes: nil)
+  def initialize(user:, duration_mins:, difficulty:, activity: nil, group_tag_name: nil, source_workout: nil, session_notes: nil, prompt_mode: :full, **_legacy)
     @user           = user
-    @main_tag       = main_tag_id.present? ? Tag.find_by(id: main_tag_id) : nil
-    @minor_tags     = Tag.where(id: Array(minor_tag_ids).map(&:to_i).reject(&:zero?))
-    @group_code_tag = group_code_id.present? ? Tag.find_by(id: group_code_id) : nil
-    # tag_ids kept for backwards compat (remix path uses source workout tags directly)
-    @tag_ids        = tag_ids.any? ? Array(tag_ids).map(&:to_i).reject(&:zero?) : ([ @main_tag&.id ] + @minor_tags.map(&:id)).compact
+    @activity       = activity.presence
+    @activity_slug  = @activity&.parameterize
+    @group_tag_name = group_tag_name.presence
     @duration_mins  = duration_mins.to_i
     @difficulty     = difficulty
     @source_workout = source_workout
     @session_notes  = session_notes.presence
+    @prompt_mode    = prompt_mode.to_sym
   end
 
   def call
     if @source_workout
-      tag_names    = @source_workout.tags.map(&:name)
       prompt       = build_remix_prompt
       workout_data = call_llm(prompt)
-      create_workout(workout_data, tag_names)
+      create_workout(workout_data)
+    elsif @prompt_mode == :examples
+      example_workouts = fetch_top_liked_examples
+      prompt           = build_example_prompt(example_workouts)
+      workout_data     = call_llm(prompt)
+      workout_data     = validate_and_fix(workout_data)
+      workout_data     = collapse_duplicate_exercises(workout_data)
+      workout_data     = collapse_set_notation(workout_data)
+      create_workout(workout_data)
     else
       context_workouts  = fetch_context
       program_research  = research_unknown_program
@@ -306,8 +313,7 @@ class WorkoutLLMGenerator
       workout_data     = validate_and_fix(workout_data)
       workout_data     = collapse_duplicate_exercises(workout_data)
       workout_data     = collapse_set_notation(workout_data)
-      all_tag_names    = ([ @main_tag&.name ] + @minor_tags.map(&:name) + [ @group_code_tag&.name ]).compact
-      create_workout(workout_data, all_tag_names)
+      create_workout(workout_data)
     end
   end
 
@@ -318,25 +324,22 @@ class WorkoutLLMGenerator
     # and act as a strong template that prevents variety.
     return [] if event_session?
 
-    # Group code takes full priority — draw from a pool and sample randomly for variety.
-    if @group_code_tag
-      ids = Workout.most_liked_with_tags([ @group_code_tag.id ], limit: 20).pluck(:id)
-      return [] if ids.empty?
-      return Workout.where(id: ids.sample(3)).includes(:tags)
+    # Group tag takes full priority — draw from a pool and sample randomly for variety.
+    if @group_tag_name
+      group_tag = Tag.find_by(slug: @group_tag_name.parameterize)
+      if group_tag
+        ids = Workout.joins(:taggings)
+                     .where(taggings: { tag_id: group_tag.id })
+                     .left_joins(:workout_likes)
+                     .group(:id)
+                     .order(Arel.sql("COUNT(DISTINCT workout_likes.id) DESC"))
+                     .limit(20).pluck(:id)
+        return Workout.where(id: ids.sample(3)) if ids.any?
+      end
     end
 
-    # Fetch a broader pool of popular workouts by tag, then sample randomly so
-    # the LLM gets different inspiration each generation (prevents template lock-in).
-    ids = @main_tag ? Workout.most_liked_with_tags([ @main_tag.id ], limit: 20).pluck(:id) : []
-
-    # Supplement with minor-focus matches (meta-only minor tags like no-run don't help here)
-    focus_minor_ids = @minor_tags.reject { |t| t.slug.in?(META_MINOR_SLUGS) }.map(&:id)
-    if ids.size < 10 && focus_minor_ids.any?
-      minor_ids = Workout.most_liked_with_tags(focus_minor_ids, limit: 20)
-                         .where.not(id: ids.any? ? ids : nil)
-                         .pluck(:id)
-      ids += minor_ids
-    end
+    # Fetch popular workouts by activity, then sample randomly
+    ids = @activity ? Workout.most_liked_with_activity(@activity, limit: 20).pluck(:id) : []
 
     # Still thin? Fall back to globally popular workouts
     if ids.size < 3
@@ -348,26 +351,84 @@ class WorkoutLLMGenerator
     end
 
     return [] if ids.empty?
-    Workout.where(id: ids.sample(3)).includes(:tags)
+    Workout.where(id: ids.sample(3))
+  end
+
+  # Fetches the 5 most-liked workouts matching the current tags for use as few-shot examples.
+  # Unlike fetch_context (which samples 3 randomly from top 20), this returns the actual top 5
+  # ordered by like count, so the user's multi-likes act as quality weighting.
+  def fetch_top_liked_examples
+    return Workout.left_joins(:workout_likes).group(:id).order(Arel.sql("COUNT(workout_likes.id) DESC")).limit(5) unless @activity
+
+    Workout.most_liked_with_activity(@activity, limit: 5)
+  end
+
+  # Builds a minimal prompt that relies on example workouts instead of extensive rules.
+  # The idea: show the LLM 5 high-quality workouts and ask it to create something fresh
+  # in the same style, rather than micromanaging every detail with rules.
+  def build_example_prompt(example_workouts)
+    main_name = @activity || "general fitness"
+
+    examples_json = example_workouts.map do |w|
+      {
+        name: w.name,
+        activity: w.activity,
+        duration_mins: w.duration_mins,
+        difficulty: w.difficulty,
+        structure: w.structure
+      }
+    end
+
+    sections = []
+
+    sections << <<~ROLE
+      You are an expert personal trainer who writes creative, fun, and effective gym workouts.
+    ROLE
+
+    user_context = build_user_context
+    sections << user_context if user_context.present?
+
+    sections << <<~TASK
+      Generate a #{@duration_mins}-minute #{@difficulty} #{main_name} session.
+    TASK
+
+    if example_workouts.any?
+      sections << <<~EXAMPLES
+        Here are #{example_workouts.size} example workouts that the athlete loves. Study their structure, exercise selection, format variety, naming style, and rep schemes — then create something FRESH in the same spirit. Do not copy them directly, but match their quality and style:
+
+        #{JSON.pretty_generate(examples_json)}
+      EXAMPLES
+    end
+
+    sections << <<~RULES
+      Use the create_workout tool. Key guidelines:
+      - Give it a punchy, memorable name (2-4 words) — creative, not generic
+      - Use a variety of section formats (don't repeat the same format back-to-back)
+      - Include a warm-up and cool-down
+      - Be specific with reps, distances, and weights
+      - Rep counts should be clean numbers (even or multiples of 5)
+      - NEVER use numbered block prefixes like "Block 1:", "Block 2:" in section names — use creative, descriptive names instead
+      - Make it genuinely fun and challenging — the kind of workout people talk about afterwards
+    RULES
+
+    sections.join("\n")
   end
 
   # Returns the names of the user's 5 most recent workouts that share the current main tag.
   # Used to avoid repeating words or themes in the new workout name.
   def fetch_recent_workout_names
     scope = @user.workouts.where(status: "active").order(created_at: :desc)
-    scope = scope.joins(:taggings).where(taggings: { tag_id: @main_tag.id }) if @main_tag
+    scope = scope.joins(:activity).where(activities: { name: @activity }) if @activity
     scope.limit(5).pluck(:name).compact
   end
 
   # For Functional Muscle sessions: extract block types and key exercises from the
   # last 3 sessions so the LLM can deliberately vary the structure and compound choices.
   def fetch_recent_fm_formats
-    return nil unless @main_tag&.slug == "functional-muscle"
+    return nil unless @activity_slug == "functional-muscle"
 
     recent = @user.workouts
-                  .where(status: "active")
-                  .joins(:taggings)
-                  .where(taggings: { tag_id: @main_tag.id })
+                  .joins(:activity).where(activities: { name: @activity }, status: "active")
                   .order(created_at: :desc)
                   .limit(3)
 
@@ -519,7 +580,15 @@ class WorkoutLLMGenerator
       WC
     end
 
-    warmup   = WARMUP_OPTIONS.sample
+    # When session notes suggest limited equipment, skip warm-ups that reference machines
+    warmup_pool = if equipment_limited?
+      WARMUP_OPTIONS.select { |w| w[:label].match?(/Activation|Bodyweight|Band/) }
+    else
+      WARMUP_OPTIONS
+    end
+    warmup_pool = WARMUP_OPTIONS if warmup_pool.empty? # safety fallback
+
+    warmup   = warmup_pool.sample
     cooldown = COOLDOWN_OPTIONS.sample
     <<~WC
       ## Warm-Up Approach: #{warmup[:label]}
@@ -532,8 +601,7 @@ class WorkoutLLMGenerator
   end
 
   def build_prompt(context_workouts, program_research = nil, recent_names = [], recent_fm_formats = nil)
-    main_name  = @main_tag&.name || "general fitness"
-    minor_str  = @minor_tags.map(&:name).join(", ")
+    main_name  = @activity || "general fitness"
     cc_config  = fm_continuous_circuit_config  # reuse same pool for all session types
 
     selected_stations = pick_event_stations
@@ -541,11 +609,7 @@ class WorkoutLLMGenerator
       " Anchor movements for this session (must appear in the main set): #{selected_stations.join(", ")}. Supplement freely with exercises from the #{main_name} training toolkit."
     end
 
-    task_sentence = if minor_str.present?
-      "Generate a #{@duration_mins}-minute #{@difficulty} #{main_name} session with a focus on: #{minor_str}.#{station_constraint}"
-    else
-      "Generate a #{@duration_mins}-minute #{@difficulty} #{main_name} session.#{station_constraint}"
-    end
+    task_sentence = "Generate a #{@duration_mins}-minute #{@difficulty} #{main_name} session.#{station_constraint}"
 
     sections = []
 
@@ -563,7 +627,7 @@ class WorkoutLLMGenerator
       # For event sessions with a station selection: inject the training philosophy
       # from the context file but NOT the station table (which causes the LLM to
       # treat it as a checklist). Station reference is injected separately below.
-      sport_context = load_sport_context([ @main_tag&.name ].compact)
+      sport_context = load_sport_context([ @activity ].compact)
       if sport_context.present?
         # Strip the station table (the block between "## The N Stations" and "## Training")
         philosophy_only = sport_context.gsub(/##\s+The \d+ (?:Stations|Zones).*?(?=##\s+Training)/m, "")
@@ -572,7 +636,7 @@ class WorkoutLLMGenerator
       station_ref = build_station_reference(selected_stations)
       sections << station_ref if station_ref
     else
-      sport_context = load_sport_context([ @main_tag&.name ].compact)
+      sport_context = load_sport_context([ @activity ].compact)
       sections << sport_context if sport_context.present?
     end
 
@@ -582,7 +646,7 @@ class WorkoutLLMGenerator
 
     if context_workouts.any?
       context_json = context_workouts.map do |w|
-        { name: w.name, tags: w.tags.map(&:name), duration_mins: w.duration_mins,
+        { name: w.name, activity: w.activity, duration_mins: w.duration_mins,
           difficulty: w.difficulty, structure: w.structure }
       end.to_json
       sections << <<~COMMUNITY
@@ -603,7 +667,7 @@ class WorkoutLLMGenerator
         >>> #{@session_notes} <<<
 
         How to apply this:
-        - "strength focus" → heavy compound lifts (deadlifts, squats, bench, overhead press), low reps (3-6), long rest, minimal cardio. At least 60% of the session should be barbell/dumbbell strength work.
+        - "strength" / "hypertrophy" / "bodybuilding" / "muscle" → STRUCTURE LIKE A REAL LIFTING SESSION: single-exercise sections with heavy sets (e.g. "5×5 Back Squat", "4×8 Romanian Deadlift", "4×10 Overhead Press") are the backbone. Each major compound gets its OWN section with proper rounds and rest (60-90s). Accessory work can be supersets (2 exercises) but NOT large circuits. Minimise cardio — warm-up and cool-down only. At least 70% of the session should be dedicated barbell/dumbbell strength work.
         - "cardio focus" → sustained machine work (rower, ski, bike, run), high-rep bodyweight, AMRAPs, EMOMs. At least 60% of the session should be cardio/conditioning.
         - "sled focus" → sled pushes, sled pulls, sled drags must appear in MULTIPLE sections, as the primary exercises. The sled is the centrepiece — not a single appearance.
         - "burpee focus" → burpee variations (burpee box jump-overs, burpee pull-ups, bar-facing burpees, lateral burpees) must appear in MULTIPLE sections. Build the session around burpees.
@@ -622,6 +686,7 @@ class WorkoutLLMGenerator
     race_sim_rule       = race_simulation_rule
     func_muscle_rule    = functional_muscle_rule
     fm_archetype        = fm_session_archetype
+    equipment_rule      = build_equipment_rule
     station_rule    = if selected_stations
       "- ANCHOR MOVEMENTS: #{selected_stations.join(", ")} must be central to the main set. Complement them with toolkit exercises from the sport context — create a complete, varied workout, not a drill of the anchor movements repeated in every section."
     end
@@ -633,6 +698,7 @@ class WorkoutLLMGenerator
       #{func_muscle_rule}
       #{structure_rule}
       #{station_rule}
+      #{equipment_rule}
       - Warm-up: #{@duration_mins <= 30 ? "3 minutes (format: straight, duration_mins: 3). Keep it simple — 1 exercise, steady cardio only." : "5 minutes (format: straight, duration_mins: 5). Use the Warm-Up Approach specified above — follow it exactly."}
       - Cool-down: #{@duration_mins <= 30 ? "2 minutes (format: straight, duration_mins: 2). Keep it minimal — just a note to loosen off and stretch, no detailed holds." : "5 minutes (format: straight, duration_mins: 5). Use the Cool-Down Approach specified above. No reps or distances — hold times only, described in notes (e.g. \"30s each side\")."}.
       - Main sets: do NOT set duration_mins on main sets — let the reps, rounds, and format define the work. Only amrap and emom sections need a duration_mins (their time cap). A short punchy finisher (e.g. Tabata, The Hundred/Centurion, for_time sprint) is a welcome extra at the end of the main work.
@@ -641,6 +707,7 @@ class WorkoutLLMGenerator
       - Rep counts and calorie targets must be "clean" numbers — even numbers (2, 4, 6, 8, 10, 12, 16, 20…) or multiples of 5 (5, 10, 15, 20, 25…). Never use odd, awkward counts like 13, 7, 11, 17, or 19. When scaling from competition volumes, round to the nearest clean number.
       - Be specific with reps, distances, and weights
       - SECTION NAMES MUST BE ACCURATE: never mention an exercise or activity in a section name unless it actually appears in that section's exercises. "Run + Station" must contain running. "Sled Circuit" must contain sled work. If unsure, use a generic evocative name instead.
+      - NEVER use numbered block prefixes like "Block 1:", "Block 2:", "Block 3:" or "Part 1:", "Part 2:" in section names. Use creative, descriptive names instead.
       - Give it a punchy, memorable name — something a gym community would actually call it. Be creative and unpredictable: draw from feelings, imagery, places, days, animals, weather, mythology, slang — anything vivid. Actively vary the style each time (e.g. a cheeky two-worder one time, a dramatic three-worder the next, a dry/ironic name after that). BANNED WORDS — never use: Iron, Gauntlet, Grinder, Thunder, Beast, Inferno, Blitz, Crusher, Destroyer, Titan. #{recent_names.any? ? "The user's recent workout names are: #{recent_names.map { |n| "\"#{n}\"" }.join(", ")}. Do NOT reuse any word or theme from these." : ""}
       #{recent_fm_formats.present? ? "- RECENT SESSIONS — the user's recent Functional Muscle sessions were:\n#{recent_fm_formats.lines.map { |l| "        #{l}" }.join}\n      Use this to avoid repetition: pick different strength machines from the ones listed, pick a different Pilates 100 exercise, and vary the tabata compounds. Block types (12-min, ladder etc) can repeat if they fit — but machines and finisher should rotate." : ""}
       #{sport_rule}
@@ -662,6 +729,7 @@ class WorkoutLLMGenerator
           - INVALID: mixing reps, distance, and calorie exercises in the same ladder.
         * straight — fixed sets with rest. Use for simple warm-ups or isolated single exercises.
         * matrix — progressive exercise combinations. List 3–5 exercises in order. The section builds up then strips back: for 3 exercises: A, A+B, A+B+C, B+C, C. For 4: A, A+B, A+B+C, A+B+C+D, B+C+D, C+D, D. For 5: A, A+B, A+B+C, A+B+C+D, A+B+C+D+E, B+C+D+E, C+D+E, D+E, E. IMPORTANT: all exercises must use the same metric — either all reps (same count each) or all duration_s (same seconds each). Prefer duration_s: 30 for each exercise most of the time — this is the most common Metafit style. Set rest_secs for the rest between each combination (typically 30–60s).
+      - EXERCISE VARIETY ACROSS THE SESSION: never use the same base movement in more than one section. If Back Squat appears in one section, do NOT use Back Squat (or Paused Back Squat, or any squat variation on a barbell) in another section — pick a different compound like Front Squat, Deadlift, or Overhead Press instead. The whole session should expose the athlete to as many different movement patterns as possible.
       - NEVER repeat the same exercise as multiple entries in the exercises array. This is a critical mistake — do NOT list "Bench Press (Set 1)", "Bench Press (Set 2)", "Bench Press (Set 3)" as three separate entries. Instead, use a single entry and set rounds: 3 on the section. Notes like "Set 1:", "Set 2:" in exercise notes are forbidden.
       - SINGLE-EXERCISE SECTIONS are valid and often better than circuits, especially for strength and power work. A section with just one exercise is perfectly correct: e.g. '5 × 5 Deadlift (heavy)', 'EMOM 10: 8 Thrusters', '4 × 8 Romanian Deadlift'. Do not feel obligated to bundle every movement into a multi-exercise circuit. HOWEVER: a single-exercise section MUST always use multiple sets (rounds: 3 minimum) or a timed modality (emom/amrap/for_time). BANNED: a section with 1 exercise and rounds ≤ 2 (or no rounds). This is always wrong. Every section must represent real training volume, not a single isolated set.
       - NEVER list the same exercise more than once in a section's exercises array. If you need the same movement repeated (e.g. 5 × 25m Freestyle), use rounds: 5 with a single exercise entry — not 5 separate entries. Duplicate entries are always wrong.
@@ -721,15 +789,100 @@ class WorkoutLLMGenerator
   end
 
   # Returns a bullet-point rule for explicit exclusions (e.g. "no-run" minor tag).
+  # Builds a hard equipment constraint from session notes mentioning specific equipment.
+  # Parses what the athlete HAS, then explicitly bans everything else.
+  def build_equipment_rule
+    return nil unless @session_notes.present?
+
+    notes_lower = @session_notes.downcase
+
+    # Map of detectable equipment → canonical name
+    equipment_map = {
+      "olympic bar" => "olympic barbell", "barbell" => "barbell",
+      "dumbbell" => "dumbbells", "dumbbells" => "dumbbells",
+      "kettlebell" => "kettlebells", "kettlebells" => "kettlebells",
+      "squat rack" => "squat rack", "power rack" => "squat rack", "rack" => "squat rack",
+      "bench" => "bench", "flat bench" => "bench", "adjustable bench" => "bench",
+      "pull-up bar" => "pull-up bar", "pull up bar" => "pull-up bar",
+      "resistance band" => "resistance bands", "bands" => "resistance bands",
+      "trx" => "TRX/suspension trainer", "suspension" => "TRX/suspension trainer",
+      "plates" => "weight plates",
+      "cable machine" => "cable machine", "cables" => "cable machine",
+      "rower" => "rowing machine", "rowing machine" => "rowing machine",
+      "ski erg" => "SkiErg", "skierg" => "SkiErg",
+      "assault bike" => "assault bike", "air bike" => "assault bike", "bike" => "stationary bike",
+      "treadmill" => "treadmill", "battle rope" => "battle ropes", "sled" => "sled",
+      "box" => "plyo box", "jump box" => "plyo box",
+      "medicine ball" => "medicine ball", "med ball" => "medicine ball",
+      "wall ball" => "wall ball"
+    }
+
+    detected = equipment_map.each_with_object(Set.new) do |(keyword, canonical), set|
+      set << canonical if notes_lower.include?(keyword)
+    end
+
+    # Also detect "home gym" or "hotel" as environment hints
+    home_gym = notes_lower.include?("home gym") || notes_lower.include?("garage gym")
+    hotel    = notes_lower.include?("hotel")
+
+    return nil if detected.empty? && !home_gym && !hotel
+
+    # Build banned list — common gym equipment NOT in the detected set
+    all_gym_equipment = [
+      "rowing machine", "SkiErg", "assault bike", "stationary bike", "treadmill",
+      "battle ropes", "sled", "cable machine", "plyo box", "wall ball", "medicine ball",
+      "GHD machine", "leg press", "lat pulldown", "pec deck"
+    ]
+    banned = all_gym_equipment.reject { |e| detected.include?(e) }
+
+    available_str = detected.any? ? detected.to_a.sort.join(", ") : "bodyweight only"
+
+    <<~RULE.strip
+      - *** EQUIPMENT CONSTRAINT (HARD LIMIT) ***:
+        The athlete is training in a #{home_gym ? "home gym" : hotel ? "hotel" : "limited equipment"} setting.
+        AVAILABLE: #{available_str} + bodyweight exercises (always allowed).
+        BANNED (athlete does NOT have these): #{banned.join(", ")}.
+        Every exercise must be doable with ONLY the available equipment or bodyweight. No exceptions.
+        Bodyweight exercises (push-ups, pull-ups, lunges, planks, etc.) are always fine as accessories — but unless the session is specifically bodyweight-focused, prioritise the listed equipment for main working sets.
+        Maximise variety with what IS available — e.g. with a barbell: deadlifts, front squats, overhead press, bent-over rows, cleans, Romanian deadlifts, hip thrusts, floor press, Pendlay rows — not just back squats repeated.
+    RULE
+  end
+
+  # Returns true when session notes mention specific equipment or a limited setting
+  # (home gym, hotel, etc.) — used to filter warm-up options that reference machines.
+  def equipment_limited?
+    return false unless @session_notes.present?
+    notes_lower = @session_notes.downcase
+    notes_lower.include?("home gym") || notes_lower.include?("garage") ||
+      notes_lower.include?("hotel") || notes_lower.include?("no equipment") ||
+      notes_lower.match?(/\b(dumbbell|barbell|olympic bar|kettlebell|resistance band|bands only)\b/)
+  end
+
+  # Parse behavior flags from session_notes (replaces old minor tag behavior)
+  def session_notes_flag?(pattern)
+    @session_notes.present? && @session_notes.match?(pattern)
+  end
+
+  def no_run?
+    session_notes_flag?(/\bno[- ]?run(ning|s)?\b/i)
+  end
+
+  def no_core?
+    session_notes_flag?(/\bno[- ]?(core|abs)\b/i)
+  end
+
+  def race_simulation?
+    session_notes_flag?(/\brace[- ]?sim(ulation)?\b/i)
+  end
+
   def sport_purity_rule
     rules = []
 
-    minor_slugs = @minor_tags.map(&:slug)
-    if minor_slugs.any? { |s| s.in?(%w[no-run no-running no-runs]) }
+    if no_run?
       rules << "- Do NOT include any running in this session. Replace any running segments with rowing, SkiErg, bike erg, or other non-running cardio."
     end
 
-    if @main_tag&.slug.in?(BODYWEIGHT_ONLY_SLUGS)
+    if @activity_slug.in?(BODYWEIGHT_ONLY_SLUGS)
       rules << "- BODYWEIGHT ONLY — this program uses NO equipment whatsoever (no barbells, no dumbbells, no kettlebells, no machines, no cardio equipment). Every exercise must use bodyweight only. Ignore the athlete's strength benchmarks for loading — use bodyweight progressions (pistol squats, archer push-ups, pull-up variations, plyometrics) to adjust difficulty instead."
     end
 
@@ -737,9 +890,8 @@ class WorkoutLLMGenerator
   end
 
   def core_section_rule
-    minor_slugs = @minor_tags.map(&:slug)
-    # Explicit no-core tag always wins
-    return "- Do NOT include a dedicated core or abs section in this session." if minor_slugs.any? { |s| s.in?(%w[no-core no-abs no-core-work]) }
+    # Explicit no-core in session notes always wins
+    return "- Do NOT include a dedicated core or abs section in this session." if no_core?
     return "- Do NOT include a dedicated core or abs section — this is a short session, keep it focused on the main work." if @duration_mins < 30
 
     if rand < 0.67
@@ -749,11 +901,6 @@ class WorkoutLLMGenerator
 
     core_mins = @duration_mins >= 45 ? 10 : 5
     "- Core section: include a #{core_mins}-minute dedicated core section (format: straight or rounds) placed towards the end of the session, before the cool-down. Use 3–5 exercises targeting abs and trunk stability (e.g. plank, hollow hold, dead bugs, Russian twist, V-ups, ab wheel rollout, GHD sit-ups, toes-to-bar, L-sit). Be specific with reps or hold times."
-  end
-
-  # Returns true when the user requested a race simulation via minor tag.
-  def race_simulation?
-    @minor_tags.any? { |t| t.slug.in?(RACE_SIM_SLUGS) }
   end
 
   # Randomly selects a Continuous Circuit duration/exercise-count for FM sessions.
@@ -778,7 +925,7 @@ class WorkoutLLMGenerator
   # a concrete structural directive rather than being asked to "vary" on its own.
   # Tabata frequency distribution: 40% = 1, 40% = 2, 15% = 3, 5% = 4.
   def fm_session_archetype
-    return nil unless @main_tag&.slug == "functional-muscle"
+    return nil unless @activity_slug == "functional-muscle"
 
     roll = rand(100)
     tabata_count = case roll
@@ -815,7 +962,7 @@ class WorkoutLLMGenerator
 
   # Hard rules specific to Functional Muscle sessions.
   def functional_muscle_rule
-    return nil unless @main_tag&.slug == "functional-muscle"
+    return nil unless @activity_slug == "functional-muscle"
 
     cc = fm_continuous_circuit_config
 
@@ -826,7 +973,7 @@ class WorkoutLLMGenerator
 
       WEIGHTS: These are high-intensity metabolic sessions. Keep weights light and sustainable. Tabata/metabolic compound exercises: 8–12kg dumbbells, 12–16kg kettlebells. Bear Mountain barbell: 20–30kg only. Strength sets (5×10): sensible working weight — e.g. 40–60kg leg press, 20–30kg shoulder press, 15–25kg side raises. Do NOT prescribe heavy barbell weights (40kg+) for tabata or metabolic blocks. Do NOT prescribe 60kg+ for any strength section.
 
-      SECTION NAMES: Give each tabata a short, punchy, fun name — NOT a number, NOT the exercise name. Examples: "Tabata Terror", "The Burner", "Sweat & Twist", "Ignition", "The Grind", "Pulse Raiser", "Chaos Round". Never write "Tabata 1", "Tabata 2", or include the exercise name in the section title. Other sections: use descriptive but concise names (e.g. "Bear Mountain", "The Ladder", "Upper Body Strength", "Lower Body Strength").
+      SECTION NAMES: Give every section a short, punchy name — NEVER prefix with "Block 1:", "Block 2:", or any number. Numeric prefixes are banned. Tabatas: use fun creative names like "The Burner", "Sweat & Twist", "Ignition", "The Grind", "Pulse Raiser", "Chaos Round" — never "Tabata 1" or the exercise name. Metabolic blocks: use evocative names like "The Grind Loop", "Cardio Blitz", "The Ladder". Strength: "Upper Body Strength", "Lower Body Strength". The section name must accurately describe what's in it — don't call it "Abs Finisher" if the exercise is plate serves or bicep curls; call it "Functional Finisher" or "The Hundred" instead. Only use "Abs Finisher" or "Core 100" when the exercises are actual abs movements.
 
       1. WARM-UP (always first): format: straight, duration_mins: 5. ONE exercise only — a single cardio machine (assault bike, rower, or ski erg) at easy pace. No mobility, no activation, no circuits. One machine, 5 mins.
 
@@ -873,8 +1020,8 @@ class WorkoutLLMGenerator
       4. LOWER BODY STRENGTH (after upper body): MANDATORY — must be present in every session. ONE section only, named "Lower Body Strength". format: rounds, rounds: 5, rest_secs: 60, reps: 10. Exactly ONE exercise — pick one at random from this list each time: Leg Press, Leg Extension, Leg Curl, Calf Raise, Squats, Deadlifts, Lunges. Do NOT default to Leg Press — every option is equally valid. One exercise, 5 rounds, 10 reps. Nothing else.
 
       5. ABS / PILATES 100 (after strength, always just before the cool-down): MANDATORY in 90% of sessions — only skip if the metabolic blocks already had heavy abs work throughout. Always 100 reps total, ~5 minutes. Choose ONE of these formats each time (vary across sessions):
-        - format: hundred — 100 reps of a single non-abs pilates-style exercise (wall ball slams, bicep curls light, lateral raises light, plate serves). Do not use sit-ups or crunches here.
-        - format: straight — 4–5 abs exercises, each 20–25 reps, one pass through (total = ~100 reps). Give the section a name like "Abs Finisher" or "Core 100".
+        - format: hundred — 100 reps of a single non-abs pilates-style exercise (wall ball slams, bicep curls light, lateral raises light, plate serves). Do not use sit-ups or crunches here. Name the section after the exercise: "The Hundred" or a creative name like "Functional Finisher", "Shoulder Burn", "Plate Party" — NOT "Abs Finisher" (these aren't abs exercises).
+        - format: straight — 4–5 abs exercises, each 20–25 reps, one pass through (total = ~100 reps). Name the section "Abs Finisher" or "Core 100" (these ARE abs exercises).
         - format: rounds, rounds: 5 — a single abs exercise × 20 reps per round, or rounds: 4 × 25 reps, or rounds: 2 × 50 reps.
         ABS EXERCISE MENU (pick from this list — mix them up across sessions, never repeat the same combination):
         Sit-ups, Crunches, Overhead crunches, Leg raises, Alternating toe touches, V-ups, Bicycle crunches, Russian twists, Flutter kicks, Hollow holds (timed), Dead bugs, Plank shoulder taps, Mountain climbers (slow), Side plank dips.
@@ -892,7 +1039,7 @@ class WorkoutLLMGenerator
     return nil unless event_session?
     return nil if race_simulation?
 
-    main_slug = @main_tag&.slug || ""
+    main_slug = @activity_slug || ""
 
     case main_slug
     when "deka", "deka-fit", "deka-strong", "deka-mile"
@@ -928,7 +1075,7 @@ class WorkoutLLMGenerator
   def race_simulation_rule
     return nil unless race_simulation?
 
-    main_slug = @main_tag&.slug || ""
+    main_slug = @activity_slug || ""
 
     case main_slug
     when "deka", "deka-fit"
@@ -978,7 +1125,7 @@ class WorkoutLLMGenerator
           No warm-up/cool-down — this is a competition-day simulation.
       RULE
     else
-      "- RACE SIMULATION MODE: Generate a full event run-through for #{@main_tag&.name} using competition-accurate reps, distances, and weights in race order. Format as for_time sections. No warm-up/cool-down."
+      "- RACE SIMULATION MODE: Generate a full event run-through for #{@activity} using competition-accurate reps, distances, and weights in race order. Format as for_time sections. No warm-up/cool-down."
     end
   end
 
@@ -1004,7 +1151,7 @@ class WorkoutLLMGenerator
 
   def build_remix_prompt
     source_json = {
-      tags:          @source_workout.tags.map(&:name),
+      activity:      @source_workout.activity_name,
       duration_mins: @source_workout.duration_mins,
       difficulty:    @source_workout.difficulty,
       structure:     @source_workout.structure
@@ -1015,8 +1162,6 @@ class WorkoutLLMGenerator
 
       If the user is doing a run, don't add any gym exercises, just use running and dynamic stretches.
 
-      If the user is doing a swim, only use swimming drills and strokes.
-
       Generate a #{@duration_mins}-minute #{@difficulty} workout inspired by this existing workout:
       #{source_json}
 
@@ -1026,7 +1171,7 @@ class WorkoutLLMGenerator
       - Total duration close to #{@duration_mins} minutes
       - Same training focus as the source but a clearly distinct session
       - Be specific with reps, distances, and weights
-      - workout_type should always be "custom"
+      - Do not include a workout_type field
       - The name MUST be completely original — do NOT reuse or rephrase "#{@source_workout.name}"
       - You may use ladder or mountain sections for variety, but ONLY when all exercises share the same metric AND the step size is realistic:
         * reps: step 1–5. E.g. start:10 end:1 step:1 = 10,9,8...1 reps.
@@ -1048,11 +1193,6 @@ class WorkoutLLMGenerator
     # Training environment
     if @user.pool_length.present?
       sections << "Training environment: #{@user.pool_length} pool."
-    end
-
-    if @user.equipment.present?
-      readable = @user.equipment.map(&:humanize).join(", ")
-      sections << "Available equipment: #{readable}."
     end
 
     benchmarks = format_benchmarks
@@ -1290,25 +1430,40 @@ class WorkoutLLMGenerator
 
   # Returns true when the main tag is an event type with a fixed station/zone list.
   def event_session?
-    EVENT_STATIONS.key?(@main_tag&.slug || "")
+    EVENT_STATIONS.key?(@activity_slug || "")
   end
 
   # Builds a compact reference block listing only the selected stations with their
   # race-accurate weights/distances. Replaces the full station table from the context
   # file so the LLM can't use the table as a checklist of "things to include".
   def build_station_reference(stations)
-    ref_map = EVENT_REFERENCE[@main_tag&.slug || ""] || {}
-    lines = stations.filter_map { |s| ref_map[s] ? "  #{s}: #{ref_map[s]}" : nil }
+    ref_map = EVENT_REFERENCE[@activity_slug || ""] || {}
+    lines = stations.filter_map do |s|
+      ref = ref_map[s]
+      next nil unless ref
+      text = resolve_station_ref(ref)
+      "  #{s}: #{text}"
+    end
     return nil if lines.empty?
     "Race-accurate reference for this session's stations (weights / distances):\n#{lines.join("\n")}"
   end
 
-  # Meta-instruction minor tags that restrict the session but are NOT focus movements.
-  # These must NOT disable station selection (they're constraints, not content choices).
-  META_MINOR_SLUGS = %w[no-run no-running no-runs no-core no-abs no-core-work race-simulation race-sim].freeze
-  RACE_SIM_SLUGS   = %w[race-simulation race-sim].freeze
+  # If the reference is a Hash with peak/foundation keys, select based on difficulty.
+  # Advanced = peak weights, beginner = foundation, intermediate = both shown.
+  def resolve_station_ref(ref)
+    return ref unless ref.is_a?(Hash)
 
-  # Main tag slugs that are inherently bodyweight-only programs.
+    case @difficulty
+    when "advanced"
+      "#{ref[:peak]} (Peak)"
+    when "beginner"
+      "#{ref[:foundation]} (Foundation)"
+    else
+      "Peak: #{ref[:peak]} | Foundation: #{ref[:foundation]} — use a weight between the two"
+    end
+  end
+
+  # Activity slugs that are inherently bodyweight-only programs.
   BODYWEIGHT_ONLY_SLUGS = %w[bodyweight meta-fit metafit metafit-bodyweight].freeze
 
   # Randomly selects a subset of event stations for this session.
@@ -1316,12 +1471,8 @@ class WorkoutLLMGenerator
   # focus movements as minor tags (in which case the LLM uses those freely).
   # Meta-instruction tags (no-run etc.) are ignored for this check.
   def pick_event_stations
-    main_slug = @main_tag&.slug || ""
-    pool = EVENT_STATIONS[main_slug]
+    pool = EVENT_STATIONS[@activity_slug || ""]
     return nil if pool.nil?
-
-    focus_tags = @minor_tags.reject { |t| t.slug.in?(META_MINOR_SLUGS) }
-    return nil if focus_tags.any?  # user specified actual movements — let them guide it
 
     count = STATION_COUNT_WEIGHTS.sample
     pool.shuffle.first(count)
@@ -1354,7 +1505,7 @@ class WorkoutLLMGenerator
   end
 
   def validate_and_fix(workout_data)
-    validator = WorkoutValidator.new(workout_data, difficulty: @difficulty, duration_mins: @duration_mins, main_tag_slug: @main_tag&.slug)
+    validator = WorkoutValidator.new(workout_data, difficulty: @difficulty, duration_mins: @duration_mins, main_tag_slug: @activity_slug || "")
     result    = validator.validate_and_fix
     validator.fixes.each    { |msg| Rails.logger.info("[WorkoutValidator] Fixed: #{msg}") }
     validator.warnings.each { |msg| Rails.logger.warn("[WorkoutValidator] Warn:  #{msg}") }
@@ -1363,19 +1514,19 @@ class WorkoutLLMGenerator
 
   # Returns true when the main tag has pre-written context or is a known event.
   def known_program?
-    slug = @main_tag&.slug || ""
+    slug = @activity_slug || ""
     CONTEXT_TAG_MAP.key?(slug) || EVENT_STATIONS.key?(slug)
   end
 
   # Fires a fast research call if the main tag is an unknown program/style.
   # Returns a hash of structured program info, or nil if not applicable / on error.
   def research_unknown_program
-    return nil if @main_tag.nil?
+    return nil if @activity.nil?
     return nil if known_program?
 
-    research_program(@main_tag.name)
+    research_program(@activity)
   rescue => e
-    Rails.logger.warn("WorkoutLLMGenerator: research pass failed for '#{@main_tag&.name}': #{e.message}")
+    Rails.logger.warn("WorkoutLLMGenerator: research pass failed for '#{@activity}': #{e.message}")
     nil
   end
 
@@ -1418,7 +1569,7 @@ class WorkoutLLMGenerator
     return nil if research["skipped"].present?
 
     lines = []
-    lines << "## Program Context: #{@main_tag&.name}"
+    lines << "## Program Context: #{@activity}"
     lines << research["description"] if research["description"].present?
 
     if research["session_structure"].present?
@@ -1440,15 +1591,15 @@ class WorkoutLLMGenerator
 
     if Array(research["typical_exercises"]).any?
       lines << "\n**Exercises from this program (use these — do not substitute generic gym movements):**"
-      research["typical_exercises"].each { |ex| lines << "  - #{ex}" }
+      Array(research["typical_exercises"]).each { |ex| lines << "  - #{ex}" }
     end
 
     if Array(research["signature_characteristics"]).any?
-      lines << "\n**What makes it feel like #{@main_tag&.name}:**"
-      research["signature_characteristics"].each { |c| lines << "  - #{c}" }
+      lines << "\n**What makes it feel like #{@activity}:**"
+      Array(research["signature_characteristics"]).each { |c| lines << "  - #{c}" }
     end
 
-    lines << "\nThe session MUST feel authentically like #{@main_tag&.name}. Follow the structure and use the exercises above — someone who has attended a real class should recognise it immediately."
+    lines << "\nThe session MUST feel authentically like #{@activity}. Follow the structure and use the exercises above — someone who has attended a real class should recognise it immediately."
 
     lines.join("\n")
   end
@@ -1517,28 +1668,29 @@ class WorkoutLLMGenerator
     tool_block["input"]
   end
 
-  def create_workout(data, tag_names)
-    tags = tag_names.map do |name|
-      # Preserve tag_type for group codes — don't downgrade an existing group_code tag to minor
-      Tag.find_or_create_by!(slug: name.parameterize) { |t| t.name = name }
-    end
-    # Ensure the group code tag's type is never overwritten by the LLM name-matching path
-    if @group_code_tag && (existing = tags.find { |t| t.id == @group_code_tag.id })
-      existing.update!(tag_type: "group_code") unless existing.group_code?
-    end
+  def create_workout(data)
+    activity_name = @activity || @source_workout&.activity_name
+    activity_record = activity_name.present? ? Activity.find_or_create_by!(name: activity_name) : nil
 
     workout = Workout.create!(
       user:          @user,
       name:          data["name"].presence || "Generated Workout",
-      workout_type:  Workout::TYPES.include?(data["workout_type"]) ? data["workout_type"] : "custom",
+      activity:      activity_record,
+      session_notes: @session_notes,
       duration_mins: data["duration_mins"].to_i.positive? ? data["duration_mins"] : @duration_mins,
       difficulty:    Workout::DIFFICULTIES.include?(data["difficulty"]) ? data["difficulty"] : @difficulty,
       status:        "active",
       structure:     data["structure"]
     )
 
-    workout.tags = tags
+    # Community tag (e.g. "Hyrox Manchester 2026")
+    if @group_tag_name.present?
+      tag = Tag.find_or_create_by!(slug: @group_tag_name.parameterize) { |t| t.name = @group_tag_name }
+      workout.tags = [ tag ]
+    end
+
     Rails.cache.write("workout_llm_debug_#{workout.id}", @llm_calls, expires_in: 2.hours) if @llm_calls.present?
+    DiscoverExerciseVideosJob.perform_later(workout.id)
     workout
   end
 end

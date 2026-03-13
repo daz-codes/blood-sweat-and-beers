@@ -40,7 +40,7 @@ class UsersController < ApplicationController
 
     if @follow_state == :accepted
       @recent_logs = @profile_user.workout_logs
-                                  .includes(workout: [ :tags ])
+                                  .includes(workout: [ :tags, :activity ])
                                   .recent
                                   .limit(10)
     end

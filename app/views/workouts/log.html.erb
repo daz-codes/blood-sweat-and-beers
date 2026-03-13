@@ -14,8 +14,11 @@
         <h1 class="text-2xl text-gray-300 tracking-tight leading-tight font-jost uppercase"><%= @workout.name.presence || "Log Your Session" %></h1>
         <div class="flex items-center gap-2 mt-1.5 flex-wrap">
           <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300"><%= @workout.difficulty.capitalize %></span>
+          <% if @workout.activity.present? %>
+            <span class="text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 px-2 py-0.5 rounded-full font-semibold"><%= @workout.activity.name %></span>
+          <% end %>
           <% @workout.tags.first(3).each do |tag| %>
-            <span class="text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 px-2 py-0.5 rounded-full font-semibold"><%= tag.name %></span>
+            <span class="text-xs bg-violet-500/15 border border-violet-400/40 text-violet-400 px-2 py-0.5 rounded-full font-semibold">#<%= tag.name %></span>
           <% end %>
         </div>
       </div>

@@ -21,12 +21,12 @@
       <p class="text-sm font-bold text-gray-300 uppercase tracking-wide mb-1">Session Type</p>
       <p class="text-xs text-gray-500 mb-4">The style of training this program is built around.</p>
       <div class="flex flex-wrap gap-2">
-        <% @main_tags.each do |tag| %>
+        <% @activities.each do |activity| %>
           <label class="cursor-pointer">
-            <%= f.radio_button :tag_id, tag.id, class: "peer sr-only",
-                checked: @program.tag_id == tag.id %>
+            <%= f.radio_button :activity, activity.name, class: "peer sr-only",
+                checked: @program.activity_id == activity.id %>
             <span class="inline-block border-2 border-zinc-600 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-lime-400 peer-checked:bg-lime-400 peer-checked:text-zinc-900 peer-checked:font-bold transition-all select-none">
-              <%= tag.name %>
+              <%= activity.name %>
             </span>
           </label>
         <% end %>
@@ -37,8 +37,8 @@
             placeholder: "e.g. Powerlifting, Olympic Lifting, Yoga…",
             class: "flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
       </div>
-      <% if @program.errors[:tag_id].any? %>
-        <p class="text-red-400 text-xs mt-2"><%= @program.errors[:tag_id].first %></p>
+      <% if @program.errors[:activity].any? %>
+        <p class="text-red-400 text-xs mt-2"><%= @program.errors[:activity].first %></p>
       <% end %>
     </div>
 

@@ -435,10 +435,9 @@ kettlebell_workouts = [
 
   {
     name:          "KB Ladder Rising",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 30,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell ladder emom conditioning],
     structure: {
       "goal"     => "Chase the ladder — keep the EMOM honest. Rest only what the minute allows.",
       "sections" => [ WARMUP, EMOM16_LADDER_PULL_PUSH, EMOM16_LADDER_LEGS, MONDAY_ABS, COOLDOWN ]
@@ -447,10 +446,9 @@ kettlebell_workouts = [
 
   {
     name:          "Rise and Grind",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 45,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell ladder emom amrap conditioning],
     structure: {
       "goal"     => "Ladder builds the engine, AMRAP tests it. Hold your pace on the AMRAP — aim for consistent rounds.",
       "sections" => [ WARMUP, EMOM16_LADDER_PULL_PUSH, EMOM16_LADDER_LEGS, MONDAY_AMRAP12, MONDAY_ABS, COOLDOWN ]
@@ -459,10 +457,9 @@ kettlebell_workouts = [
 
   {
     name:          "Monday Full Stack",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 60,
     difficulty:    "advanced",
-    tag_names:     %w[Kettlebell ladder emom amrap conditioning],
     structure: {
       "goal"     => "Three blocks, zero excuses. The EMOM10 at the end is where character is built.",
       "sections" => [ WARMUP, EMOM16_LADDER_PULL_PUSH, EMOM16_LADDER_LEGS, MONDAY_AMRAP12, MONDAY_EMOM10, MONDAY_ABS, COOLDOWN ]
@@ -473,10 +470,9 @@ kettlebell_workouts = [
 
   {
     name:          "Burpee Gauntlet",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 30,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell metcon burpees conditioning],
     structure: {
       "goal"     => "The burpees between movements are the test. Don't slow down just because something hard is coming.",
       "sections" => [ WARMUP, TUESDAY_METCON16, TUESDAY_ABS, COOLDOWN ]
@@ -485,10 +481,9 @@ kettlebell_workouts = [
 
   {
     name:          "Swing and Suffer",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 45,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell metcon amrap burpees conditioning],
     structure: {
       "goal"     => "MetCon sets the tone. AMRAP keeps the pressure on. Consistent effort wins.",
       "sections" => [ WARMUP, TUESDAY_METCON16, TUESDAY_AMRAP12, TUESDAY_ABS, COOLDOWN ]
@@ -497,10 +492,9 @@ kettlebell_workouts = [
 
   {
     name:          "Man Maker Tuesday",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 60,
     difficulty:    "advanced",
-    tag_names:     %w[Kettlebell metcon amrap ladder conditioning],
     structure: {
       "goal"     => "Three blocks of pain. Man Makers in the MetCon will break you — that's the point.",
       "sections" => [ WARMUP, TUESDAY_METCON16, TUESDAY_AMRAP12, TUESDAY_LADDER10, TUESDAY_ABS, COOLDOWN ]
@@ -511,10 +505,9 @@ kettlebell_workouts = [
 
   {
     name:          "Double AMRAP",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 30,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell amrap strength conditioning],
     structure: {
       "goal"     => "Two single-movement AMRAPs — the simplicity is the challenge. How many rounds can you rack up?",
       "sections" => [ WARMUP, WED_AMRAP8_SQUATS, WED_AMRAP8_CLEAN_PRESS, WED_ABS_45_15, COOLDOWN ]
@@ -523,10 +516,9 @@ kettlebell_workouts = [
 
   {
     name:          "Push Pull Squat",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 45,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell amrap strength conditioning],
     structure: {
       "goal"     => "Focus on the full-body pattern — squat, pull, push. Breathe between movements.",
       "sections" => [ WARMUP, WED_AMRAP8_SQUATS, WED_AMRAP8_CLEAN_PRESS, WED_AMRAP12, WED_ABS_AMRAP, COOLDOWN ]
@@ -535,10 +527,9 @@ kettlebell_workouts = [
 
   {
     name:          "Wednesday Wrecking Ball",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 60,
     difficulty:    "advanced",
-    tag_names:     %w[Kettlebell amrap strength tabata conditioning],
     structure: {
       "goal"     => "The tabata block is the wildcard. Everything before it is fuel, everything after is survival.",
       "sections" => [ WARMUP, WED_AMRAP8_SQUATS, WED_AMRAP8_CLEAN_PRESS, WED_AMRAP12, WED_TABATA10, WED_ABS_AMRAP, COOLDOWN ]
@@ -549,10 +540,9 @@ kettlebell_workouts = [
 
   {
     name:          "40/20 Thunder",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 30,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell tabata intervals bodyweight conditioning],
     structure: {
       "goal"     => "Four rounds of five movements. The 40s intervals are longer than they sound. Stay moving.",
       "sections" => [ WARMUP, THU_TABATA20, THU_ABS7, COOLDOWN ]
@@ -561,10 +551,9 @@ kettlebell_workouts = [
 
   {
     name:          "Thunder and Chase",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 45,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell tabata amrap intervals conditioning],
     structure: {
       "goal"     => "Tabata warms up the engine, AMRAP runs it hard. Don't coast on the intervals.",
       "sections" => [ WARMUP, THU_TABATA20, THU_AMRAP12, THU_ABS7, COOLDOWN ]
@@ -573,10 +562,9 @@ kettlebell_workouts = [
 
   {
     name:          "Jump and Suffer",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 60,
     difficulty:    "advanced",
-    tag_names:     %w[Kettlebell tabata amrap emom conditioning],
     structure: {
       "goal"     => "The EMOM10 at the end separates sessions from workouts. Man Makers under fatigue are brutal — that's the goal.",
       "sections" => [ WARMUP, THU_TABATA20, THU_AMRAP12, THU_EMOM10, THU_ABS7, COOLDOWN ]
@@ -587,10 +575,9 @@ kettlebell_workouts = [
 
   {
     name:          "The Taxman",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 30,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell metcon for-time conditioning],
     structure: {
       "goal"     => "Every 4 minutes the taxman comes. Pay up and keep moving — don't let the penalty break your rhythm.",
       "sections" => [ WARMUP, FRI_METCON16, FRI_ABS, COOLDOWN ]
@@ -599,10 +586,9 @@ kettlebell_workouts = [
 
   {
     name:          "Ladder and Tax",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 45,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell metcon ladder for-time conditioning],
     structure: {
       "goal"     => "Two time-pressured blocks. The MetCon breaks you down, the Ladder rebuilds you — with interest.",
       "sections" => [ WARMUP, FRI_METCON16, FRI_LADDER12, FRI_ABS, COOLDOWN ]
@@ -611,10 +597,9 @@ kettlebell_workouts = [
 
   {
     name:          "Full Audit",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 60,
     difficulty:    "advanced",
-    tag_names:     %w[Kettlebell metcon ladder amrap for-time conditioning],
     structure: {
       "goal"     => "Three blocks, all business. The AMRAP10 is a reward — but only if you've earned it.",
       "sections" => [ WARMUP, FRI_METCON16, FRI_LADDER12, FRI_AMRAP10, FRI_ABS, COOLDOWN ]
@@ -625,10 +610,9 @@ kettlebell_workouts = [
 
   {
     name:          "Six Gun EMOM",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 30,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell emom strength conditioning],
     structure: {
       "goal"     => "Six reps, every minute, four movements. Deceptively simple — consistently brutal.",
       "sections" => [ WARMUP, SAT_EMOM16, SAT_ABS, COOLDOWN ]
@@ -637,10 +621,9 @@ kettlebell_workouts = [
 
   {
     name:          "EMOM + Chaos",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 45,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell emom amrap strength conditioning],
     structure: {
       "goal"     => "Structured EMOM builds the base; open AMRAP reveals how much you have left.",
       "sections" => [ WARMUP, SAT_EMOM16, SAT_AMRAP12, SAT_ABS, COOLDOWN ]
@@ -649,10 +632,9 @@ kettlebell_workouts = [
 
   {
     name:          "Saturday Staircase",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 60,
     difficulty:    "advanced",
-    tag_names:     %w[Kettlebell emom amrap ladder strength conditioning],
     structure: {
       "goal"     => "EMOM builds discipline, AMRAP tests fitness, Ladder pushes volume. Three different gears.",
       "sections" => [ WARMUP, SAT_EMOM16, SAT_AMRAP12, SAT_LADDER10, SAT_ABS, COOLDOWN ]
@@ -663,10 +645,9 @@ kettlebell_workouts = [
 
   {
     name:          "Long Sunday",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 30,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell amrap conditioning recovery],
     structure: {
       "goal"     => "Sunday is about movement, not suffering. Smooth and steady — stack up the rounds.",
       "sections" => [ WARMUP, SUN_AMRAP20, SUN_ABS, COOLDOWN ]
@@ -675,10 +656,9 @@ kettlebell_workouts = [
 
   {
     name:          "Sunday Build",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 45,
     difficulty:    "intermediate",
-    tag_names:     %w[Kettlebell amrap emom conditioning],
     structure: {
       "goal"     => "Long AMRAP sets the rhythm, EMOM adds a tempo spike at the end. Finish strong.",
       "sections" => [ WARMUP, SUN_AMRAP20, SUN_EMOM10, SUN_ABS, COOLDOWN ]
@@ -687,10 +667,9 @@ kettlebell_workouts = [
 
   {
     name:          "Weekend Finisher",
-    workout_type:  "custom",
+    activity:      "Kettlebell",
     duration_mins: 60,
     difficulty:    "advanced",
-    tag_names:     %w[Kettlebell amrap emom conditioning],
     structure: {
       "goal"     => "End the week with intent. Three blocks, each harder than it looks. Leave nothing.",
       "sections" => [ WARMUP, SUN_AMRAP20, SUN_EMOM10, SUN_AMRAP10, SUN_ABS, COOLDOWN ]
@@ -703,17 +682,15 @@ system_user = User.find_by!(email_address: "system@volt.app")
 
 puts "Seeding kettlebell workouts..."
 
-kettlebell_workouts.each do |attrs|
-  tag_names = attrs.delete(:tag_names)
+kettlebell_activity = Activity.find_or_create_by!(name: "Kettlebell")
 
+kettlebell_workouts.each do |attrs|
+  attrs.delete(:activity)  # remove the string, use the record
   workout = Workout.find_or_initialize_by(name: attrs[:name], user: system_user)
-  workout.assign_attributes(attrs.merge(status: "active"))
+  workout.assign_attributes(attrs.merge(status: "active", activity: kettlebell_activity))
   workout.save!
 
-  tags = tag_names.map { |n| tag_for(n) }
-  workout.tags = tags
-
-  puts "  #{workout.name} [#{tag_names.join(", ")}]"
+  puts "  #{workout.name} [Kettlebell]"
 end
 
 puts "Done. #{kettlebell_workouts.size} kettlebell workouts seeded."

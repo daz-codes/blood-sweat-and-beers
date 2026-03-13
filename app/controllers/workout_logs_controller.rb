@@ -8,7 +8,7 @@ class WorkoutLogsController < ApplicationController
     offset  = (@page - 1) * PAGE_SIZE
 
     logs = Current.user.workout_logs
-                   .includes(:tags, photo_attachment: :blob, workout: [ :tags, :workout_likes ])
+                   .includes(:tags, photo_attachment: :blob, workout: [ :tags, :activity, :workout_likes ])
                    .recent
 
     results           = logs.offset(offset).limit(PAGE_SIZE + 1).to_a
@@ -62,7 +62,7 @@ class WorkoutLogsController < ApplicationController
     @date = Date.parse(params[:date])
     @day_logs = Current.user.workout_logs
                             .where(completed_at: @date.all_day)
-                            .includes(workout: :tags)
+                            .includes(workout: [ :tags, :activity ])
                             .order(:completed_at)
     render layout: false
   rescue ArgumentError

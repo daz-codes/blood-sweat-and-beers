@@ -42,9 +42,8 @@
             </p>
           </div>
           <div class="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-            <% main_tag = workout.tags.find(&:main?) %>
-            <% if main_tag %>
-              <p class="text-lime-400 font-black text-sm uppercase tracking-wide leading-none"><%= main_tag.name %></p>
+            <% if workout.activity.present? %>
+              <p class="text-lime-400 font-black text-sm uppercase tracking-wide leading-none"><%= workout.activity&.name %></p>
             <% end %>
             <div class="flex items-center gap-1.5">
               <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300"><%= workout.difficulty.capitalize %></span>
@@ -83,8 +82,8 @@
           <p class="text-gray-600 text-[10px] font-black uppercase tracking-widest mb-1">Session <%= pw.session_number %></p>
           <h2 class="text-xl font-black tracking-tight uppercase" style="font-family: 'Jost', sans-serif"><%= workout.name %></h2>
           <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            <% if main_tag %>
-              <span class="text-lime-400 text-[10px] font-black uppercase tracking-wide"><%= main_tag.name %></span>
+            <% if workout.activity.present? %>
+              <span class="text-lime-400 text-[10px] font-black uppercase tracking-wide"><%= workout.activity&.name %></span>
             <% end %>
             <span class="text-xs font-bold px-2 py-0.5 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300"><%= workout.difficulty.capitalize %></span>
             <span class="text-gray-600 text-xs"><%= workout.duration_mins %> min</span>

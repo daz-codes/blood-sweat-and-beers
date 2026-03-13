@@ -6,7 +6,7 @@
       <h2 class="text-2xl text-gray-300 tracking-tight leading-tight mb-3 font-jost uppercase"><%= workout.name %></h2>
     <% end %>
 
-    <% main_slug = workout.tags.find(&:main?)&.slug.to_s %>
+    <% main_slug = workout.activity_slug.to_s %>
     <% is_distance_sport = main_slug.match?(/\A(run|swim|row|ski|bike|cycl|jog|tri|duat)/) %>
     <% total_distance_m = is_distance_sport && workout.structure.is_a?(Hash) ?
          workout.structure["sections"].to_a.sum { |s| section_distance_m(s) } : 0 %>
@@ -18,9 +18,8 @@
 
     <div class="flex items-start justify-between gap-3">
       <div>
-        <% main_tag = workout.tags.find(&:main?) %>
-        <% if main_tag %>
-          <p class="text-lime-400 font-black text-base uppercase tracking-wide leading-none mb-1"><%= main_tag.name %></p>
+        <% if workout.activity.present? %>
+          <p class="text-lime-400 font-black text-base uppercase tracking-wide leading-none mb-1"><%= workout.activity.name %></p>
         <% end %>
         <div class="flex items-center gap-1.5 flex-wrap mt-2">
           <span class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300">
@@ -30,13 +29,7 @@
         <% if workout.tags.any? %>
           <div class="flex flex-wrap gap-1.5 mt-2">
             <% workout.tags.each do |tag| %>
-              <% if tag.main? %>
-                <%# main tag shown prominently above — skip in pills %>
-              <% elsif tag.group_code? %>
-                <%= link_to "##{tag.name}", library_path(tag_id: tag.id), class: "text-xs bg-violet-500/15 border border-violet-400/40 text-violet-400 hover:text-white hover:border-violet-400 px-2.5 py-0.5 rounded-full font-semibold transition-colors" %>
-              <% else %>
-                <%= link_to tag.name, library_path(tag_id: tag.id), class: "text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 hover:text-white hover:border-lime-400 px-2.5 py-0.5 rounded-full font-semibold transition-colors" %>
-              <% end %>
+              <%= link_to "##{tag.name}", library_path(tag_id: tag.id), class: "text-xs bg-violet-500/15 border border-violet-400/40 text-violet-400 hover:text-white hover:border-violet-400 px-2.5 py-0.5 rounded-full font-semibold transition-colors" %>
             <% end %>
           </div>
         <% end %>

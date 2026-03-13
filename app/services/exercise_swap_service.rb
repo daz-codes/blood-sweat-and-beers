@@ -111,7 +111,7 @@ class ExerciseSwapService
     lines = []
     lines << "You are a personal trainer. Suggest a replacement for one exercise in a workout."
     lines << ""
-    lines << "Workout: #{workout_tags.presence || @workout.workout_type} · #{@workout.difficulty}"
+    lines << "Workout: #{@workout.activity_name.presence || workout_tags.presence || "custom"} · #{@workout.difficulty}"
     lines << "Section: \"#{section["name"]}\" (format: #{section["format"]})"
     lines << "Other exercises in section: #{other_names.join(", ")}" if other_names.any?
     lines << ""

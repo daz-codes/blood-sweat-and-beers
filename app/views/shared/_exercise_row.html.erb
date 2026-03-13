@@ -18,7 +18,14 @@
   <% end %>
   <div class="flex items-start justify-between gap-2">
     <div>
-      <p class="<%= matched_benchmark ? 'text-amber-300 font-bold' : 'text-white font-semibold' %> text-sm" <% if swappable && workout %>data-swap-exercise-target="name"<% end %>><%= exercise["name"] %></p>
+      <% video_url = ExerciseVideo.url_for(exercise["name"]) %>
+      <p class="<%= matched_benchmark ? 'text-amber-300 font-bold' : 'text-white font-semibold' %> text-sm" <% if swappable && workout %>data-swap-exercise-target="name"<% end %>>
+        <% if video_url %>
+          <%= link_to exercise["name"], video_url, target: "_blank", rel: "noopener", class: "underline decoration-dotted underline-offset-2 hover:text-lime-400 transition-colors", onclick: "event.stopPropagation()" %>
+        <% else %>
+          <%= exercise["name"] %>
+        <% end %>
+      </p>
       <% if is_tabata %>
         <p class="text-gray-400 text-xs italic mt-0.5">20s hard effort / 10s easy</p>
       <% end %>

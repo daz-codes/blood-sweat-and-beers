@@ -29,9 +29,8 @@ class WorkoutPdfGenerator
   end
 
   def draw_meta(pdf)
-    main_tag = @workout.tags.find(&:main?)
-    pills    = [ "#{@workout.duration_mins} min", @workout.difficulty.capitalize ]
-    pills.unshift(main_tag.name) if main_tag
+    pills = [ "#{@workout.duration_mins} min", @workout.difficulty.capitalize ]
+    pills.unshift(@workout.activity.name) if @workout.activity.present?
 
     pdf.fill_color MID_GREY
     pdf.text pills.join("   ·   "), size: 10

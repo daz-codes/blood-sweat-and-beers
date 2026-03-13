@@ -26,50 +26,39 @@
 
   <%= form_with url: workouts_path do |f| %>
 
-    <%# Session Type — radio pills, pick one %>
+    <%# Session Type — radio pills from ACTIVITIES constant %>
     <div class="mb-6">
       <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Session Type</p>
-      <p class="text-xs text-gray-500 mb-3">The type of session — CrossFit, Hyrox, HIIT, Deka, and more.</p>
-      <%# Core tags always shown, in this order (slugs match what .parameterize produces) %>
-      <% core_slugs = %w[hyrox deka crossfit functional-fitness functional-muscle hiit
-                         bodyweight kettlebell metafit f45 strength] %>
-      <% core_tags = Tag.main_focus.where(slug: core_slugs)
-                                   .sort_by { |t| core_slugs.index(t.slug).to_i } %>
-      <%# Returning users: last 3 distinct main tags by most recent workout %>
-      <% recent_tags = Tag.main_focus
-                          .joins(:taggings)
-                          .joins("INNER JOIN workouts ON taggings.taggable_type = 'Workout' AND taggings.taggable_id = workouts.id")
-                          .where(workouts: { user_id: Current.user.id })
-                          .select("tags.*, MAX(workouts.created_at) AS last_used_at")
-                          .group("tags.id")
-                          .order("last_used_at DESC")
-                          .limit(3)
-                          .to_a %>
-      <% recent_ids = recent_tags.map(&:id).to_set %>
-      <% main_tags = recent_tags + core_tags.reject { |t| recent_ids.include?(t.id) } %>
+      <p class="text-xs text-gray-500 mb-3">Pick a recent session type or type your own below.</p>
+      <% recent_activities = Activity.where(id:
+            Current.user.workouts.where.not(activity_id: nil)
+                                 .order(created_at: :desc)
+                                 .select(:activity_id)
+         ).distinct.limit(10) %>
       <div class="flex flex-wrap gap-2">
         <label class="cursor-pointer">
-          <%= radio_button_tag "main_tag_id", "", true, id: "main_tag_none",
-              class: "peer sr-only",
-              data: { slug: "" } %>
+          <%= radio_button_tag "activity", "", true, id: "activity_none",
+              class: "peer sr-only" %>
           <span class="inline-block border-2 border-zinc-600 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-lime-400 peer-checked:bg-lime-400/15 peer-checked:text-lime-400 transition-all select-none">
             General Fitness
           </span>
         </label>
-        <% main_tags.each do |tag| %>
+        <% recent_activities.each do |activity| %>
           <label class="cursor-pointer">
-            <%= radio_button_tag "main_tag_id", tag.id, false, id: "main_tag_#{tag.id}",
-                class: "peer sr-only",
-                data: { slug: tag.slug } %>
+            <%= radio_button_tag "activity", activity.name, false, id: "activity_#{activity.slug}",
+                class: "peer sr-only" %>
             <span class="inline-block border-2 border-zinc-600 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-lime-400 peer-checked:bg-lime-400 peer-checked:text-zinc-900 peer-checked:font-bold transition-all select-none">
-              <%= tag.name %>
+              <%= activity.name %>
             </span>
           </label>
         <% end %>
       </div>
-      <%= text_field_tag :new_main_tag_name, nil,
-          placeholder: "Or type a custom session type…",
-          class: "mt-2 w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
+      <div class="mt-3 flex items-center gap-3">
+        <span class="text-xs text-gray-600 flex-shrink-0">or type your own:</span>
+        <%= text_field_tag :custom_activity, nil,
+            placeholder: "e.g. Powerlifting, Olympic Lifting, Yoga…",
+            class: "flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
+      </div>
     </div>
 
     <%# Duration %>
@@ -114,18 +103,19 @@
     <div class="mb-6">
       <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Session Notes</p>
       <p class="text-xs text-gray-500 mb-3">Injuries, equipment, intensity, focus — anything that should shape this session.</p>
-      <%= text_field_tag :new_tag_name, nil,
+      <%= text_field_tag :session_notes, nil,
           placeholder: "e.g. injured knee · hotel gym · zone 2 only · upper body · no running",
           class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
     </div>
 
-    <%# Workout Tag %>
-    <div class="mb-8">
-      <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Workout Tag</p>
-      <p class="text-xs text-gray-500 mb-3">Tag this workout so your group can find it (e.g. Hyrox Manchester 2026).</p>
-      <%= text_field_tag :group_code, nil,
-          placeholder: "e.g. Hyrox Manchester 2026",
-          class: "w-full bg-zinc-800 border border-zinc-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-400 transition-colors" %>
+    <%# Workout Tag — hidden until tagging UX is designed (see project memory) %>
+
+    <%# Experiment: example-based prompt toggle %>
+    <div class="flex items-center gap-3 mb-6">
+      <%= check_box_tag :prompt_mode, "examples", false, class: "w-4 h-4 accent-lime-400 cursor-pointer" %>
+      <label for="prompt_mode" class="text-sm text-gray-400 cursor-pointer">
+        Use example-based prompt <span class="text-gray-600">(experimental)</span>
+      </label>
     </div>
 
     <% if user_at_limit %>

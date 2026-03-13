@@ -3,16 +3,8 @@ class WorkoutLikesController < ApplicationController
 
   def toggle
     @workout = Workout.find(params[:id])
-    existing = @workout.workout_likes.find_by(user: Current.user)
-
-    if existing
-      existing.destroy
-      @liked = false
-    else
-      @workout.workout_likes.create!(user: Current.user)
-      @liked = true
-    end
-
+    @workout.workout_likes.create!(user: Current.user)
+    @liked = true
     @like_count = @workout.workout_likes.count
 
     respond_to do |format|

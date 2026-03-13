@@ -18,3 +18,11 @@ dialog {
 dialog::backdrop {
   background-color: rgba(0, 0, 0, 0.7);
 }
+
+/* Hide default disclosure triangle on <summary> elements */
+summary::-webkit-details-marker {
+  display: none;
+}
+summary::marker {
+  content: "";
+}

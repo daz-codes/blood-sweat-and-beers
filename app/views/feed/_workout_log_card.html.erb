@@ -9,7 +9,7 @@
    else
      []
    end %>
-<% main_slug = workout.tags.find(&:main?)&.slug.to_s %>
+<% main_slug = workout.activity_slug.to_s %>
 <% is_distance_sport = main_slug.match?(/\A(run|swim|row|ski|bike|cycl|jog|tri|duat)/) %>
 <% total_distance_m = is_distance_sport && structure.is_a?(Hash) ?
      structure["sections"].to_a.sum { |s| section_distance_m(s) } : 0 %>
@@ -37,9 +37,8 @@
         <%= workout.name.presence || "Untitled Workout" %>
       </p>
       <div class="flex flex-col items-end gap-1 flex-shrink-0 mt-0.5">
-        <% main_tag = workout.tags.find(&:main?) %>
-        <% if main_tag %>
-          <p class="text-volt font-black text-sm uppercase tracking-wide leading-none"><%= main_tag.name %></p>
+        <% if workout.activity.present? %>
+          <p class="text-volt font-black text-sm uppercase tracking-wide leading-none"><%= workout.activity.name %></p>
         <% end %>
         <div class="flex items-center gap-1.5">
         <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-gray-600 bg-zinc-700/50 text-gray-300"><%= workout.difficulty.capitalize %></span>
@@ -96,12 +95,8 @@
     <%# Tags %>
     <% if display_tags.any? %>
       <div class="flex items-center gap-1.5 mt-3 flex-wrap">
-        <% display_tags.reject(&:main?).first(3).each do |tag| %>
-          <% if tag.group_code? %>
-            <%= link_to "##{tag.name}", feed_path(tag_id: tag.id), class: "text-xs bg-violet-500/15 border border-violet-400/40 text-violet-400 hover:text-white hover:border-violet-400 px-2 py-0.5 rounded-full font-semibold flex-shrink-0 transition-colors" %>
-          <% else %>
-            <%= link_to tag.name, feed_path(tag_id: tag.id), class: "text-xs bg-zinc-700/50 border border-lime-400/30 text-lime-400 hover:text-white hover:border-lime-400 px-2 py-0.5 rounded-full font-semibold flex-shrink-0 transition-colors" %>
-          <% end %>
+        <% display_tags.first(3).each do |tag| %>
+          <%= link_to "##{tag.name}", feed_path(tag_id: tag.id), class: "text-xs bg-violet-500/15 border border-violet-400/40 text-violet-400 hover:text-white hover:border-violet-400 px-2 py-0.5 rounded-full font-semibold flex-shrink-0 transition-colors" %>
         <% end %>
       </div>
     <% end %>
