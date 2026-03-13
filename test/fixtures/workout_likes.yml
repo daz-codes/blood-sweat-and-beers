@@ -1,0 +1,7 @@
+one_likes_hyrox:
+  user: one
+  workout: hyrox_session
+
+two_likes_hyrox:
+  user: two
+  workout: hyrox_session

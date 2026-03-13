@@ -24,29 +24,22 @@
     </button>
   </div>
 
-  <%= form_with url: workouts_path do |f| %>
+  <%= form_with url: workouts_path, data: { controller: "generate-form", action: "submit->generate-form#showSpinner" } do |f| %>
 
-    <%# Session Type — radio pills from ACTIVITIES constant %>
+    <%# Session Type — radio pills: defaults + user's recent activities %>
     <div class="mb-6">
       <p class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-1">Session Type</p>
-      <p class="text-xs text-gray-500 mb-3">Pick a recent session type or type your own below.</p>
-      <% recent_activities = Activity.where(id:
-            Current.user.workouts.where.not(activity_id: nil)
-                                 .order(created_at: :desc)
-                                 .select(:activity_id)
-         ).distinct.limit(10) %>
+      <p class="text-xs text-gray-500 mb-3">Pick a session type or type your own below.</p>
+      <% user_recent_ids = Current.user.workouts.where.not(activity_id: nil)
+                                       .order(created_at: :desc)
+                                       .select(:activity_id).distinct.limit(10).map(&:activity_id) %>
+      <% activities = Activity.where(id: (Activity.defaults.ids + user_recent_ids).uniq) %>
       <div class="flex flex-wrap gap-2">
-        <label class="cursor-pointer">
-          <%= radio_button_tag "activity", "", true, id: "activity_none",
-              class: "peer sr-only" %>
-          <span class="inline-block border-2 border-zinc-600 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-lime-400 peer-checked:bg-lime-400/15 peer-checked:text-lime-400 transition-all select-none">
-            General Fitness
-          </span>
-        </label>
-        <% recent_activities.each do |activity| %>
+        <% activities.each do |activity| %>
           <label class="cursor-pointer">
             <%= radio_button_tag "activity", activity.name, false, id: "activity_#{activity.slug}",
-                class: "peer sr-only" %>
+                class: "peer sr-only",
+                data: { generate_form_target: "pill", action: "change->generate-form#pillSelected" } %>
             <span class="inline-block border-2 border-zinc-600 rounded-full px-4 py-1.5 text-sm font-medium text-gray-400 peer-checked:border-lime-400 peer-checked:bg-lime-400 peer-checked:text-zinc-900 peer-checked:font-bold transition-all select-none">
               <%= activity.name %>
             </span>
@@ -57,7 +50,8 @@
         <span class="text-xs text-gray-600 flex-shrink-0">or type your own:</span>
         <%= text_field_tag :custom_activity, nil,
             placeholder: "e.g. Powerlifting, Olympic Lifting, Yoga…",
-            class: "flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors" %>
+            class: "flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-lime-400 transition-colors",
+            data: { generate_form_target: "customInput", action: "input->generate-form#customTyped" } %>
       </div>
     </div>
 
@@ -110,13 +104,15 @@
 
     <%# Workout Tag — hidden until tagging UX is designed (see project memory) %>
 
-    <%# Experiment: example-based prompt toggle %>
-    <div class="flex items-center gap-3 mb-6">
-      <%= check_box_tag :prompt_mode, "examples", false, class: "w-4 h-4 accent-lime-400 cursor-pointer" %>
-      <label for="prompt_mode" class="text-sm text-gray-400 cursor-pointer">
-        Use example-based prompt <span class="text-gray-600">(experimental)</span>
-      </label>
-    </div>
+    <% if Rails.env.development? %>
+      <%# Experiment: example-based prompt toggle %>
+      <div class="flex items-center gap-3 mb-6">
+        <%= check_box_tag :prompt_mode, "examples", false, class: "w-4 h-4 accent-lime-400 cursor-pointer" %>
+        <label for="prompt_mode" class="text-sm text-gray-400 cursor-pointer">
+          Use example-based prompt <span class="text-gray-600">(experimental)</span>
+        </label>
+      </div>
+    <% end %>
 
     <% if user_at_limit %>
       <%# Locked — show upgrade CTA instead of generate button %>
@@ -142,7 +138,7 @@
       <% end %>
       <%= f.submit "Generate Workout",
           class: "w-full bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 font-bold py-3.5 rounded-xl text-lg transition-colors cursor-pointer",
-          data: { turbo_submits_with: "Generating…" } %>
+          data: { generate_form_target: "submitBtn" } %>
     <% end %>
 
   <% end %>
