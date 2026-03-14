@@ -1586,7 +1586,7 @@ class WorkoutLLMGenerator
     end
 
     if Array(research["equipment"]).any?
-      lines << "\n**Equipment:** #{research["equipment"].join(", ")}"
+      lines << "\n**Equipment:** #{Array(research["equipment"]).join(", ")}"
     end
 
     if Array(research["typical_exercises"]).any?
