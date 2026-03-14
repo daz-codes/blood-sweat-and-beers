@@ -114,21 +114,12 @@
       </div>
     <% end %>
 
-    <% if user_at_limit %>
-      <%# Locked — show upgrade CTA instead of generate button %>
-      <div class="bg-zinc-800 border border-zinc-600 rounded-xl p-4 mb-4 text-center">
-        <p class="text-white font-bold text-sm mb-1">Weekly limit reached</p>
-        <p class="text-gray-400 text-xs mb-3">Upgrade to Pro for unlimited AI-generated workouts, Sonnet 4.6 model, and more.</p>
-        <%= link_to "Upgrade to Pro",
-            upgrade_subscription_path,
-            data: { turbo_method: :patch },
-            class: "inline-block w-full bg-volt hover:bg-volt/80 text-zinc-950 font-bold py-3 rounded-xl text-base transition-colors text-center" %>
-      </div>
-    <% else %>
+    <% unless user_at_limit %>
       <% if Current.user.free? %>
         <p class="text-gray-600 text-xs text-center mb-3">
           <%= generations_used %> of <%= User::FREE_GENERATION_LIMIT %> free generations used this week
-          · <%= link_to "Upgrade to Pro", upgrade_subscription_path, data: { turbo_method: :patch }, class: "text-volt hover:text-volt/80" %>
+          · <%= button_to "Upgrade to Pro", upgrade_subscription_path, method: :patch, form: { data: { turbo: true } },
+              class: "text-volt hover:text-volt/80 inline cursor-pointer bg-transparent border-0 p-0 text-xs" %>
         </p>
       <% else %>
         <div class="flex items-center justify-center gap-1.5 mb-3">
@@ -141,6 +132,17 @@
           data: { generate_form_target: "submitBtn" } %>
     <% end %>
 
+  <% end %>
+
+  <% if user_at_limit %>
+    <div class="bg-zinc-800 border border-zinc-600 rounded-xl p-4 mb-4 text-center">
+      <p class="text-white font-bold text-sm mb-1">Weekly limit reached</p>
+      <p class="text-gray-400 text-xs mb-3">Upgrade to Pro for unlimited AI-generated workouts, Sonnet 4.6 model, and more.</p>
+      <%= button_to "Upgrade to Pro",
+          upgrade_subscription_path,
+          method: :patch,
+          class: "inline-block w-full bg-volt hover:bg-volt/80 text-zinc-950 font-bold py-3 rounded-xl text-base transition-colors text-center cursor-pointer" %>
+    </div>
   <% end %>
 
 </div>
