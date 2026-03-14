@@ -7,7 +7,9 @@ class DailyChallenge < ApplicationRecord
   validates :date, presence: true, uniqueness: true
   validates :title, :description, presence: true
 
-  scope :today, -> { find_by(date: Date.current) }
+  def self.today
+    find_by(date: Date.current)
+  end
 
   def leaderboard
     entries = challenge_entries.includes(:user)

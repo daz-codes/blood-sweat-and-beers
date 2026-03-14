@@ -1,4 +1,7 @@
 class Program < ApplicationRecord
+  include Program::Broadcasting
+  include Program::WorkoutBuilder
+
   belongs_to :user
   belongs_to :activity, optional: true
   has_many :program_workouts, dependent: :destroy

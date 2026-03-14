@@ -1,5 +1,6 @@
 class ChallengeEntriesController < ApplicationController
   before_action :require_authentication
+  rate_limit to: 10, within: 3.minutes, only: :create
 
   def create
     @challenge = DailyChallenge.find(params[:daily_challenge_id])
@@ -9,7 +10,7 @@ class ChallengeEntriesController < ApplicationController
       return
     end
 
-    score = parse_score(params[:score], @challenge.scoring_type)
+    score = ChallengeEntry.parse_score(params[:score], @challenge.scoring_type)
 
     unless score&.positive?
       redirect_to root_path, alert: "Please enter a valid score."
@@ -31,14 +32,4 @@ class ChallengeEntriesController < ApplicationController
   end
 
   private
-
-  def parse_score(raw, scoring_type)
-    return nil if raw.blank?
-    if scoring_type == "time" && raw.match?(/\A\d+:\d{2}\z/)
-      parts = raw.split(":")
-      parts[0].to_i * 60 + parts[1].to_i
-    else
-      raw.to_f
-    end
-  end
 end

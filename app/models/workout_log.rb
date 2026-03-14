@@ -1,4 +1,6 @@
 class WorkoutLog < ApplicationRecord
+  include WorkoutLog::ExerciseLogBuilder
+
   belongs_to :user
   belongs_to :workout
   has_many :exercise_logs, dependent: :destroy
@@ -15,4 +17,5 @@ class WorkoutLog < ApplicationRecord
 
   scope :public_posts, -> { where(visibility: "public") }
   scope :recent, -> { order(completed_at: :desc) }
+  scope :with_feed_includes, -> { includes(:tags, photo_attachment: :blob, workout: [ :tags, :activity, :workout_likes ]) }
 end
