@@ -42,7 +42,7 @@
           </div>
           <%= button_to "Downgrade", downgrade_subscription_path,
               method: :patch,
-              form: { data: { turbo_confirm: "Downgrade to the Free plan?" } },
+              form: { data: { turbo: false, turbo_confirm: "Downgrade to the Free plan?" } },
               class: "text-gray-500 hover:text-white text-xs font-medium transition-colors flex-shrink-0 ml-4 bg-transparent border-0 p-0 cursor-pointer" %>
         </div>
       <% else %>
@@ -66,6 +66,7 @@
           <%= button_to "Upgrade to Pro (Free for now)",
               upgrade_subscription_path,
               method: :patch,
+              form: { data: { turbo: false } },
               class: "block w-full bg-volt hover:bg-volt/80 text-zinc-950 font-bold py-2.5 rounded-xl text-sm transition-colors text-center cursor-pointer" %>
         </div>
       <% end %>
