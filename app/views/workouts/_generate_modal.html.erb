@@ -118,8 +118,7 @@
       <% if Current.user.free? %>
         <p class="text-gray-600 text-xs text-center mb-3">
           <%= generations_used %> of <%= User::FREE_GENERATION_LIMIT %> free generations used this week
-          · <%= button_to "Upgrade to Pro", upgrade_subscription_path, method: :patch, form: { data: { turbo: true } },
-              class: "text-volt hover:text-volt/80 inline cursor-pointer bg-transparent border-0 p-0 text-xs" %>
+          · <%= link_to "Upgrade to Pro", upgrade_subscription_path, data: { turbo_method: :patch }, class: "text-volt hover:text-volt/80" %>
         </p>
       <% else %>
         <div class="flex items-center justify-center gap-1.5 mb-3">
