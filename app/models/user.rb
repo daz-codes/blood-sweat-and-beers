@@ -92,6 +92,10 @@ class User < ApplicationRecord
   private
 
   def skip_password_validation?
-    skip_password_validation || (persisted? && password_digest.present?)
+    skip_password_validation || (persisted? && !password_changed?)
+  end
+
+  def password_changed?
+    password.present?
   end
 end

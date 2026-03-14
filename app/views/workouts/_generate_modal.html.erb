@@ -136,14 +136,12 @@
       <%= button_to "Upgrade to Pro",
           upgrade_subscription_path,
           method: :patch,
-          form: { data: { turbo: false } },
           class: "inline-block w-full bg-volt hover:bg-volt/80 text-zinc-950 font-bold py-3 rounded-xl text-base transition-colors text-center cursor-pointer" %>
     </div>
   <% elsif Current.user.free? %>
     <p class="text-gray-600 text-xs text-center mb-3">
       <%= generations_used %> of <%= User::FREE_GENERATION_LIMIT %> free generations used this week ·
       <%= button_to "Upgrade to Pro", upgrade_subscription_path, method: :patch,
-          form: { data: { turbo: false } },
           class: "text-volt hover:text-volt/80 inline cursor-pointer bg-transparent border-0 p-0 text-xs font-inherit" %>
     </p>
   <% end %>
