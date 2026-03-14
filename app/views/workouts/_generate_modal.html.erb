@@ -24,7 +24,7 @@
     </button>
   </div>
 
-  <%= form_with url: workouts_path, data: { controller: "generate-form", action: "turbo:submit-start->generate-form#showSpinner" } do |f| %>
+  <%= form_with url: workouts_path, data: { controller: "generate-form", action: "submit->generate-form#showSpinner" } do |f| %>
 
     <%# Session Type — radio pills: defaults + user's recent activities %>
     <div class="mb-6">
