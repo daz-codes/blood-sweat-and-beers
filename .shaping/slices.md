@@ -22,16 +22,17 @@ Vertical implementation slices derived from the breadboard. Each slice ends in d
 | V4 | Follow Graph + Private Profiles | A7.1–7.3 | "Request follow → accept → see each other's workouts" | ✅ Built |
 | V5 | Likes + Comments | A8.1–8.2 | "Like post live; comment appends without reload" | ✅ Built |
 | V6 | Library + Save + Remix | A6, A8.3 | "Save to library; remix a workout; preview before logging" | ✅ Built |
-| V7 | PR Detection + Progress Charts | A5.3–5.4 | "Log heavier lift → PR badge; view exercise chart" | ⬜ Next |
-| V8 | Daily Challenges | A9 | "Challenge on home screen; log result; leaderboard live" | ⬜ |
-| V9 | Calendar History | A6.2 | "Heatmap of all workouts; tap day → see sessions" | ⬜ |
+| — | OAuth Login (Google/Apple/Facebook) | — | "Sign in with Google → account created → signed in" | ✅ Built |
+| V7 | PR Detection + Progress Charts | A5.3–5.4 | "Log heavier lift → PR badge; view exercise chart" | 🟡 Partial — progress charts built (fitness_test_entries + chartkick), PR detection not wired up (personal_records table exists but dormant) |
+| V8 | Daily Challenges | A9 | "Challenge on home screen; log result; leaderboard live" | ✅ Built |
+| V9 | Calendar History | A6.2 | "Heatmap of all workouts; tap day → see sessions" | ✅ Built |
 | V10 | Exercise Guides | — | "Tap exercise → modal shows cues + video link" | ⬜ |
-| V11 | Pro Tier + Stripe | B1–B7 | "Free user hits limit → upgrade prompt → Stripe → Pro unlocked" | ⬜ |
+| V11 | Pro Tier + Stripe | B1–B7 | "Free user hits limit → upgrade prompt → Stripe → Pro unlocked" | 🟡 Partial — plan column, generation limits, upgrade/downgrade UI built; Stripe not integrated |
 | V12 | Workout Streaks | — | "Profile shows current streak; badge on feed card" | ⬜ |
-| V13 | Training Plans (Pro) | C1–C7 | "Request 6-week Hyrox plan → week grid → sessions auto-generated with progressive overload" | ⬜ |
-| V14 | Share Card | — | "Tap share → styled PNG of workout generated → share sheet" | ⬜ |
+| V13 | Training Plans (Pro) | C1–C7 | "Request 6-week Hyrox plan → week grid → sessions auto-generated with progressive overload" | ✅ Built (programs + BuildProgramJob + LLM generation) |
+| V14 | Share Card | — | "Tap share → styled PNG of workout generated → share sheet" | 🟡 Partial — PDF export built (Prawn), PNG share card not built |
 | V15 | AI Coaching Insights (Pro) | — | "Coach's Notes on any workout (on-demand); weekly digest: volume trends, load warning, PR highlights" | ⬜ |
-| V16 | PWA — Install + Push + Offline | D1–D5 | "Install prompt appears → app on home screen → push notification for challenge" | ⬜ |
+| V16 | PWA — Install + Push + Offline | D1–D5 | "Install prompt appears → app on home screen → push notification for challenge" | 🟡 Skeleton — manifest + service worker files exist but commented out/not wired |
 | V17 | Native Apps (iOS + Android) | E1–E5 | "App store install → full feature parity with web" | ⬜ |
 | V18 | Device Integration (native required) | F1–F6 | "Post workout → HR + calories from Apple Watch on feed card" | ⬜ |
 | V19 | Community Challenges + Friend Challenges | — | "Weekly leaderboard; tag friend on a workout as a challenge" | ⬜ |
