@@ -8,7 +8,7 @@ class WorkoutLikeTest < ActiveSupport::TestCase
   end
 
   test "creates notification for workout owner" do
-    workout = workouts(:strength_session)
+    workout = workouts(:hyrox_session)
     liker = users(:two)
 
     assert_difference "Notification.count", 1 do
@@ -17,7 +17,7 @@ class WorkoutLikeTest < ActiveSupport::TestCase
   end
 
   test "does not notify when owner likes own workout" do
-    workout = workouts(:strength_session)
+    workout = workouts(:hyrox_session)
 
     assert_no_difference "Notification.count" do
       WorkoutLike.create!(user: workout.user, workout: workout)
