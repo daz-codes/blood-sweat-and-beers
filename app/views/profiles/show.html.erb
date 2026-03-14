@@ -62,10 +62,10 @@
               <span class="text-volt">✓</span> Priority access to new features
             </li>
           </ul>
-          <%= button_to "Upgrade to Pro (Free for now)",
+          <%= link_to "Upgrade to Pro (Free for now)",
               upgrade_subscription_path,
-              method: :patch,
-              class: "block w-full bg-volt hover:bg-volt/80 text-zinc-950 font-bold py-2.5 rounded-xl text-sm transition-colors text-center cursor-pointer" %>
+              data: { turbo_method: :patch },
+              class: "block w-full bg-volt hover:bg-volt/80 text-zinc-950 font-bold py-2.5 rounded-xl text-sm transition-colors text-center" %>
         </div>
       <% end %>
     </div>
