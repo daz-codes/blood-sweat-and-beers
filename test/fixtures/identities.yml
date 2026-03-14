@@ -1,0 +1,4 @@
+google_one:
+  provider: google_oauth2
+  uid: "123456"
+  user: one

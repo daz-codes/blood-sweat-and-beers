@@ -5,7 +5,12 @@ class User < ApplicationRecord
   validates :username, uniqueness: true, allow_nil: true,
             format: { with: /\A[a-zA-Z0-9_]{3,30}\z/,
                       message: "must be 3–30 characters: letters, numbers, and underscores only" }
-  has_secure_password
+  has_secure_password validations: false
+  validates :password, presence: true, length: { minimum: 8 }, unless: :skip_password_validation?
+  validates :password, length: { minimum: 8 }, allow_nil: true, if: :skip_password_validation?
+
+  attr_accessor :skip_password_validation
+  has_many :identities, dependent: :destroy
   has_many :sessions, dependent: :destroy
   has_many :comments, dependent: :destroy
   has_many :workouts, dependent: :destroy
@@ -62,6 +67,10 @@ class User < ApplicationRecord
     display.first(1).upcase
   end
 
+  def oauth_user?
+    identities.any?
+  end
+
   # IDs of users this user is accepted-following (for feed query)
   def accepted_following_ids
     follows_as_follower.accepted.pluck(:following_id)
@@ -78,5 +87,11 @@ class User < ApplicationRecord
     follow = follows_as_follower.find_by(following_id: other_user.id)
     return :none unless follow
     follow.status.to_sym
+  end
+
+  private
+
+  def skip_password_validation?
+    skip_password_validation || (persisted? && password_digest.present?)
   end
 end

@@ -29,6 +29,8 @@
     </div>
   <% end %>
 
+  <%= render "shared/oauth_buttons" %>
+
   <p class="mt-6 text-sm text-gray-500">
     Don't have an account?
     <%= link_to "Sign up", new_registration_path, class: "text-gray-700 underline hover:no-underline" %>
