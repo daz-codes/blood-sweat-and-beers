@@ -1,4 +1,6 @@
 class Comment < ApplicationRecord
+  include Notifiable
+
   belongs_to :user
   belongs_to :workout_log, counter_cache: true, touch: true
 
@@ -6,19 +8,11 @@ class Comment < ApplicationRecord
 
   scope :chronological, -> { order(created_at: :asc) }
 
-  after_create_commit :notify_log_owner
+  notifies action: :comment, recipient: :log_owner
 
   private
 
-  def notify_log_owner
-    owner = workout_log.user
-    return if owner == user
-
-    Notification.create!(
-      recipient:  owner,
-      actor:      user,
-      notifiable: self,
-      action:     "comment"
-    )
+  def log_owner
+    workout_log.user
   end
 end
