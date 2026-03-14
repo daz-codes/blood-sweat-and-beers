@@ -1,14 +1,5 @@
-<div class="my-6">
-  <div class="relative">
-    <div class="absolute inset-0 flex items-center">
-      <div class="w-full border-t border-gray-300"></div>
-    </div>
-    <div class="relative flex justify-center text-sm">
-      <span class="bg-white px-2 text-gray-500">Or continue with</span>
-    </div>
-  </div>
-
-  <div class="mt-6 flex flex-col gap-3">
+<% buttons = capture do %>
+  <% if ENV["GOOGLE_CLIENT_ID"].present? %>
     <%= button_to "/auth/google_oauth2", method: :post, data: { turbo: false },
         class: "flex items-center justify-center gap-3 rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 cursor-pointer" do %>
       <svg class="h-5 w-5" viewBox="0 0 24 24">
@@ -19,7 +10,9 @@
       </svg>
       Google
     <% end %>
+  <% end %>
 
+  <% if ENV["FACEBOOK_APP_ID"].present? %>
     <%= button_to "/auth/facebook", method: :post, data: { turbo: false },
         class: "flex items-center justify-center gap-3 rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 cursor-pointer" do %>
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="#1877F2">
@@ -27,7 +20,9 @@
       </svg>
       Facebook
     <% end %>
+  <% end %>
 
+  <% if ENV["APPLE_CLIENT_ID"].present? %>
     <%= button_to "/auth/apple", method: :post, data: { turbo: false },
         class: "flex items-center justify-center gap-3 rounded-md border border-gray-300 bg-[#000] px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-gray-800 cursor-pointer" do %>
       <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -35,5 +30,22 @@
       </svg>
       Apple
     <% end %>
+  <% end %>
+<% end %>
+
+<% if buttons.present? %>
+  <div class="my-6">
+    <div class="relative">
+      <div class="absolute inset-0 flex items-center">
+        <div class="w-full border-t border-gray-300"></div>
+      </div>
+      <div class="relative flex justify-center text-sm">
+        <span class="bg-white px-2 text-gray-500">Or continue with</span>
+      </div>
+    </div>
+
+    <div class="mt-6 flex flex-col gap-3">
+      <%= buttons %>
+    </div>
   </div>
-</div>
+<% end %>
