@@ -1690,7 +1690,7 @@ class WorkoutLLMGenerator
     end
 
     Rails.cache.write("workout_llm_debug_#{workout.id}", @llm_calls, expires_in: 2.hours) if @llm_calls.present?
-    DiscoverExerciseVideosJob.perform_later(workout.id)
+    workout.discover_videos_later
     workout
   end
 end

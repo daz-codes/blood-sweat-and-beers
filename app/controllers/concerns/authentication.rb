@@ -3,7 +3,7 @@ module Authentication
 
   included do
     before_action :require_authentication
-    helper_method :authenticated?, :link_to_sign_in_or_out, :show_user_if_signed_in
+    helper_method :authenticated?
   end
 
   class_methods do
@@ -12,27 +12,7 @@ module Authentication
     end
   end
 
-
-def link_to_sign_in_or_out
-  if authenticated?
-    # Return the form as a string
-    "<form class=\"button_to\" action=\"#{sign_out_path}\" accept-charset=\"UTF-8\" method=\"post\">
-      <input type=\"hidden\" name=\"_method\" value=\"delete\" autocomplete=\"off\" />
-      <button type=\"submit\">Sign Out</button>
-      <input type=\"hidden\" name=\"authenticity_token\" value=\"#{form_authenticity_token}\" autocomplete=\"off\" />
-    </form>".html_safe
-  else
-    "<a href=\"#{sign_in_path}\">Sign In</a>".html_safe
-  end
-end
-
-def show_user_if_signed_in
-  if authenticated?
-    "Signed in as #{Current.user.email_address}"
-  end
-end
-
-private
+  private
     def authenticated?
       resume_session
     end

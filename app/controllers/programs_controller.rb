@@ -1,6 +1,7 @@
 class ProgramsController < ApplicationController
   before_action :require_authentication
   before_action :set_program, only: [ :show, :destroy ]
+  rate_limit to: 5, within: 3.minutes, only: :create
 
   def new
     @program    = Program.new(weeks_count: 4, sessions_per_week: 3, duration_mins: 45, difficulty: "intermediate")
@@ -23,8 +24,8 @@ class ProgramsController < ApplicationController
 
     if @program.save
       session_notes = Array(params[:session_notes]).first(@program.sessions_per_week)
-      ProgramBuilder.build_placeholders(@program, session_notes, custom_activity: params[:custom_activity].presence)
-      BuildProgramJob.perform_later(@program.id)
+      @program.create_workout_placeholders(session_notes, custom_activity: params[:custom_activity].presence)
+      @program.build_later
       redirect_to program_path(@program), notice: "Building your #{@program.weeks_count}-week program — workouts will appear as they're generated."
     else
       @activities = recent_activities_for_user
@@ -48,7 +49,7 @@ class ProgramsController < ApplicationController
   end
 
   def program_params
-    params.require(:program).permit(:weeks_count, :sessions_per_week, :duration_mins, :difficulty)
+    params.expect(program: [ :weeks_count, :sessions_per_week, :duration_mins, :difficulty ])
   end
 
   def recent_activities_for_user

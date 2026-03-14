@@ -1,22 +1,21 @@
 class User < ApplicationRecord
   FREE_GENERATION_LIMIT = 5
 
+  include User::GenerationQuota
+  include User::FollowGraph
+
   validates :email_address, uniqueness: true
   validates :username, uniqueness: true, allow_nil: true,
             format: { with: /\A[a-zA-Z0-9_]{3,30}\z/,
                       message: "must be 3–30 characters: letters, numbers, and underscores only" }
   has_secure_password
-  has_many :sessions, dependent: :destroy
+  has_many :sessions, dependent: :delete_all
   has_many :comments, dependent: :destroy
   has_many :workouts, dependent: :destroy
   has_many :workout_logs, dependent: :destroy
-  has_many :generation_uses, dependent: :destroy
   has_many :programs, dependent: :destroy
   has_many :fitness_test_entries, dependent: :destroy
-  has_many :notifications, foreign_key: :recipient_id, dependent: :destroy
-
-  has_many :follows_as_follower,  class_name: "Follow", foreign_key: :follower_id,  dependent: :destroy
-  has_many :follows_as_following, class_name: "Follow", foreign_key: :following_id, dependent: :destroy
+  has_many :notifications, foreign_key: :recipient_id, dependent: :delete_all
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
   normalizes :username, with: ->(u) { u.presence }  # treat blank as nil
@@ -41,19 +40,6 @@ class User < ApplicationRecord
     plan == "free"
   end
 
-  def generations_this_week
-    generation_uses.where(created_at: 1.week.ago..).count
-  end
-
-  def generation_limit_reached?
-    free? && generations_this_week >= FREE_GENERATION_LIMIT
-  end
-
-  def generations_remaining
-    return nil if pro?
-    [ FREE_GENERATION_LIMIT - generations_this_week, 0 ].max
-  end
-
   def display
     display_name.presence || username.presence || email_address.split("@").first
   end
@@ -62,21 +48,22 @@ class User < ApplicationRecord
     display.first(1).upcase
   end
 
-  # IDs of users this user is accepted-following (for feed query)
-  def accepted_following_ids
-    follows_as_follower.accepted.pluck(:following_id)
-  end
+  # Record exercise weights from a workout structure into the user's profile
+  def record_weights_from_workout(structure)
+    return unless structure.is_a?(Hash)
 
-  # Count of pending inbound follow requests
-  def pending_follow_request_count
-    follows_as_following.pending.count
-  end
+    updates = {}
+    Array(structure["sections"]).each do |section|
+      Array(section["exercises"]).each do |exercise|
+        name = exercise["name"].to_s.strip
+        kg   = exercise["weight_kg"]
+        next if name.blank? || kg.blank? || kg.to_f <= 0
+        normalized = name.downcase.gsub(/[^a-z0-9\s]/, "").strip.gsub(/\s+/, "_")
+        updates[normalized] = kg.to_f
+      end
+    end
 
-  # Follow state this user has toward another user
-  def follow_state_for(other_user)
-    return :self if id == other_user.id
-    follow = follows_as_follower.find_by(following_id: other_user.id)
-    return :none unless follow
-    follow.status.to_sym
+    return if updates.empty?
+    update_column(:exercise_weights, (exercise_weights || {}).merge(updates))
   end
 end
