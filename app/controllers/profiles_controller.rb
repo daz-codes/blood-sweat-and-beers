@@ -36,10 +36,8 @@ class ProfilesController < ApplicationController
   private
 
   def profile_params
-    params.require(:user).permit(
-      :username, :display_name,
+    params.expect(user: [ :username, :display_name,
       :age, :height_cm, :weight_kg, :gender,
-      :pool_length
-    )
+      :pool_length ])
   end
 end

@@ -69,7 +69,7 @@ class ExerciseVideoLookup
                 .strip
                 .gsub(/\s+/, "-")
 
-    candidates = [base]
+    candidates = [ base ]
 
     # Try with common equipment prefixes
     EQUIPMENT_PREFIXES.each do |prefix|

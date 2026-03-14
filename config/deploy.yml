@@ -2,7 +2,7 @@
 service: volt
 
 # Name of the container image.
-image: daz-codes/volt-rails
+image: daz-codes/volt
 
 # Deploy to these servers.
 servers:

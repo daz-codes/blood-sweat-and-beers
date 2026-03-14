@@ -913,7 +913,7 @@ class WorkoutLLMGenerator
     { exercises: 3, rounds: 5, mins: 15 },
     { exercises: 5, rounds: 3, mins: 15 },
     { exercises: 3, rounds: 6, mins: 18 },
-    { exercises: 4, rounds: 5, mins: 20 },
+    { exercises: 4, rounds: 5, mins: 20 }
   ].freeze
 
   def fm_continuous_circuit_config
@@ -929,11 +929,11 @@ class WorkoutLLMGenerator
 
     roll = rand(100)
     tabata_count = case roll
-                   when  0..39 then 1
-                   when 40..79 then 2
-                   when 80..94 then 3
-                   else             4
-                   end
+    when  0..39 then 1
+    when 40..79 then 2
+    when 80..94 then 3
+    else             4
+    end
 
     archetypes = {
       1 => [
@@ -1690,7 +1690,7 @@ class WorkoutLLMGenerator
     end
 
     Rails.cache.write("workout_llm_debug_#{workout.id}", @llm_calls, expires_in: 2.hours) if @llm_calls.present?
-    DiscoverExerciseVideosJob.perform_later(workout.id)
+    workout.discover_videos_later
     workout
   end
 end

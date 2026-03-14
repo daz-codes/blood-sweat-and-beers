@@ -1,0 +1,8 @@
+one_logged_hyrox:
+  user: one
+  workout: hyrox_session
+  completed_at: <%= 1.day.ago.to_fs(:db) %>
+  sweat_rating: 4
+  visibility: public
+  notes: "Felt great"
+  location: "Home Gym"

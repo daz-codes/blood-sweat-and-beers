@@ -1,6 +1,6 @@
 class Comment < ApplicationRecord
   belongs_to :user
-  belongs_to :workout_log, counter_cache: true
+  belongs_to :workout_log, counter_cache: true, touch: true
 
   validates :body, presence: true, length: { maximum: 500 }
 

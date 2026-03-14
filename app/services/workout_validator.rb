@@ -635,7 +635,7 @@ class WorkoutValidator
     "tabata"   => 6,
     "mountain" => 10,
     "ladder"   => 12,
-    "hundred"  => 5,
+    "hundred"  => 5
   }.freeze
   FM_FIXED_MINS = 30
 

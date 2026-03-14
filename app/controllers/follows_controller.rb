@@ -1,6 +1,7 @@
 class FollowsController < ApplicationController
   before_action :require_authentication
   before_action :set_follow, only: [ :destroy, :accept ]
+  rate_limit to: 30, within: 3.minutes, only: :create
 
   # GET /follows — inbound pending requests inbox
   def index

@@ -1,6 +1,7 @@
 class CommentsController < ApplicationController
   before_action :require_authentication
   before_action :set_workout_log
+  rate_limit to: 20, within: 3.minutes, only: :create
 
   def index
     @comments = @workout_log.comments.includes(:user).chronological
