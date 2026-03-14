@@ -33,6 +33,8 @@ env:
   secret:
     - RAILS_MASTER_KEY
     - ANTHROPIC_API_KEY
+    - GOOGLE_CLIENT_ID
+    - GOOGLE_CLIENT_SECRET
   clear: {}
 
 # Aliases are triggered with "bin/kamal <alias>".

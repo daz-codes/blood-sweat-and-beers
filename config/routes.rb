@@ -4,6 +4,11 @@ Rails.application.routes.draw do
   resource :registration, only: [ :new, :create ]
   resource :session, only: [ :new, :create, :destroy ]
   resources :passwords, param: :token, only: [ :new, :create, :edit, :update ]
+
+  # OAuth callbacks
+  get  "auth/:provider/callback", to: "omniauth_callbacks#create"
+  post "auth/:provider/callback", to: "omniauth_callbacks#create"
+  get  "auth/failure",            to: "omniauth_callbacks#failure"
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

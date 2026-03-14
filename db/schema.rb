@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_03_12_175037) do
+ActiveRecord::Schema[8.2].define(version: 2026_03_14_170423) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -150,6 +150,16 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_12_175037) do
     t.index ["user_id"], name: "index_generation_uses_on_user_id"
   end
 
+  create_table "identities", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "provider", null: false
+    t.string "uid", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["provider", "uid"], name: "index_identities_on_provider_and_uid", unique: true
+    t.index ["user_id"], name: "index_identities_on_user_id"
+  end
+
   create_table "notifications", force: :cascade do |t|
     t.string "action", null: false
     t.integer "actor_id", null: false
@@ -257,7 +267,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_12_175037) do
     t.json "exercise_weights", default: {}, null: false
     t.string "gender"
     t.integer "height_cm"
-    t.string "password_digest", null: false
+    t.string "password_digest"
     t.json "personal_bests", default: {}
     t.string "plan", default: "free", null: false
     t.string "pool_length"
@@ -326,6 +336,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_03_12_175037) do
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "follows", "users", column: "following_id"
   add_foreign_key "generation_uses", "users"
+  add_foreign_key "identities", "users"
   add_foreign_key "notifications", "users", column: "actor_id"
   add_foreign_key "notifications", "users", column: "recipient_id"
   add_foreign_key "personal_records", "users"
