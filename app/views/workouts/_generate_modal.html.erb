@@ -121,9 +121,11 @@
           <span class="text-gray-500 text-xs">Unlimited generations</span>
         </div>
       <% end %>
-      <%= f.submit "Generate Workout",
-          class: "w-full bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 font-bold py-3.5 rounded-xl text-lg transition-colors cursor-pointer",
-          data: { generate_form_target: "submitBtn" } %>
+      <button type="submit"
+          class="w-full bg-volt hover:bg-volt/80 active:opacity-90 text-zinc-950 font-bold py-3.5 rounded-xl text-lg transition-colors cursor-pointer"
+          data-generate-form-target="submitBtn">
+        Generate Workout
+      </button>
     <% end %>
 
   <% end %>
