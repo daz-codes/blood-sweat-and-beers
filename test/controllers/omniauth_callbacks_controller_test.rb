@@ -36,6 +36,17 @@ class OmniauthCallbacksControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
+  test "rejects oauth with blank email" do
+    mock_omniauth(provider: "google_oauth2", uid: "no-email-uid", email: nil, name: "No Email")
+
+    assert_no_difference [ "User.count", "Identity.count" ] do
+      get "/auth/google_oauth2/callback"
+    end
+
+    assert_redirected_to sign_in_path
+    assert_equal "We couldn't retrieve your email. Please sign up manually.", flash[:alert]
+  end
+
   test "failure redirects to sign in" do
     get "/auth/failure", params: { message: "invalid_credentials" }
     assert_redirected_to sign_in_path

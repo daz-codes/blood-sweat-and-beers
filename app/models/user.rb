@@ -68,7 +68,7 @@ class User < ApplicationRecord
   end
 
   def oauth_user?
-    identities.any?
+    identities.exists?
   end
 
   # IDs of users this user is accepted-following (for feed query)

@@ -4,6 +4,12 @@ class OmniauthCallbacksController < ApplicationController
 
   def create
     auth = request.env["omniauth.auth"]
+
+    if auth.info.email.blank?
+      redirect_to sign_in_path, alert: "We couldn't retrieve your email. Please sign up manually."
+      return
+    end
+
     identity = Identity.find_by(provider: auth.provider, uid: auth.uid)
 
     if identity
@@ -18,18 +24,20 @@ class OmniauthCallbacksController < ApplicationController
       # New user or existing user matching by email
       user = User.find_by(email_address: auth.info.email)
 
-      if user
-        # Link OAuth to existing email-matched account
-        user.identities.create!(provider: auth.provider, uid: auth.uid)
-      else
-        # Create brand new user (no password needed)
-        user = User.new(
-          email_address: auth.info.email,
-          display_name: auth.info.name
-        )
-        user.skip_password_validation = true
-        user.save!
-        user.identities.create!(provider: auth.provider, uid: auth.uid)
+      ActiveRecord::Base.transaction do
+        if user
+          # Link OAuth to existing email-matched account
+          user.identities.create!(provider: auth.provider, uid: auth.uid)
+        else
+          # Create brand new user (no password needed)
+          user = User.new(
+            email_address: auth.info.email,
+            display_name: auth.info.name
+          )
+          user.skip_password_validation = true
+          user.save!
+          user.identities.create!(provider: auth.provider, uid: auth.uid)
+        end
       end
 
       start_new_session_for user
