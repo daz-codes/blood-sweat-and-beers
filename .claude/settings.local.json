@@ -68,7 +68,26 @@
       "WebFetch(domain:assets.ctfassets.net)",
       "Bash(PATH=\"/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle exec:*)",
       "Bash(PATH=\"/opt/homebrew/bin:/usr/local/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" which git:*)",
-      "Bash(PATH=\"/opt/homebrew/bin:/usr/bin:/usr/local/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle update:*)"
+      "Bash(PATH=\"/opt/homebrew/bin:/usr/bin:/usr/local/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle update:*)",
+      "Bash(git checkout:*)",
+      "Bash(git status:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr:*)",
+      "Bash(git remote:*)",
+      "Bash(wc:*)",
+      "Bash(git:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails test:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" RAILS_ENV=test bin/rails test:*)",
+      "Bash(cat:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails db:migrate:status:*)",
+      "Bash(bundle show:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle install:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rubocop:*)",
+      "Bash(security find-generic-password:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails routes:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bundle show:*)",
+      "Bash(PATH=\"/opt/homebrew/bin:/Users/daz/.local/share/mise/installs/ruby/3.4.7/bin:$PATH\" bin/rails middleware:*)"
     ]
   }
 }
